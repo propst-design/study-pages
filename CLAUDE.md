@@ -18,6 +18,8 @@ been added to the page yet.
    every angle, not just the one that happens to cover it.)
 3. **Numbers at human scale is an optional add-on**, not a full angle. It only covers the
    number-heavy ideas, so it is exempt from the full-spine rule.
+4. **Going beyond the article is fine.** If the article states something without explaining it
+   (e.g. *why* no engine turns all heat into work), the angles should supply the reason.
 
 ### Angles Jacob likes (keep)
 
@@ -26,7 +28,9 @@ Full angles (must cover the whole spine):
 - **Problem it solves.** Start from why anyone cares and what goes wrong without it, then explain
   the idea as the answer to that problem. Use one everyday comparison at most.
 - **Questions you're stuck on (Q&A).** Plain questions a confused reader actually asks, at least
-  one per spine idea, each answered in two or three sentences. This should fit almost every topic.
+  one per spine idea, each answered in two or three sentences. Add extra questions for the obvious
+  confusions too; a long Q&A is fine (Entropy's had 8 and Jacob wanted to keep it). Fits almost
+  every topic.
 
 Add-on (partial coverage is fine):
 
@@ -44,7 +48,7 @@ Add-on (partial coverage is fine):
 1. No new equations. Only refer to equations the article already has.
 2. End by connecting back to the article's own terms.
 3. If an analogy is used, say in one line where it breaks.
-4. Keep each angle short (roughly 200–300 words; walking the full spine needs a bit more room).
+4. Keep the Problem-it-solves angle to roughly 200–300 words. The Q&A has no length cap.
 5. The numbers add-on is only included when the topic has numbers worth scaling.
 
 Open questions: section heading/name, styling (`.note` box vs own section), placement in the topic
