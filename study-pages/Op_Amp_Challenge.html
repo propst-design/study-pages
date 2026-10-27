@@ -42,6 +42,8 @@ math[display="block"]{margin:.4em 0;overflow-x:auto;overflow-y:hidden;max-width:
 .brand{font-weight:800;color:var(--brand);letter-spacing:-.01em;line-height:1.1;font-size:1.05rem;text-decoration:none}
 .brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;color:var(--ink2);font-weight:500;font-size:.72rem;letter-spacing:0}
 .topbar .sp{flex:1}
+.home-chip{text-decoration:none;color:inherit}
+@media (max-width:560px){.home-chip span{display:none}}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:.85rem;cursor:pointer;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
 .iconbtn{border:1px solid var(--line);background:var(--surface2);border-radius:10px;width:38px;height:38px;display:inline-grid;place-items:center;cursor:pointer;flex:none}
 .iconbtn svg{width:20px;height:20px}
@@ -520,8 +522,9 @@ App.init=function(cfg){
   document.body.innerHTML=`<header class="topbar noprint"><div class="in">
     <a class="brand" href="#/" aria-label="Home">${esc(cfg.title)}<small>${esc(cfg.tagline||'Interactive exercises')}</small></a>
     <span class="sp"></span>
+    <a class="chip home-chip" href="index.html" title="Back to the study site's first page">${IC.home.replace('<svg','<svg width="16" height="16"')}<span>Study home</span></a>
     <button class="chip" id="who" title="Student name and ID">${IC.user.replace('<svg','<svg width="16" height="16"')}<span></span></button>
-    <a class="iconbtn" href="#/" title="Main menu" aria-label="Main menu">${IC.home}</a>
+    <a class="iconbtn" href="#/" title="This challenge's main menu" aria-label="Challenge main menu">${IC.menu}</a>
   </div></header><main id="view"></main>`;
   $('#who').onclick=()=>App.askStudent(true);
   App.refreshWho();
@@ -1574,5 +1577,5 @@ CC.App.init({
 });
 })();
 </script>
-<a href="index.html" style="position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;background:#1d2733;color:#f3f0ea;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:.92">&larr; Study home</a></body>
+</body>
 </html>

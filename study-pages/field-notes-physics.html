@@ -127,6 +127,10 @@ h1.title{font-size:38px;margin:0 0 6px}
 .legend span{display:flex;align-items:center;gap:6px}
 .consts td:first-child{width:40%}
 .menu-btn{display:none}
+.toprow{display:flex;align-items:center;flex-wrap:wrap;gap:0 8px}
+.toprow .brand{flex:1 0 100%}
+.home-link{margin:-4px 0 0;flex:none;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 10px;white-space:nowrap}
+.home-link:hover{border-color:var(--accent);text-decoration:none}
 .theme-btn{margin-top:18px;font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:7px;padding:6px 10px;cursor:pointer;width:100%}
 .empty{color:var(--muted);font-size:14px;padding:6px 8px}
 .btn{font:inherit;font-size:13px;padding:6px 12px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
@@ -178,7 +182,8 @@ nav a.item.done::after{content:"✓";float:right;color:var(--ci);font-size:12px;
   .layout{grid-template-columns:1fr}
   aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:12px 16px}
   .brand{margin:0}
-  .menu-btn{display:block;margin-left:auto;font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 12px}
+  .toprow{flex-wrap:nowrap} .toprow .brand{flex:0 1 auto} .home-link{margin:0 0 0 auto}
+  .menu-btn{display:block;margin-left:8px;font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 12px}
   #navpanel{display:none;margin-top:12px} aside.open #navpanel{display:block}
   main{padding:20px 16px 60px}
   h1.title{font-size:30px}
@@ -190,11 +195,12 @@ nav a.item.done::after{content:"✓";float:right;color:var(--ci);font-size:12px;
 <body>
 <div class="layout">
 <aside id="side">
-  <div style="display:flex;align-items:center">
+  <div class="toprow">
     <a class="brand" href="#/">
       <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".35"/><path d="M5 17c4-8 8-8 12 0s8 8 12 0" fill="none" stroke="var(--mg)" stroke-width="2.2" stroke-linecap="round"/><circle cx="17" cy="17" r="3.2" fill="var(--es)"/></svg>
       <div><b>Field Notes</b><span>Physics reference</span></div>
     </a>
+    <a class="home-link" href="index.html" title="Back to the study site's first page">&larr; Study home</a>
     <button class="menu-btn" id="menuBtn">Menu</button>
   </div>
   <div id="navpanel">
@@ -2406,5 +2412,5 @@ function route() {
 addEventListener('hashchange', route);
 buildNav(); route();
 </script>
-<a href="index.html" style="position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;background:#1d2733;color:#f3f0ea;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:.92">&larr; Study home</a></body>
+</body>
 </html>
