@@ -55,6 +55,16 @@ Add-on (partial coverage is fine):
    spinning coil's emf peaks when the flux is zero.)
 4. Keep the Problem-it-solves angle to roughly 400 words at most. The Q&A has no length cap.
 5. The numbers add-on is only included when the topic has numbers worth scaling.
+6. **Explain every piece of notation.** Every unfamiliar symbol or operation in the article
+   (integrals, d/dt, Σ, ∝, cos θ, subscripts like n_i, etc.) gets a plain-words answer somewhere
+   in the Q&A, e.g. "What does dΦ/dt mean if I don't do calculus?"
 
-Open questions: section heading/name, styling (`.note` box vs own section), placement in the topic
-page, and whether the extra explanations live in the `TOPICS` data or a separate field.
+### Presentation
+
+Jacob wants these **collapsible** so articles don't become overwhelmingly long. The topic page
+already uses collapsible cards (`<details class="card fold">`, see `exampleCard`, `historyCard`)
+and per-item "Show solution" toggles, so reuse those patterns.
+
+Open questions: section heading/name, exact placement in the topic page, layout inside the
+section, and whether the extra explanations live in the `TOPICS` data or a separate object
+(like `APPS`).
