@@ -7,7 +7,8 @@ rewriting them, add extra explanation alongside the existing article that comes 
 different angle. Long-term aim: every topic gets these.
 
 Status: still trialling on a few topics before settling the rules. Trials so far:
-Semiconductors & Doping (`semiconductors`), Entropy & the Second Law (`secondlaw`). Nothing has
+Semiconductors & Doping (`semiconductors`), Entropy & the Second Law (`secondlaw`),
+Faraday's Law (`faraday`). Nothing has
 been added to the page yet.
 
 ### Structure (decided)
@@ -26,7 +27,7 @@ been added to the page yet.
 Full angles (must cover the whole spine):
 
 - **Problem it solves.** Start from why anyone cares and what goes wrong without it, then explain
-  the idea as the answer to that problem. Use one everyday comparison at most.
+  the idea as the answer to that problem.
 - **Questions you're stuck on (Q&A).** Plain questions a confused reader actually asks, at least
   one per spine idea, each answered in two or three sentences. Add extra questions for the obvious
   confusions too; a long Q&A is fine (Entropy's had 8 and Jacob wanted to keep it). Fits almost
@@ -47,8 +48,12 @@ Add-on (partial coverage is fine):
 
 1. No new equations. Only refer to equations the article already has.
 2. End by connecting back to the article's own terms.
-3. If an analogy is used, say in one line where it breaks.
-4. Keep the Problem-it-solves angle to roughly 200–300 words. The Q&A has no length cap.
+3. **Comparisons: as many as help, but each one is local.** It serves one spine idea, is used once,
+   and is not extended (that would drift back into the rejected single-analogy angle). Use a
+   comparison only where an idea is hard to picture. Add a one-line "where it breaks" only when the
+   comparison could plant a misconception. (Example that earned its place: a Ferris wheel for why a
+   spinning coil's emf peaks when the flux is zero.)
+4. Keep the Problem-it-solves angle to roughly 400 words at most. The Q&A has no length cap.
 5. The numbers add-on is only included when the topic has numbers worth scaling.
 
 Open questions: section heading/name, styling (`.note` box vs own section), placement in the topic
