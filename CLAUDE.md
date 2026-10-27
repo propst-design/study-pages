@@ -8,8 +8,7 @@ different angle. Long-term aim: every topic gets these.
 
 Status: still trialling on a few topics before settling the rules. Trials so far:
 Semiconductors & Doping (`semiconductors`), Entropy & the Second Law (`secondlaw`),
-Faraday's Law (`faraday`). Nothing has
-been added to the page yet.
+Faraday's Law (`faraday`). Only `semiconductors` is on the page so far (prototype).
 
 ### Structure (decided)
 
@@ -65,6 +64,13 @@ Jacob wants these **collapsible** so articles don't become overwhelmingly long. 
 already uses collapsible cards (`<details class="card fold">`, see `exampleCard`, `historyCard`)
 and per-item "Show solution" toggles, so reuse those patterns.
 
-Open questions: section heading/name, exact placement in the topic page, layout inside the
-section, and whether the extra explanations live in the `TOPICS` data or a separate object
-(like `APPS`).
+Built (prototype on `semiconductors`):
+
+- Content lives in a separate `ALT` object (the line after `APPS`), keyed by topic id:
+  `{why: html, qa: [[question, answer html], ...], nums: html}`. `nums` is optional.
+- Write maths as plain HTML (`<i>n</i><sub>i</sub>`, `<sup>`, Unicode ∝ ≈ ×), the way `APPS` does.
+  Topic bodies use pre-rendered KaTeX, but there is no KaTeX at runtime, so don't paste TeX.
+- `altCard(t)` renders one folded card, **collapsed by default**, directly under the article body:
+  tag "Stuck?", title "Try another way in". Inside are tabs: The problem it solves | Questions (n) |
+  Numbers at human scale. Each Q&A answer is hidden until its question is clicked. `wireAlt`
+  handles the tabs.
