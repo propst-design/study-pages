@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23b4582a%27/%3E%3C/svg%3E">
+<title>Jacob's Study Pages</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=Chivo+Mono:wght@400;500&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column — a bench-label header, then the physics notebook, then a 3-up grid of circuit trainers */
+:root{
+  --bg:#eef0f2; --panel:#ffffff; --ink:#18202a; --ink2:#5a6573; --line:#d5dae0;
+  --copper:#b4582a; --copper-soft:#f5e6dc; --blue:#2c5b8f;
+  --display:"Chivo",system-ui,sans-serif; --body:"Public Sans",system-ui,sans-serif; --mono:"Chivo Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12171d; --panel:#1a2129; --ink:#e8ebee; --ink2:#9aa5b1; --line:#2c3540;
+  --copper:#e48a5a; --copper-soft:#3a271d; --blue:#7fb0e6; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#12171d; --panel:#1a2129; --ink:#e8ebee; --ink2:#9aa5b1; --line:#2c3540;
+  --copper:#e48a5a; --copper-soft:#3a271d; --blue:#7fb0e6; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body)}
+.wrap{max-width:1000px;margin:0 auto;padding-block:36px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:40px}
+header{display:grid;gap:10px}
+.bands{display:flex;gap:5px;align-items:center}
+.bands i{display:block;width:10px;height:26px;border-radius:2px}
+.bands .lead{width:34px;height:3px;background:var(--ink2);border-radius:2px}
+h1{font:800 clamp(2rem,6vw,3rem)/1.05 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+.lede{color:var(--ink2);margin:0;max-width:60ch}
+.label{font:500 .74rem/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink2)}
+h2{font:700 1.3rem/1.2 var(--display);margin:0}
+section{display:grid;gap:14px}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+a.feature{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+a.feature:hover,a.tile:hover{border-color:var(--copper)}
+a.feature:focus-visible,a.tile:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.feature h3{font:700 1.5rem/1.2 var(--display);margin:4px 0 6px}
+.feature p{margin:0;color:var(--ink2);max-width:58ch}
+.eq{font:500 1.1rem var(--mono);color:var(--copper);white-space:nowrap}
+.go{font:600 .9rem var(--body);color:var(--copper)}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+a.tile{display:grid;gap:4px;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.tile b{font:700 1.05rem/1.25 var(--display)}
+.tile span{font-size:.86rem;color:var(--ink2)}
+.tile .tag{font:500 .7rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--copper)}
+.foot{font-size:.85rem;color:var(--ink2);margin:0}
+@media (max-width:560px){a.feature{grid-template-columns:1fr}.eq{display:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="bands" aria-hidden="true"><span class="lead"></span><i style="background:#8a5a2b"></i><i style="background:#111"></i><i style="background:#d33"></i><i style="background:#c9a227;margin-left:6px"></i><span class="lead"></span></div>
+    <span class="label">Study bench · 1 kΩ ±5%</span>
+    <h1>Jacob's Study Pages</h1>
+    <p class="lede">Physics field notes and the nine Circuits Challenge trainers, in one place. Each page saves its own progress in this browser.</p>
+  </header>
+
+  <section>
+    <div class="sechead"><h2>Physics</h2><span class="label">Notebook</span></div>
+    <a class="feature" href="field-notes-physics.html">
+      <div>
+        <span class="label">Field Notes</span>
+        <h3>Field Notes: Physics</h3>
+        <p>Topic notes, concept maps and a physical-constants table with rendered equations.</p>
+      </div>
+      <span class="eq"><math><mi>F</mi><mo>=</mo><mi>q</mi><mi>E</mi></math></span>
+    </a>
+  </section>
+
+  <section>
+    <div class="sechead"><h2>Circuits Challenges</h2><a class="go" href="circuits.html">Challenge menu →</a></div>
+    <div class="grid">
+      <a class="tile" href="Basic_Circuits_Challenge.html"><span class="tag">Fundamentals</span><b>Basic Circuits</b><span>Ohm's law, power, color codes, basic circuits</span></a>
+      <a class="tile" href="DC_Circuits_Challenge.html"><span class="tag">Fundamentals</span><b>DC Circuits</b><span>Series, parallel, series-parallel, networks, troubleshooting</span></a>
+      <a class="tile" href="AC_Circuits_Challenge.html"><span class="tag">Fundamentals</span><b>AC Circuits</b><span>RC, RL, RLC, resonance, transformers, troubleshooting</span></a>
+      <a class="tile" href="Ohmmeter_Challenge.html"><span class="tag">Meters</span><b>Ohmmeter</b><span>Wire testing, circuit tracing, PC board troubleshooting</span></a>
+      <a class="tile" href="Voltmeter_Challenge.html"><span class="tag">Meters</span><b>Voltmeter</b><span>Opens and shorts, module testing, troubleshooting</span></a>
+      <a class="tile" href="Digital_Challenge.html"><span class="tag">EET 1214</span><b>Digital</b><span>Gates, number systems, flip-flops, breadboarding</span></a>
+      <a class="tile" href="Solid_State_Challenge.html"><span class="tag">Devices</span><b>Solid-State</b><span>Diode and transistor testing, amplifiers, troubleshooting</span></a>
+      <a class="tile" href="Op_Amp_Challenge.html"><span class="tag">Devices</span><b>Op Amp</b><span>Inverting, noninverting, summing, troubleshooting</span></a>
+      <a class="tile" href="Power_Supply_Challenge.html"><span class="tag">Devices</span><b>Power Supply</b><span>Half-wave, full-wave and bridge supplies with scope and meter</span></a>
+    </div>
+  </section>
+
+  <p class="foot">Circuits Challenges are based on the ETCAI Products Challenge series. Every page has a "Study home" button to get back here.</p>
+</div>
+</body>
+</html>

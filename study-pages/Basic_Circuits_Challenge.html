@@ -1,0 +1,1504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Basic Circuits Challenge</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b3261e'/%3E%3Cpath d='M5 16q5.5-12 11 0t11 0' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<style>:root{
+  --bg:#f4f1ea; --surface:#fffdf8; --surface2:#f0ece2; --ink:#1d2228; --ink2:#55606b; --line:#d9d2c3;
+  --brand:#b3261e; --brand-ink:#fff; --accent:#1f5fa8; --ok:#1e7d43; --ok-bg:#e3f3e8; --bad:#b3261e; --bad-bg:#fbe6e4;
+  --warn:#9a6400; --warn-bg:#fdf1d8; --board:#c9a66b; --board-dark:#9c7a42; --trace:#e8c48a; --copper:#b5652b;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06); --r:12px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+math{font-size:1.1em}
+math[display="block"]{margin:.4em 0;overflow-x:auto;overflow-y:hidden;max-width:100%}
+
+/* header */
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);}
+.topbar .in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.logo{width:34px;height:34px;flex:none}
+.brand{font-weight:800;color:var(--brand);letter-spacing:-.01em;line-height:1.1;font-size:1.05rem;text-decoration:none}
+.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;color:var(--ink2);font-weight:500;font-size:.72rem;letter-spacing:0}
+.topbar .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:.85rem;cursor:pointer;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{border:1px solid var(--line);background:var(--surface2);border-radius:10px;width:38px;height:38px;display:inline-grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn svg{width:20px;height:20px}
+
+main{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:1.6rem;line-height:1.2;margin:.2em 0 .4em;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:1.2em 0 .5em}
+h3{font-size:1rem;margin:1em 0 .4em}
+p{margin:.5em 0}
+.muted{color:var(--ink2)}
+.small{font-size:.875rem}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.card+.card{margin-top:14px}
+.grid{display:grid;gap:12px}
+.cols2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.cols2{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:42px;text-decoration:none;color:var(--ink)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible,input:focus-visible,.menu-item:focus-visible,.pad:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.blue{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:34px;padding:5px 10px;font-size:.875rem;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+
+/* home */
+.hero{display:grid;gap:16px;grid-template-columns:1fr;align-items:center;margin-bottom:8px}
+@media (min-width:860px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero h1{font-size:2rem;color:var(--brand);margin:0}
+.group-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:22px 0 8px;font-weight:700}
+.menu{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.menu-item{display:flex;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);min-height:64px;width:100%;color:var(--ink)}
+.menu-item:hover{border-color:var(--brand)}
+.menu-item .ic{width:42px;height:42px;flex:none;border-radius:10px;background:var(--surface2);display:grid;place-items:center;color:var(--brand)}
+.menu-item .ic svg{width:30px;height:30px}
+.menu-item b{display:block;line-height:1.25}
+.menu-item span{font-size:.8rem;color:var(--ink2)}
+.menu-item .best{margin-left:auto;font-size:.75rem;font-weight:700;color:var(--ok);white-space:nowrap}
+.utils{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+
+/* intro */
+.intro-text p{max-width:68ch}
+.formulas{display:grid;gap:8px 18px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));align-items:center}
+.formula{background:var(--surface2);border-radius:10px;padding:8px 12px;overflow-x:auto}
+.formula .cap{font-size:.78rem;color:var(--ink2);display:block}
+.diagram{display:flex;justify-content:center;align-items:center;background:var(--surface2);border-radius:10px;padding:10px;overflow:hidden}
+.diagram svg{max-width:100%;height:auto}
+.where{font-size:.85rem;color:var(--ink2);margin:.2em 0 0;padding-left:1em}
+
+/* status bar */
+.statusbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.pill{border-radius:999px;background:var(--surface2);border:1px solid var(--line);padding:3px 10px;font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.pill.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+/* givens */
+.givens{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.given{background:var(--warn-bg);border-radius:10px;padding:6px 10px}
+.given .k{font-size:.8rem;color:var(--ink2)}
+.given .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:1.05rem}
+
+/* worksheet rows */
+.ws{display:grid;gap:8px}
+.wrow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface)}
+.wrow .lab{font-weight:600;text-align:center}
+.wrow .inp{display:flex;align-items:center;gap:6px;min-width:0}
+.wrow input{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 10px;font-variant-numeric:tabular-nums;font-size:1rem}
+.wrow .unit{color:var(--ink2);min-width:2.2em;font-size:.95rem}
+.wrow .acts{display:flex;gap:6px}
+.wrow .fb{grid-column:1/-1;font-size:.875rem;display:none}
+.wrow.ok{border-color:var(--ok);background:var(--ok-bg)}
+.wrow.bad{border-color:var(--bad);background:var(--bad-bg)}
+.wrow.ok .fb,.wrow.bad .fb,.wrow.info .fb{display:block}
+.wrow.ok .fb{color:var(--ok)} .wrow.bad .fb{color:var(--bad)}
+input.ok{border-color:var(--ok)!important;background:var(--ok-bg)!important}
+input.bad{border-color:var(--bad)!important;background:var(--bad-bg)!important}
+input.known{background:#dbe8fb!important;border-color:#9dbbe6!important;font-weight:700}
+:root[data-theme="dark"] input.known{background:#1d2d47!important;border-color:#35507c!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) input.known{background:#1d2d47!important;border-color:#35507c!important}}
+input.ask{background:var(--warn-bg)!important}
+
+/* problems list */
+.prob{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.prob-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.field{display:grid;gap:4px;margin:8px 0}
+.field label{font-size:.875rem;color:var(--ink2)}
+.field input{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px;width:100%}
+.fields{display:grid;gap:4px 14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.verdict{font-weight:800;font-size:1.25rem}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+.progress{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--brand);transition:width .3s}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(10,12,15,.5);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:18px}
+.modal h3{margin-top:0}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:120;font-weight:600;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+
+/* tables */
+table.t{border-collapse:collapse;width:100%;font-size:.9rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.tablewrap{overflow-x:auto}
+
+/* board / troubleshooting */
+.board-wrap{background:var(--surface2);border-radius:12px;padding:8px;overflow:hidden}
+.board-wrap svg{width:100%;height:auto;display:block;touch-action:manipulation}
+.pad{cursor:pointer}
+.pad circle.hit{fill:transparent}
+.pad:hover circle.ring{stroke:var(--accent);stroke-width:3}
+.meter{display:flex;gap:10px;flex-wrap:wrap}
+.lcd{font-family:var(--mono);background:#9fb59a;color:#0f1a0e;border-radius:6px;padding:4px 10px;font-size:1.35rem;min-width:7.5ch;text-align:right;box-shadow:inset 0 2px 4px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.meterbox{background:#3b3f45;color:#eee;border-radius:10px;padding:8px 10px;display:grid;gap:4px;justify-items:start}
+.meterbox .ml{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:#c9cdd2}
+.faults{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.faults label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;background:var(--surface)}
+.faults input{accent-color:var(--brand);width:18px;height:18px}
+.faults label.correct{border-color:var(--ok);background:var(--ok-bg)}
+.faults label.wrong{border-color:var(--bad);background:var(--bad-bg)}
+
+/* certificate */
+.cert{background:#fffdf4;color:#222;border:10px double #8a6d1f;padding:28px;text-align:center;border-radius:6px;max-width:760px;margin:0 auto}
+.cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2em 0;color:#7a1610}
+.cert .big{font-family:Georgia,serif;font-size:1.6rem;margin:.3em 0}
+.cert dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;text-align:left;max-width:460px;margin:18px auto 0}
+.cert dt{color:#666}
+.cert dd{margin:0;font-weight:600}
+
+.kbd{font-family:var(--mono);background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.85em}
+.hide{display:none!important}
+.center{text-align:center}
+.mt{margin-top:14px}
+.anim-bulb{transition:opacity .3s}
+
+@media print{
+  .topbar,.noprint,.toast,.scrim{display:none!important}
+  body{background:#fff;color:#000}
+  main{padding:0;max-width:none}
+  .card{box-shadow:none;border:none}
+  .cert{border-color:#8a6d1f}
+}
+
+@media (max-width:520px){.brand small{display:none}.brand{font-size:1rem}h1{font-size:1.35rem}.hero h1{font-size:1.6rem}main{padding:12px 12px 60px}.card{padding:12px}.wrow{grid-template-columns:48px minmax(0,1fr) auto;padding:6px}}
+
+.work{margin-top:6px;color:var(--ink)}.work summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:.875rem}.work[open]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}.work math{font-size:1em}
+</style>
+</head>
+<body>
+<noscript><p style="padding:16px">This page needs JavaScript turned on.</p></noscript>
+<script>/* Circuits Challenge offline engine. No network access, no external libraries. */
+(function(){
+'use strict';
+const CC = window.CC = {};
+
+/* ---------- small utils ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+CC.$ = $; CC.$$ = $$;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+CC.esc = esc;
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+CC.el = el;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+Object.assign(CC,{rnd,ri,pick,shuffle});
+CC.E12=[1,1.2,1.5,1.8,2.2,2.7,3.3,3.9,4.7,5.6,6.8,8.2];
+CC.E6=[1,1.5,2.2,3.3,4.7,6.8];
+/** random value from an E-series between lo and hi (inclusive) */
+CC.eVal=function(lo,hi,series=CC.E12){const out=[];for(let d=-15;d<=9;d++){for(const m of series){const v=+(m*Math.pow(10,d)).toPrecision(3);if(v>=lo*0.999&&v<=hi*1.001)out.push(v);}}return pick(out);};
+/** round to nearest E-series value */
+CC.eNear=function(x,series=CC.E12){const d=Math.floor(Math.log10(x));let best=null,bd=1e99;for(const dd of [d-1,d,d+1])for(const m of series){const v=+(m*Math.pow(10,dd)).toPrecision(3);const e=Math.abs(Math.log(v/x));if(e<bd){bd=e;best=v;}}return best;};
+CC.sig=(x,n=3)=>x===0?0:+x.toPrecision(n);
+/** format number for display: up to `n` significant figures, no exponent, trims zeros */
+CC.fmt=function(x,n=4){
+  if(x===null||x===undefined||isNaN(x))return '—';
+  if(!isFinite(x))return '∞';
+  if(Math.abs(x)<1e-12)return '0';
+  let v=+x.toPrecision(n);
+  let s;
+  const a=Math.abs(v);
+  if(a>=1e15||a<1e-9) s=v.toExponential(n-1);
+  else { const dec=Math.max(0,n-1-Math.floor(Math.log10(a))); s=v.toFixed(Math.min(dec,12)); if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,''); }
+  // thousands separators for readability on integers part
+  const parts=s.split('.'); if(Math.abs(v)>=10000) parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,','); return parts.join('.');
+};
+/** parse a typed number. Accepts "1,234.5", "1.2e3", "−5", and SI suffixes k, M, m, u/µ, n, p if allowSuffix */
+CC.parse=function(str,allowSuffix=true){
+  if(str===null||str===undefined)return NaN;
+  let s=String(str).trim().replace(/[−–]/g,'-').replace(/\s+/g,'');
+  if(!s)return NaN;
+  s=s.replace(/,(?=\d{3}(\D|$))/g,'');
+  s=s.replace(/,/g,'.');
+  let mult=1;
+  if(allowSuffix){const m=s.match(/^(.*?)([kKMmuµnp])$/);if(m&&m[1]!==''&&!isNaN(+m[1])){mult={k:1e3,K:1e3,M:1e6,m:1e-3,u:1e-6,'µ':1e-6,n:1e-9,p:1e-12}[m[2]];s=m[1];}}
+  if(!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(s))return NaN;
+  return parseFloat(s)*mult;
+};
+/** compare typed value with correct value */
+CC.prefixed=u=>/^(m|k|µ|μ|M|n|p|G)./.test(u||'');
+CC.close=function(user,correct,tol=0.02,absTol=null){
+  if(isNaN(user))return false;
+  if(absTol===null) absTol=Math.max(1e-9,Math.abs(correct)*1e-6);
+  if(Math.abs(user-correct)<=absTol)return true;
+  return Math.abs(user-correct)<=Math.abs(correct)*tol;
+};
+CC.fmtTime=function(ms){const s=Math.round(ms/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(ss).padStart(2,'0');};
+CC.deg=r=>r*180/Math.PI;
+CC.rad=d=>d*Math.PI/180;
+
+/* complex numbers */
+const Cx=CC.Cx={
+  c:(re,im=0)=>({re,im}),
+  add:(a,b)=>({re:a.re+b.re,im:a.im+b.im}),
+  sub:(a,b)=>({re:a.re-b.re,im:a.im-b.im}),
+  mul:(a,b)=>({re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re}),
+  div:(a,b)=>{const d=b.re*b.re+b.im*b.im;return {re:(a.re*b.re+a.im*b.im)/d,im:(a.im*b.re-a.re*b.im)/d};},
+  abs:a=>Math.hypot(a.re,a.im),
+  inv:a=>Cx.div({re:1,im:0},a),
+  par:(a,b)=>Cx.div(Cx.mul(a,b),Cx.add(a,b))
+};
+
+/* ---------- storage (best effort) ---------- */
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+CC.store=store;
+
+/* ---------- TeX-subset → MathML ---------- */
+const GREEK={alpha:'α',beta:'β',gamma:'γ',delta:'δ',theta:'θ',pi:'π',omega:'ω',phi:'φ',lambda:'λ',tau:'τ',mu:'μ',rho:'ρ',sigma:'σ',epsilon:'ε',eta:'η',
+  Omega:'Ω',Delta:'Δ',Sigma:'Σ',Phi:'Φ',Theta:'Θ',Lambda:'Λ'};
+const OPS={cdot:'·',times:'×',approx:'≈',pm:'±',to:'→',ne:'≠',le:'≤',ge:'≥',angle:'∠',infty:'∞',deg:'°',div:'÷',parallel:'∥',cdots:'⋯',ldots:'…',
+  overline:null,rightarrow:'→',leftarrow:'←',Rightarrow:'⇒',equiv:'≡',neg:'¬',oplus:'⊕',odot:'⊙',vee:'∨',wedge:'∧',bar:null};
+function texToMathML(src,block){
+  const p={s:src,i:0,up:0};
+  const body=seq(p,null);
+  return '<math'+(block?' display="block"':'')+'><mrow>'+body+'</mrow></math>';
+}
+CC.tex=texToMathML;
+CC.m=s=>texToMathML(s,false);
+CC.M=s=>texToMathML(s,true);
+function seq(p,end){
+  let out='';
+  while(p.i<p.s.length){
+    const c=p.s[p.i];
+    if(end&&c===end){p.i++;return out;}
+    if(c===' '){p.i++;continue;}
+    let base=atom(p); if(base===null)continue;
+    let sub=null,sup=null;
+    for(;;){
+      while(p.s[p.i]===' ')p.i++;
+      const d=p.s[p.i];
+      if(d==='_'){p.i++;p.up++;sub=arg(p);p.up--;}
+      else if(d==='^'){p.i++;sup=arg(p);}
+      else break;
+    }
+    if(sub!==null&&sup!==null)out+='<msubsup>'+base+sub+sup+'</msubsup>';
+    else if(sub!==null)out+='<msub>'+base+sub+'</msub>';
+    else if(sup!==null)out+='<msup>'+base+sup+'</msup>';
+    else out+=base;
+  }
+  return out;
+}
+function arg(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  return atom(p)||'<mrow></mrow>';
+}
+function rawBraced(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]!=='{'){const c=p.s[p.i];p.i++;return c;}
+  let depth=0,start=++p.i;
+  for(;p.i<p.s.length;p.i++){const c=p.s[p.i];if(c==='{')depth++;else if(c==='}'){if(depth===0)break;depth--;}}
+  const t=p.s.slice(start,p.i);p.i++;return t;
+}
+function mi(ch,p){return p.up?'<mi mathvariant="normal">'+esc(ch)+'</mi>':'<mi>'+esc(ch)+'</mi>';}
+function atom(p){
+  const s=p.s;let c=s[p.i];
+  if(c==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  if(c==='\\'){
+    p.i++;
+    let m=s.slice(p.i).match(/^[A-Za-z]+/);
+    if(!m){const ch=s[p.i];p.i++;
+      if(ch===',')return '<mspace width="0.17em"/>';
+      if(ch===';')return '<mspace width="0.28em"/>';
+      if(ch==='!')return '';
+      if(ch==='%')return '<mo>%</mo>';
+      return '<mo>'+esc(ch)+'</mo>';}
+    const name=m[0];p.i+=name.length;
+    switch(name){
+      case 'frac':{const a=arg(p),b=arg(p);return '<mfrac>'+a+b+'</mfrac>';}
+      case 'dfrac':{const a=arg(p),b=arg(p);return '<mstyle displaystyle="true"><mfrac>'+a+b+'</mfrac></mstyle>';}
+      case 'sqrt':{
+        if(s[p.i]==='['){const j=s.indexOf(']',p.i);const n=s.slice(p.i+1,j);p.i=j+1;const a=arg(p);return '<mroot>'+a+'<mrow>'+seq({s:n,i:0,up:0},null)+'</mrow></mroot>';}
+        return '<msqrt>'+arg(p)+'</msqrt>';}
+      case 'text':return '<mtext>'+esc(rawBraced(p))+'</mtext>';
+      case 'mathrm':case 'rm':case 'operatorname':case 'mathrm*':return '<mi mathvariant="normal">'+esc(rawBraced(p))+'</mi>';
+      case 'mathbf':return '<mi mathvariant="bold">'+esc(rawBraced(p))+'</mi>';
+      case 'quad':return '<mspace width="1em"/>';
+      case 'qquad':return '<mspace width="2em"/>';
+      case 'left':case 'right':{const ch=s[p.i];p.i++;if(ch==='.')return '';if(ch==='\\'){const mm=s.slice(p.i).match(/^[A-Za-z]+/);if(mm){p.i+=mm[0].length;return '<mo stretchy="true">'+(mm[0]==='lbrace'?'{':mm[0]==='rbrace'?'}':'|')+'</mo>';}const c2=s[p.i];p.i++;return '<mo stretchy="true">'+esc(c2)+'</mo>';}return '<mo stretchy="true">'+esc(ch)+'</mo>';}
+      case 'overline':case 'bar':{const a=arg(p);return '<mover>'+a+'<mo stretchy="true">¯</mo></mover>';}
+      case 'arctan':case 'tan':case 'sin':case 'cos':case 'log':case 'ln':case 'atan':return '<mi>'+name+'</mi><mo>&#x2061;</mo>';
+    }
+    if(GREEK[name]){const g=GREEK[name];return (name[0]===name[0].toUpperCase())?'<mi mathvariant="normal">'+g+'</mi>':mi(g,p);}
+    if(OPS[name])return '<mo>'+OPS[name]+'</mo>';
+    return '<mi>'+esc(name)+'</mi>';
+  }
+  if(/[0-9.]/.test(c)){const m=s.slice(p.i).match(/^[0-9]*\.?[0-9]+|^[0-9]+\.?/);p.i+=m[0].length;return '<mn>'+m[0]+'</mn>';}
+  if(/[A-Za-z]/.test(c)){p.i++;return mi(c,p);}
+  if(c==='°'||c==='Ω'||c==='µ'||c==='μ'){p.i++;return '<mi mathvariant="normal">'+c+'</mi>';}
+  if(c==='}'){p.i++;return null;}
+  p.i++;
+  const map={'*':'·','-':'−'};
+  const ch=map[c]||c;
+  if(c==='('||c===')'||c==='['||c===']'||c==='|')return '<mo stretchy="false">'+esc(ch)+'</mo>';
+  return '<mo>'+esc(ch)+'</mo>';
+}
+
+/* ---------- SVG schematic primitives ---------- */
+const S=CC.svg={};
+S.stroke='currentColor';
+function vSym(t,x,y,label,o={}){
+  // vertical symbol centred at (x,y), occupying y-30..y+30, leads included
+  let g='';
+  const L=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  switch(t){
+    case 'R':{g+=L(x,y-30,x,y-21);let d=`M${x},${y-21}`;for(let i=0;i<6;i++){d+=` L${x+(i%2?-7:7)},${y-17.5+i*7}`;}d+=` L${x},${y+21}`;g+=`<path d="${d}" fill="none"/>`+L(x,y+21,x,y+30);break;}
+    case 'C':g+=L(x,y-30,x,y-4)+L(x-13,y-4,x+13,y-4)+L(x-13,y+4,x+13,y+4)+L(x,y+4,x,y+30);break;
+    case 'L':{g+=L(x,y-30,x,y-20);let d=`M${x},${y-20}`;for(let i=0;i<4;i++){d+=` a5,5 0 0 1 0,10`;}g+=`<path d="${d}" fill="none"/>`+L(x,y+20,x,y+30);if(o.core)g+=L(x+10,y-20,x+10,y+20)+L(x+13,y-20,x+13,y+20);break;}
+    case 'F':g+=L(x,y-30,x,y-14)+`<rect x="${x-6}" y="${y-14}" width="12" height="28" rx="2" fill="none"/>`+L(x,y-14,x,y+14)+L(x,y+14,x,y+30);break;
+    case 'W':g+=L(x,y-30,x,y+30);break;
+    case 'lamp':g+=L(x,y-30,x,y-13)+`<circle cx="${x}" cy="${y}" r="13" fill="none"/>`+L(x-9,y-9,x+9,y+9)+L(x+9,y-9,x-9,y+9)+L(x,y+13,x,y+30);break;
+    case 'ac':g+=L(x,y-30,x,y-17)+`<circle cx="${x}" cy="${y}" r="17" fill="none"/><path d="M${x-10},${y} q5,-11 10,0 t10,0" fill="none"/>`+L(x,y+17,x,y+30);break;
+    case 'dc':g+=L(x,y-30,x,y-6)+L(x-15,y-6,x+15,y-6)+`<line x1="${x-8}" y1="${y+3}" x2="${x+8}" y2="${y+3}" stroke-width="4"/>`+L(x-15,y+12,x+15,y+12)+`<line x1="${x-8}" y1="${y+21}" x2="${x+8}" y2="${y+21}" stroke-width="4"/>`+L(x,y+21,x,y+30)+`<text x="${x+18}" y="${y-8}" font-size="12" stroke="none" fill="currentColor">+</text>`;break;
+    case 'D':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+L(x-10,y+8,x+10,y+8)+L(x,y+8,x,y+30);break;
+    case 'Dz':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+`<path d="M${x-13},${y+12} L${x-10},${y+8} L${x+10},${y+8} L${x+13},${y+4}" fill="none"/>`+L(x,y+8,x,y+30);break;
+    case 'SW':g+=L(x,y-30,x,y-12)+`<circle cx="${x}" cy="${y-12}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+12}" r="2.5" fill="currentColor"/>`+(o.closed?L(x,y-12,x,y+12):L(x,y+12,x-12,y-8))+L(x,y+12,x,y+30);break;
+    case 'open':g+=L(x,y-30,x,y-8)+L(x,y+8,x,y+30)+`<circle cx="${x}" cy="${y-8}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+8}" r="2.5" fill="currentColor"/>`;break;
+  }
+  let lab='';
+  if(label){const side=o.side||'right';const off=(t==='ac'||t==='dc')?24:16;const lx=side==='right'?x+off:x-off;const anchor=side==='right'?'start':'end';
+    const lines=String(label).split('\n');
+    lab=lines.map((ln,i)=>`<text x="${lx}" y="${y+5+(i-(lines.length-1)/2)*15}" text-anchor="${anchor}" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g>${g}</g>${lab}`;
+}
+S.vSym=vSym;
+function hSym(t,x,y,label,o={}){
+  // horizontal: rotate a vertical symbol
+  const inner=vSym(t,0,0,null,o);
+  let lab='';if(label){const lines=String(label).split('\n');lab=lines.map((ln,i)=>`<text x="${x}" y="${y-(o.below?-30-i*15:22+(lines.length-1-i)*15)}" text-anchor="middle" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g transform="translate(${x},${y}) rotate(-90)">${inner}</g>${lab}`;
+}
+S.hSym=hSym;
+S.wrap=(w,h,inner,cls='')=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="${cls}" role="img" aria-label="circuit schematic" style="color:var(--ink)"><g stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</g></svg>`;
+S.dot=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.5" fill="currentColor" stroke="none"/>`;
+S.line=(pts)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none"/>`;
+/** source on left; components stacked vertically on the right side (series loop) */
+S.series=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length;
+  const step=74, top=24, h=top*2+Math.max(n*step,120), xs=46, xr=o.wide?220:190, w=xr+(o.labelW||110);
+  let g=S.line([[xs,top],[xr,top]])+S.line([[xs,h-top],[xr,h-top]]);
+  const my=h/2;g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  const span=(h-2*top), seg=span/n;
+  comps.forEach((c,i)=>{const cy=top+seg*(i+.5);g+=S.line([[xr,top+seg*i],[xr,cy-30]])+vSym(c.t,xr,cy,c.label,c)+S.line([[xr,cy+30],[xr,top+seg*(i+1)]]);});
+  return S.wrap(w,h,g);
+};
+/** source on left, parallel branches to the right */
+S.parallel=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length, top=24, h=o.h||170, xs=46, gap=o.gap||92, x0=xs+(o.first||96);
+  const w=x0+gap*(n-1)+(o.labelW||70);
+  const my=h/2;
+  let g=S.line([[xs,top],[x0+gap*(n-1),top]])+S.line([[xs,h-top],[x0+gap*(n-1),h-top]]);
+  g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  comps.forEach((c,i)=>{const x=x0+gap*i;g+=S.line([[x,top],[x,my-30]])+vSym(c.t,x,my,c.label,Object.assign({side:'right'},c))+S.line([[x,my+30],[x,h-top]]);if(i<n-1){g+=S.dot(x,top)+S.dot(x,h-top);}});
+  return S.wrap(w,h,g);
+};
+/** phasor diagram. vecs:[{x,y,label,color,dash}] in arbitrary units; origin auto-placed */
+S.phasor=function(vecs,o={}){
+  const W=o.w||280,H=o.h||220,pad=34;
+  let maxX=0,minX=0,maxY=0,minY=0;
+  vecs.forEach(v=>{maxX=Math.max(maxX,v.x,v.x0||0);minX=Math.min(minX,v.x,v.x0||0);maxY=Math.max(maxY,v.y,v.y0||0);minY=Math.min(minY,v.y,v.y0||0);});
+  const sx=(W-2*pad)/Math.max(1e-9,maxX-minX||1), sy=(H-2*pad)/Math.max(1e-9,maxY-minY||1); const k=Math.min(sx,sy);
+  const ox=pad-minX*k+((W-2*pad)-(maxX-minX)*k)/2, oy=pad+maxY*k+((H-2*pad)-(maxY-minY)*k)/2;
+  let g=`<line x1="${pad/2}" y1="${oy}" x2="${W-pad/2}" y2="${oy}" stroke="var(--ink2)" stroke-width="1"/><line x1="${ox}" y1="${pad/2}" x2="${ox}" y2="${H-pad/2}" stroke="var(--ink2)" stroke-width="1"/>`;
+  vecs.forEach((v,i)=>{const x0=ox+(v.x0||0)*k,y0=oy-(v.y0||0)*k,x1=ox+v.x*k,y1=oy-v.y*k;const col=v.color||'var(--accent)';
+    const ang=Math.atan2(y1-y0,x1-x0),len=Math.hypot(x1-x0,y1-y0);
+    g+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="${v.w||2.5}" ${v.dash?'stroke-dasharray="4 4"':''}/>`;
+    if(len>8&&!v.noArrow)g+=`<path d="M${x1},${y1} L${x1-9*Math.cos(ang-0.4)},${y1-9*Math.sin(ang-0.4)} L${x1-9*Math.cos(ang+0.4)},${y1-9*Math.sin(ang+0.4)} Z" fill="${col}" stroke="none"/>`;
+    if(v.label){const lx=(v.lx!==undefined?ox+v.lx*k:(x0+x1)/2)+(v.ldx||0),ly=(v.ly!==undefined?oy-v.ly*k:(y0+y1)/2)+(v.ldy||0);g+=`<text x="${lx}" y="${ly}" font-size="13" font-weight="700" fill="${col}" stroke="none" text-anchor="middle">${esc(v.label)}</text>`;}
+  });
+  if(o.theta!==undefined&&Math.abs(o.theta)>0.5){const r=30,a=CC.rad(o.theta);const x1=ox+r,y1=oy,x2=ox+r*Math.cos(a),y2=oy-r*Math.sin(a);g+=`<path d="M${x1},${y1} A${r},${r} 0 0 ${o.theta>0?0:1} ${x2},${y2}" stroke="var(--brand)" fill="none" stroke-width="1.5"/><text x="${ox+r+12}" y="${oy-(o.theta>0?6:-16)}" font-size="13" fill="var(--brand)" stroke="none">θ</text>`;}
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="vector diagram">${g}</svg>`;
+};
+
+/* ---------- icons ---------- */
+const IC={
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>',
+  wave:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="16" cy="16" r="12"/><path d="M8 16q4-9 8 0t8 0"/></svg>',
+  res:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M2 16h6l2-6 4 12 4-12 4 12 2-6h6"/></svg>',
+  cap:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M2 16h11M19 16h11M13 7v18M19 7v18"/></svg>',
+  ind:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 18h4a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0h3"/></svg>',
+  xfmr:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6M23 5a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6M15 4v24M17 4v24"/></svg>',
+  meter:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="24" height="24" rx="3"/><path d="M9 20a8 8 0 0 1 14 0M16 20l4-7"/></svg>',
+  wrench:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M20 4a7 7 0 0 0-6 9L4 23l5 5 10-10a7 7 0 0 0 9-6l-4 2-4-1-1-4z"/></svg>',
+  res2:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 26C10 26 12 6 16 6s6 20 12 20"/><path d="M2 26h28"/></svg>',
+  chip:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="6" width="16" height="20" rx="2"/><path d="M4 10h4M4 16h4M4 22h4M24 10h4M24 16h4M24 22h4"/></svg>',
+  gate:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h8a9 9 0 0 1 0 18H8z M2 12h6M2 20h6M25 16h5"/></svg>',
+  num:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><text x="3" y="22" font-size="13" fill="currentColor" stroke="none" font-family="monospace">101</text></svg>',
+  amp:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M8 5v22l18-11z M2 11h6M2 21h6M26 16h4"/><text x="9.5" y="14" font-size="7" fill="currentColor" stroke="none">−</text><text x="9.5" y="23" font-size="7" fill="currentColor" stroke="none">+</text></svg>',
+  diode:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16h8M22 16h8M10 8v16l12-8z M22 8v16"/></svg>',
+  trans:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="17" cy="16" r="11"/><path d="M4 16h8M12 9v14M12 13l9-6M12 19l9 6M21 7v-4M21 25v4"/></svg>',
+  bulb:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20a8 8 0 1 1 10 0v4H11z M12 28h8"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z M20 4h-4a2 2 0 0 0-2 2"/></svg>',
+  plug:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 3v7M21 3v7M8 10h16v5a8 8 0 0 1-16 0zM16 23v6"/></svg>',
+  wire:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 24c6 0 6-16 13-16s7 16 13 16"/><circle cx="3" cy="24" r="2" fill="currentColor"/><circle cx="29" cy="24" r="2" fill="currentColor"/></svg>',
+  ohm:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">Ω</text></svg>',
+  volt:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">V</text></svg>',
+  power:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M18 3L7 18h8l-2 11 11-15h-8z"/></svg>',
+  clock:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="9" width="22" height="14" rx="2"/><path d="M9 19v-6h3v6h3v-6h3v6h3v-6"/></svg>',
+  ff:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="5" width="16" height="22" rx="1"/><text x="11" y="14" font-size="7" fill="currentColor" stroke="none">J</text><text x="11" y="25" font-size="7" fill="currentColor" stroke="none">K</text><text x="19" y="14" font-size="7" fill="currentColor" stroke="none">Q</text><path d="M8 17l3 2-3 2"/></svg>',
+  bread:'<svg viewBox="0 0 32 32" fill="currentColor"><rect x="3" y="6" width="26" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>'+[9,13,19,23].map(y=>[7,11,15,19,23].map(x=>`<circle cx="${x+1}" cy="${y}" r="1.3"/>`).join('')).join('')+'</svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg>',
+};
+CC.icons=IC;
+
+/* ---------- modal / toast ---------- */
+CC.modal=function(html,buttons=[{label:'Close',primary:true}],opts={}){
+  return new Promise(res=>{
+    const sc=el(`<div class="scrim" role="dialog" aria-modal="true"><div class="modal">${html}<div class="row end mt modal-btns"></div></div></div>`);
+    const bb=$('.modal-btns',sc);
+    const close=v=>{sc.remove();document.removeEventListener('keydown',onKey);res(v);};
+    buttons.forEach((b,i)=>{const x=el(`<button class="btn ${b.primary?'primary':''} ${b.cls||''}">${b.label}</button>`);x.onclick=()=>{if(b.onClick&&b.onClick(sc)===false)return;close(b.value!==undefined?b.value:i);};bb.appendChild(x);});
+    const onKey=e=>{if(e.key==='Escape'&&!opts.noEscape)close(-1);};
+    document.addEventListener('keydown',onKey);
+    sc.addEventListener('click',e=>{if(e.target===sc&&!opts.noEscape)close(-1);});
+    document.body.appendChild(sc);
+    const f=$('input',sc)||$('.btn.primary',sc);if(f)setTimeout(()=>f.focus(),30);
+    if(opts.onOpen)opts.onOpen(sc);
+  });
+};
+CC.confirm=(msg,yes='Yes',no='Cancel')=>CC.modal(`<p>${msg}</p>`,[{label:no,value:false},{label:yes,primary:true,value:true}]).then(v=>v===true);
+CC.toast=function(msg,ms=2200){const t=el(`<div class="toast" role="status">${msg}</div>`);document.body.appendChild(t);setTimeout(()=>t.remove(),ms);};
+
+/* ---------- validity code ---------- */
+function hashStr(s){let h1=0x811c9dc5,h2=0x1b873593;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822507);h2^=h2>>>13;}return [h1>>>0,h2>>>0];}
+CC.validity=function(prog,name,id,title,score,time,date){
+  const norm=[prog,name.trim().toUpperCase(),String(id).trim(),title.trim().toUpperCase(),String(score).trim(),String(time).trim(),String(date).trim()].join('|');
+  const [a,b]=hashStr(norm);const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let out='';let x=a,y=b;
+  for(let i=0;i<10;i++){const v=(i<5?x:y);out+=A[v%A.length];if(i<5)x=Math.floor(x/A.length);else y=Math.floor(y/A.length);}
+  return out.slice(0,5)+'-'+out.slice(5);
+};
+
+/* ---------- App shell ---------- */
+const App=CC.App={mods:{},order:[],cfg:null,last:null,running:null};
+App.key=k=>'cc:'+App.cfg.id+':'+k;
+App.student=()=>store.get('cc:student',null);
+App.opts=()=>Object.assign({certs:true,theme:'auto'},store.get('cc:opts',{}));
+App.applyTheme=function(){const t=App.opts().theme;if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);};
+App.init=function(cfg){
+  App.cfg=cfg;
+  cfg.groups.forEach(g=>g.items.forEach(m=>{App.mods[m.id]=m;m.group=g.title;App.order.push(m.id);}));
+  document.title=cfg.title;
+  App.applyTheme();
+  document.body.innerHTML=`<header class="topbar noprint"><div class="in">
+    <a class="brand" href="#/" aria-label="Home">${esc(cfg.title)}<small>${esc(cfg.tagline||'Interactive exercises')}</small></a>
+    <span class="sp"></span>
+    <button class="chip" id="who" title="Student name and ID">${IC.user.replace('<svg','<svg width="16" height="16"')}<span></span></button>
+    <a class="iconbtn" href="#/" title="Main menu" aria-label="Main menu">${IC.home}</a>
+  </div></header><main id="view"></main>`;
+  $('#who').onclick=()=>App.askStudent(true);
+  App.refreshWho();
+  window.addEventListener('hashchange',App.route);
+  App.route();
+};
+App.refreshWho=function(){const s=App.student();$('#who span').textContent=s?s.name:'Sign in';};
+App.askStudent=function(force){
+  return new Promise(res=>{
+    const cur=App.student();
+    if(cur&&!force)return res(cur);
+    CC.modal(`<h3>Student information</h3><p class="small muted">Your name and ID appear on certificates and in the grade file stored on this device.</p>
+      <div class="field"><label for="sn">Name</label><input id="sn" autocomplete="name" value="${cur?esc(cur.name):''}"></div>
+      <div class="field"><label for="sid">ID code (2–9 digits)</label><input id="sid" inputmode="numeric" value="${cur?esc(cur.id):''}"></div>
+      <p class="small" id="serr" style="color:var(--bad)"></p>`,
+      [{label:'Practice without signing in',value:'skip'},{label:'Save',primary:true,value:'ok',onClick:sc=>{
+        const n=$('#sn',sc).value.trim(),i=$('#sid',sc).value.trim();
+        if(n.length<2){$('#serr',sc).textContent='Name must be at least two characters.';return false;}
+        if(!/^\d{2,9}$/.test(i)){$('#serr',sc).textContent='ID code must have between 2 and 9 digits.';return false;}
+        store.set('cc:student',{name:n,id:i});App.refreshWho();}}]).then(v=>{
+          if(v==='skip'){App.guest=true;}
+          res(App.student());});
+  });
+};
+App.view=()=>$('#view');
+App.route=function(){
+  const h=location.hash.replace(/^#\/?/,'');const [r,a]=h.split('/');
+  if(App.running&&App.running.cleanup){App.running.cleanup();}
+  App.running=null;
+  window.scrollTo(0,0);
+  const v=App.view();v.innerHTML='';
+  if(!r)return App.home(v);
+  if(r==='m'&&App.mods[a])return App.intro(v,App.mods[a]);
+  if(r==='run'&&App.mods[a])return App.run(v,App.mods[a]);
+  if(r==='grades')return App.grades(v);
+  if(r==='validity')return App.validityView(v);
+  if(r==='manual')return App.manual(v);
+  if(r==='options')return App.options(v);
+  if(r==='cert')return App.certificate(v);
+  if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
+  App.home(v);
+};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.home=function(v){
+  const c=App.cfg;
+  v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
+    <div class="utils noprint"><a class="btn sm" href="#/manual">${IC.book.replace('<svg','<svg width="18" height="18"')} Manual</a><a class="btn sm" href="#/grades">Grade file</a><a class="btn sm" href="#/validity">Check validity</a><a class="btn sm" href="#/options">Options</a></div></div>
+    <div id="heroSlot"></div></section>`));
+  if(c.hero)c.hero($('#heroSlot',v));
+  c.groups.forEach(g=>{
+    v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
+    const m=el('<div class="menu"></div>');
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    v.appendChild(m);
+  });
+  v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
+};
+App.intro=function(v,m){
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px"><a class="btn sm ghost" href="#/">← Main menu</a></div><h1>${esc(m.title)}</h1><div class="card" id="introBody"></div>
+    <div class="row end mt"><a class="btn" href="#/">Quit</a><button class="btn primary" id="begin">Begin</button></div></div>`);
+  v.appendChild(wrap);
+  const body=$('#introBody',wrap);
+  if(typeof m.intro==='function')m.intro(body);else body.innerHTML=m.intro||'';
+  $('#begin',wrap).onclick=async()=>{
+    if(m.graded!==false&&!App.student()&&!App.guest)await App.askStudent(false);
+    location.hash='#/run/'+m.id;
+  };
+};
+App.run=function(v,m){
+  const s=new Session(m);
+  App.running=s;
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px;justify-content:space-between"><button class="btn sm ghost" id="quitx">← Quit</button><span class="small muted">${esc(m.title)}</span></div><div id="ex"></div></div>`);
+  v.appendChild(wrap);
+  $('#quitx',wrap).onclick=async()=>{if(s.done||await CC.confirm('Quit this exercise without grading?','Quit'))location.hash='#/';};
+  m.run($('#ex',wrap),s);
+};
+class Session{
+  constructor(m){this.m=m;this.t0=Date.now();this.done=false;this.timers=[];}
+  elapsed(){return Date.now()-this.t0;}
+  every(fn,ms){const t=setInterval(fn,ms);this.timers.push(t);return t;}
+  cleanup(){this.timers.forEach(clearInterval);}
+  restart(){location.hash='#/run/'+this.m.id;App.route();}
+  finish(score,summary){
+    if(this.done)return;this.done=true;this.cleanup();
+    score=Math.max(0,Math.min(100,Math.round(score)));
+    const st=App.student();
+    const time=CC.fmtTime(this.elapsed());
+    const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const rec={mid:this.m.id,title:this.m.title,score,time,date,name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
+    App.last=rec;
+    const pass=App.cfg.pass||80;
+    const certOk=App.opts().certs&&rec.id;
+    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${score>=pass?'ok':'bad'}">Score: ${score}%</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
+      [{label:'Main menu',value:'menu'},{label:'Review',value:'review'},...(certOk?[{label:'Certificate',value:'cert'}]:[]),{label:'Try again',primary:true,value:'again'}],{noEscape:false}).then(v=>{
+        if(v==='menu')location.hash='#/';
+        else if(v==='cert')location.hash='#/cert';
+        else if(v==='again')this.restart();
+      });
+  }
+}
+CC.Session=Session;
+
+App.certificate=function(v){
+  const r=App.last;
+  if(!r){v.appendChild(el('<div class="card"><p>No exercise has been completed in this session yet.</p><a class="btn" href="#/">Main menu</a></div>'));return;}
+  const code=CC.validity(App.cfg.id,r.name,r.id,r.title,r.score,r.time,r.date);
+  v.appendChild(el(`<div><div class="cert"><div style="font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:#7a5b10">Certificate of Completion</div>
+  <h2>${esc(App.cfg.title)}</h2><p>This certifies that</p><div class="big">${esc(r.name)}</div><p>has completed the exercise</p><div class="big" style="font-size:1.3rem">${esc(r.title)}</div>
+  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${r.score}%</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
+  <div class="row end mt noprint"><a class="btn" href="#/">Main menu</a><button class="btn primary" onclick="window.print()">Print certificate</button></div></div>`));
+};
+App.validityView=function(v){
+  const titles=App.order.map(id=>App.mods[id].title);
+  v.appendChild(el(`<div><h1>Check certificate validity</h1><div class="card"><p class="small muted">Type the information exactly as it appears on the certificate. A matching validity code means the certificate was very likely produced by this program and has not been altered.</p>
+  <div class="fields">
+   <div class="field"><label>Student name</label><input id="vn"></div>
+   <div class="field"><label>Student ID</label><input id="vi" inputmode="numeric"></div>
+   <div class="field"><label>Topic title</label><select id="vt" style="border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px">${titles.map(t=>`<option>${esc(t)}</option>`).join('')}</select></div>
+   <div class="field"><label>Exercise score (number only)</label><input id="vs" inputmode="numeric"></div>
+   <div class="field"><label>Time on task</label><input id="vtm" placeholder="e.g. 12:34"></div>
+   <div class="field"><label>Date / time</label><input id="vd"></div>
+   <div class="field"><label>Validity code</label><input id="vc" style="font-family:var(--mono)"></div>
+  </div><div class="row end"><button class="btn primary" id="vgo">Evaluate validity</button></div><p id="vres" class="verdict"></p></div></div>`));
+  $('#vgo',v).onclick=()=>{const code=CC.validity(App.cfg.id,$('#vn',v).value,$('#vi',v).value,$('#vt',v).value,$('#vs',v).value.replace('%',''),$('#vtm',v).value,$('#vd',v).value);
+    const ok=code.replace('-','')===$('#vc',v).value.trim().toUpperCase().replace(/[^A-Z]/g,'');const r=$('#vres',v);r.className='verdict '+(ok?'ok':'bad');r.textContent=ok?'Valid code — the data matches.':'Not valid — check each entry carefully, including capitalization of the date.';};
+};
+App.grades=function(v){
+  const g=store.get(App.key('grades'),[]);
+  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
+  v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored only in this browser on this device.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
+  <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
+  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
+  $('#gclr',v).onclick=async()=>{if(await CC.confirm('Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
+};
+App.manual=function(v){
+  v.appendChild(el(`<div><h1>Manual</h1><div class="card intro-text">${App.cfg.manual||''}
+  <h2>Using this offline edition</h2>
+  <p>This page is a self-contained web version of the original Windows program. It needs no internet connection and runs in any modern browser on phones, tablets, Chromebooks, Macs and PCs. Copy the file to any device and open it.</p>
+  ${App.cfg.numericAnswers===false?'':`<p>${App.cfg.tolNote||'Numeric answers are accepted within the tolerance stated on each exercise\'s intro page, so normal rounding is fine.'} Type plain numbers in the unit shown next to each answer box (for example <span class="kbd">4.7</span> in a box marked mA). In a box with a plain unit such as V, Ω or A you may also use an engineering suffix such as <span class="kbd">4.7k</span> or <span class="kbd">22m</span>.</p>`}
+  <p>Your name, ID and grade file are stored in this browser only. Use <b>Grade file</b> on the main menu to print or download them.</p></div></div>`));
+};
+App.options=function(v){
+  const o=App.opts();
+  v.appendChild(el(`<div><h1>Options</h1><div class="card">
+   <label class="row"><input type="checkbox" id="oc" ${o.certs?'checked':''}> Certificate printing enabled</label>
+   <div class="field mt"><label>Appearance</label><div class="row"><label class="row"><input type="radio" name="th" value="auto" ${o.theme==='auto'?'checked':''}> Match device</label><label class="row"><input type="radio" name="th" value="light" ${o.theme==='light'?'checked':''}> Light</label><label class="row"><input type="radio" name="th" value="dark" ${o.theme==='dark'?'checked':''}> Dark</label></div></div>
+   <div class="row mt"><button class="btn" id="ostu">Change student name / ID</button><button class="btn" id="oout">Sign out</button></div></div></div>`));
+  const save=()=>{const n={certs:$('#oc',v).checked,theme:($('input[name=th]:checked',v)||{}).value||'auto'};store.set('cc:opts',n);App.applyTheme();};
+  $$('input',v).forEach(i=>i.onchange=save);
+  $('#ostu',v).onclick=()=>App.askStudent(true);
+  $('#oout',v).onclick=()=>{store.del('cc:student');App.guest=false;App.refreshWho();CC.toast('Signed out');};
+};
+
+/* ---------- exercise kit: helpers for intro pages ---------- */
+CC.introPage=function({text,formulas,diagram,extra,how}){
+  let h='';
+  if(diagram)h+=`<div class="diagram" style="margin-bottom:12px">${diagram}</div>`;
+  if(text)h+=`<div class="intro-text">${text}</div>`;
+  if(formulas&&formulas.length){h+=`<h3>Key relationships</h3><div class="formulas">${formulas.map(f=>`<div class="formula">${f.cap?`<span class="cap">${f.cap}</span>`:''}${CC.M(f.tex||f)}${f.where?`<div class="where">${f.where}</div>`:''}</div>`).join('')}</div>`;}
+  if(extra)h+=extra;
+  if(how)h+=`<h3>How this exercise works</h3><div class="small intro-text">${how}</div>`;
+  return h;
+};
+
+/* worked solution renderer: steps are TeX strings (math) or strings starting with '>' (prose) */
+CC.workHTML=function(steps,label='Show worked solution'){
+  if(!steps||!steps.length)return '';
+  const body=steps.map(t=>typeof t==='string'&&t.startsWith('>')?`<p class="small">${t.slice(1)}</p>`:CC.M(t)).join('');
+  return `<details class="work"><summary>${label}</summary>${body}</details>`;
+};
+/* ---------- Worksheet: one circuit, many answers, Check (-2) Help (-3) Grade ---------- */
+CC.worksheet=function(root,s,spec){
+  CC._last=spec;
+  const checkCost=spec.checkCost??2, helpCost=spec.helpCost??3, N=spec.items.length;
+  let pen=0;const helped=new Set();
+  const w=el(`<div>
+    <div class="statusbar"><span class="pill" id="wpen">Deductions: 0</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
+    <div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title||'Circuit')}</h2><div class="diagram">${spec.diagram||''}</div><div class="givens">${spec.givens.map(g=>`<div class="given"><div class="k">${g.k}</div><div class="v">${g.v}</div></div>`).join('')}</div>${spec.note?`<p class="small muted">${spec.note}</p>`:''}</div><div id="wextra"></div></div>
+    <div><div class="card"><h2 style="margin-top:0">Find</h2><div class="ws" id="ws"></div>
+    <div class="row end mt"><button class="btn primary" id="wgrade">Grade</button></div></div></div></div></div>`);
+  root.appendChild(w);
+  const wsEl=$('#ws',w);
+  const upd=()=>{$('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  s.every(()=>{$('#wtime',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const ok=(it,val)=>{if(it.signFree)return CC.close(Math.abs(val),Math.abs(it.value),it.tol??spec.tol??0.02,it.absTol??null);return CC.close(val,it.value,it.tol??spec.tol??0.02,it.absTol??null);};
+  spec.items.forEach((it,i)=>{
+    const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
+      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points." aria-label="Help">?</button></div><div class="fb"></div></div>`);
+    it._row=r;const inp=$('input',r);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
+    $('[data-a=c]',r).onclick=()=>{
+      const val=CC.parse(inp.value,!CC.prefixed(it.unit));
+      if(isNaN(val)){CC.toast('Type a number first.');return;}
+      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';}
+      else{pen+=checkCost;r.className='wrow bad';$('.fb',r).textContent=`Not right — ${checkCost} points deducted.`;upd();}
+    };
+    $('[data-a=h]',r).onclick=async()=>{
+      const first=!helped.has(i);
+      if(first){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. It costs ${helpCost} points, charged once per item.</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
+        if(go!==true)return;helped.add(i);pen+=helpCost;upd();}
+      CC.modal(`<h3>${CC.m(it.sym)}${it.name?` — ${esc(it.name)}`:''}</h3>${(it.help||[]).map(h=>typeof h==='string'&&h.startsWith('$')?CC.M(h.slice(1)):`<p>${h}</p>`).join('')}`);
+    };
+    wsEl.appendChild(r);
+  });
+  $('#wgrade',w).onclick=async()=>{
+    const blanks=spec.items.filter(it=>!$('input',it._row).value.trim()).length;
+    if(blanks&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
+    let right=0;
+    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good)right++;inp.disabled=true;
+      it._row.className='wrow '+(good?'ok':'bad');$('.fb',it._row).innerHTML=(good?'Right! ':'')+`Correct answer: <b>${CC.fmt(it.value)} ${esc(it.unit||'')}</b>`+CC.workHTML(typeof it.work==='function'?it.work():it.work);$$('button',it._row).forEach(b=>b.disabled=true);});
+    $('#wgrade',w).disabled=true;
+    const raw=right/N*100;const score=raw-pen;
+    if(spec.after)spec.after($('#wextra',w));
+    s.finish(score,`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
+    const again=el('<div class="row end mt noprint"><button class="btn primary">New problem</button></div>');$('button',again).onclick=()=>s.restart();$('#wgrade',w).parentNode.after(again);
+  };
+};
+
+/* ---------- Problem set: N problems one at a time, each graded immediately ---------- */
+CC.problemSet=function(root,s,spec){
+  const N=spec.count;let i=0,right=0,total=0;const log=[];
+  const probs=spec.list?spec.list():Array.from({length:N},(_,k)=>spec.gen(k));
+  CC._last=probs;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="pn"></span><span class="pill" id="ps">Correct: 0</span><span class="pill" id="pt">0:00</span></div><div class="progress"><i id="pb" style="width:0"></i></div><div id="pbody" class="mt"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#pt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const show=()=>{
+    const p=probs[i];
+    $('#pn',w).textContent=`Problem ${i+1} of ${probs.length}`;$('#pb',w).style.width=(i/probs.length*100)+'%';
+    const body=$('#pbody',w);body.innerHTML='';
+    const card=el(`<div class="card"><div class="cols2"><div>${p.title?`<h2 style="margin-top:0">${p.title}</h2>`:''}${p.prompt?`<div>${p.prompt}</div>`:''}${p.diagram?`<div class="diagram mt">${p.diagram}</div>`:''}</div>
+      <div><div class="fields" id="pf"></div><div id="pfb"></div><div class="row end mt"><button class="btn primary" id="pg">${spec.gradeLabel||'Grade answers'}</button></div></div></div></div>`);
+    body.appendChild(card);
+    const pf=$('#pf',card);
+    p.fields.forEach(f=>{
+      let fe;
+      if(f.choices){
+        fe=el(`<div class="field"><label>${f.label}</label><div class="faults">${f.choices.map((c,ci)=>`<label><input type="radio" name="ch_${f.key}" value="${ci}"> <span>${c}</span></label>`).join('')}</div></div>`);
+      } else {
+        fe=el(`<div class="field"><label>${f.label}${f.unit?` <span class="muted">(${esc(f.unit)})</span>`:''}</label><input type="text" inputmode="${f.text?'text':'decimal'}" autocomplete="off" ${f.given?'readonly':''} class="${f.given?'known':'ask'}" value="${f.given?esc(f.show||CC.fmt(f.value)):''}"></div>`);
+        const inp=$('input',fe);inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const all=$$('input:not([readonly])',pf);const k=all.indexOf(inp);if(all[k+1])all[k+1].focus();else $('#pg',card).click();}});
+      }
+      f._el=fe;pf.appendChild(fe);
+    });
+    const firstAsk=$('input:not([readonly])',pf);if(firstAsk&&window.innerWidth>700)firstAsk.focus();
+    $('#pg',card).onclick=()=>{
+      const btn=$('#pg',card);
+      if(btn.dataset.done){i++;if(i>=probs.length)return end();return show();}
+      let pr=0,pt=0;const fbs=[];
+      p.fields.forEach(f=>{if(f.given)return;pt++;let good;
+        if(f.choices){const c=$('input:checked',f._el);good=c&&+c.value===f.answer;$$('.faults label',f._el).forEach((lb,ci)=>{if(ci===f.answer)lb.classList.add('correct');else if(c&&+c.value===ci)lb.classList.add('wrong');});$$('input',f._el).forEach(x=>x.disabled=true);}
+        else{const inp=$('input',f._el);
+          if(f.check)good=f.check(inp.value);
+          else if(f.text)good=inp.value.trim().toUpperCase().replace(/\s+/g,'')===String(f.value).toUpperCase().replace(/\s+/g,'');
+          else{const v=CC.parse(inp.value,f.suffix!==false&&!CC.prefixed(f.unit));good=f.signFree?CC.close(Math.abs(v),Math.abs(f.value),f.tol??spec.tol??0.02,f.absTol??null):CC.close(v,f.value,f.tol??spec.tol??0.02,f.absTol??null);}
+          inp.classList.add(good?'ok':'bad');inp.readOnly=true;
+          if(!good)fbs.push(`${f.label}: correct answer is <b>${f.show||CC.fmt(f.value)}${f.unit?' '+esc(f.unit):''}</b>`);}
+        if(good)pr++;});
+      right+=pr;total+=pt;log.push({i,pr,pt});
+      $('#ps',w).textContent=`Correct: ${right} of ${total}`;
+      const allGood=pr===pt;
+      $('#pfb',card).innerHTML=`<p class="verdict ${allGood?'ok':'bad'}">${allGood?'Correct!':(pr?`${pr} of ${pt} correct`:'Incorrect')}</p>${fbs.length?`<p class="small">${fbs.join('<br>')}</p>`:''}${p.explain?`<div class="formula mt">${p.explain}</div>`:''}${CC.workHTML(typeof p.work==='function'?p.work():p.work)}`;
+      btn.dataset.done='1';btn.textContent=i+1<probs.length?'Next problem':'Finish';btn.focus();
+    };
+  };
+  const end=()=>{$('#pb',w).style.width='100%';const score=total?right/total*100:0;s.finish(score,`${right} of ${total} answers correct.`);
+    const again=el('<div class="card mt center"><p>Exercise finished.</p><div class="row" style="justify-content:center"><a class="btn" href="#/">Main menu</a><button class="btn primary">New problem set</button></div></div>');$('button',again).onclick=()=>s.restart();$('#pbody',w).appendChild(again);};
+  show();
+};
+
+/* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}]}} */
+CC.trouble=function(root,s,spec){
+  const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const next=()=>{
+    const b=spec.build(k);let pts=P;CC._last=b;
+    if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
+    $('#tn',w).textContent=`Problem ${k+1} of ${N}`;
+    const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for this item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};
+    updP();
+    const body=$('#tbody',w);body.innerHTML='';
+    const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button></div></div>
+      <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
+      <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
+      <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
+    body.appendChild(card);
+    $('#info',card).innerHTML=b.info?b.info():'';
+    const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
+    const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
+    $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    const meterHTML=()=>{
+      const ms=(b.meters?b.meters():[]).map(m=>`<div class="meterbox"><span class="ml">${m.label}</span><span class="lcd">${m.text}</span></div>`).join('');
+      let main='----';
+      if(probe.red&&probe.black){main=b.measure(probe.red,probe.black).text;}
+      return `<div class="meterbox"><span class="ml">${spec.meterLabel||'Voltmeter'}</span><span class="lcd">${main}</span></div>`+ms;
+    };
+    const draw=()=>{
+      const pads=b.pads.map(p=>{const r=probe.red===p.id,bl=probe.black===p.id;
+        return `<g class="pad" data-id="${p.id}" tabindex="0" role="button" aria-label="Test point ${esc(p.label||p.id)}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="7" fill="#d8d8d8" stroke="#777" stroke-width="2"/><circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#555"/>${r?`<circle cx="${p.x}" cy="${p.y}" r="11" fill="none" stroke="#d32f2f" stroke-width="4"/><text x="${p.x+12}" y="${p.y-10}" fill="#d32f2f" font-weight="800" font-size="14">+</text>`:''}${bl?`<circle cx="${p.x}" cy="${p.y}" r="${r?15:11}" fill="none" stroke="#111" stroke-width="4"/><text x="${p.x-20}" y="${p.y-10}" fill="#111" font-weight="800" font-size="16">−</text>`:''}<circle class="hit" cx="${p.x}" cy="${p.y}" r="16"/></g>`;}).join('');
+      $('#bw',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
+      $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+      $('#mt',card).innerHTML=meterHTML();
+    };
+    const tap=id=>{
+      if(card.dataset.graded)return;
+      probe[probe.active]=id;
+      setActive(probe.active==='red'?'black':'red');
+      if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
+        const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
+        $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
+      draw();
+    };
+    draw();
+    $('#tg',card).onclick=()=>{
+      const btn=$('#tg',card);
+      if(card.dataset.graded){k++;if(k>=N)return end();return next();}
+      const c=$('input:checked',fl);
+      if(!c){CC.modal('<p>You did not select a fault. Select a fault, then choose Grade item.</p>');return;}
+      card.dataset.graded='1';
+      const good=+c.value===b.answer;const got=good?pts:0;earned+=got;
+      $$('label',fl).forEach((lb,i)=>{if(i===b.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
+      $$('input',fl).forEach(x=>x.disabled=true);
+      $('#ts',w).textContent=`Score: ${earned}`;
+      $('#tfb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Correct!':'Incorrect'}</p><p class="small">${good?`You earned ${got} point${got===1?'':'s'} on this item.`:`The correct answer is highlighted: <b>${esc(b.faults[b.answer])}</b>.`} Your total score so far is ${earned} point${earned===1?'':'s'}.</p>${b.explain?`<p class="small muted">${b.explain()}</p>`:''}${CC.workHTML(typeof b.work==='function'?b.work():b.work,'Show how to find this fault')}`;
+      btn.textContent=k+1<N?'Continue':'Finish';
+    };
+  };
+  const end=()=>{const score=earned/(N*P)*100;s.finish(score,`${earned} of ${N*P} possible points.`);};
+  next();
+};
+
+/* meter helpers */
+CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.008,0.008));};
+CC.lcd=(v,dec=2)=>{if(!isFinite(v))return 'OL';const a=Math.abs(v);if(a<0.005)return (0).toFixed(dec);return v.toFixed(a>=100?1:dec);};
+
+/* ---------- PC-board drawing kit ---------- */
+const B=CC.board={};
+B.svg=(w,h,inner)=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="printed circuit board" font-family="system-ui,sans-serif">${inner}</svg>`;
+B.pcb=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="var(--board)" stroke="var(--board-dark)" stroke-width="3"/>`+[[x+10,y+10],[x+w-10,y+10],[x+10,y+h-10],[x+w-10,y+h-10]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--board-dark)"/>`).join('');
+B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--trace)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>`+(label?`<text x="${lp[0]}" y="${lp[1]}" font-size="11" font-weight="700" fill="#5a3b12" ${lp[2]?`transform="rotate(${lp[2]} ${lp[0]} ${lp[1]})"`:''} text-anchor="middle">${label}</text>`:'');
+B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
+/** component between two pad points (horizontal or vertical) */
+B.part=(type,a,b,label)=>{
+  const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+  let body='';const bl=Math.min(L-26,64);
+  const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
+  if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
+  if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
+  if(type==='F')body=`<rect x="${-bl/2}" y="-7" width="${bl}" height="14" rx="3" fill="#e9f3f7" stroke="#8aa"/><rect x="${-bl/2}" y="-7" width="8" height="14" fill="#bbb"/><rect x="${bl/2-8}" y="-7" width="8" height="14" fill="#bbb"/><line x1="${-bl/2+8}" y1="0" x2="${bl/2-8}" y2="0" stroke="#777" stroke-width="1"/>`;
+  if(type==='D')body=`<rect x="${-bl/2}" y="-6" width="${bl}" height="12" rx="3" fill="#222"/><rect x="${bl/2-9}" y="-6" width="4" height="12" fill="#ddd"/>`;
+  const flip=Math.abs(ang)>90;
+  const lab=label?`<text x="${cx+(Math.abs(ang)===90?14:0)}" y="${cy+(Math.abs(ang)===90?4:22)}" font-size="12" font-weight="700" fill="#2b1a05" text-anchor="${Math.abs(ang)===90?'start':'middle'}">${esc(label)}</text>`:'';
+  return `<g transform="translate(${cx},${cy}) rotate(${flip?ang-180:ang})">${lead}${body}</g>${lab}`;
+};
+B.xfmr=(x,y,w,h,label)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#2a8c8c" stroke="#145"/><rect x="${x+w*.25}" y="${y-6}" width="${w*.5}" height="${h+12}" rx="3" fill="#cfd8dc" stroke="#78909c"/><text x="${x+w/2}" y="${y+h/2+4}" font-size="11" font-weight="800" text-anchor="middle" fill="#455a64" transform="rotate(-90 ${x+w/2} ${y+h/2})">ACME</text>${label?B.label(x+w/2,y+h+24,label):''}`;
+B.supply=(x,y,w,h,title,readout)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#4a3b33" stroke="#2a201b" stroke-width="2"/><rect x="${x+8}" y="${y+8}" width="${w-16}" height="${h-16}" rx="5" fill="#e9e4dc"/><text x="${x+w/2}" y="${y+26}" font-size="11" font-weight="800" text-anchor="middle" fill="#b3261e">${esc(title)}</text>${readout?`<text x="${x+w/2}" y="${y+46}" font-size="13" font-weight="700" text-anchor="middle" fill="#333">${esc(readout)}</text>`:''}`;
+
+})();
+</script>
+<script>/* Shared helpers for the DC and Basic Circuits challenges (copied into both folders). */
+(function(){
+'use strict';
+if(window.DCK)return;
+const K=window.DCK={};
+{const st=document.createElement('style');st.textContent='.faults label span{overflow-wrap:anywhere;min-width:0}';document.head.appendChild(st);}
+const {fmt,esc,svg:S,el,$,$$}=CC;
+
+/* ---------- linear DC nodal solver (modified nodal analysis) ----------
+   nodes: 0 is ground. elems:[{a,b,R}] (R=Infinity -> skipped). srcs:[{p,n,V,Ri}] */
+K.solve=function(nNodes,elems,srcs){
+  const N=nNodes-1,M=srcs.length,D=N+M;
+  const A=Array.from({length:D},()=>new Float64Array(D+1));
+  const g=(i,j,v)=>{if(i>0&&j>0)A[i-1][j-1]+=v;};
+  for(let i=1;i<nNodes;i++)A[i-1][i-1]+=1e-9;            // tiny leak keeps floating nodes defined
+  elems.forEach(e=>{if(!isFinite(e.R))return;const G=1/Math.max(e.R,1e-6);g(e.a,e.a,G);g(e.b,e.b,G);g(e.a,e.b,-G);g(e.b,e.a,-G);});
+  srcs.forEach((s,k)=>{const r=N+k;if(s.p>0){A[s.p-1][r]+=1;A[r][s.p-1]+=1;}if(s.n>0){A[s.n-1][r]-=1;A[r][s.n-1]-=1;}A[r][r]-=(s.Ri||0);A[r][D]=s.V;});
+  for(let c=0;c<D;c++){let p=c;for(let r=c+1;r<D;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];const d=A[c][c]||1e-30;
+    for(let r=0;r<D;r++){if(r===c)continue;const f=A[r][c]/d;if(f)for(let k=c;k<=D;k++)A[r][k]-=f*A[c][k];}}
+  const x=Array.from({length:D},(_,i)=>A[i][D]/(A[i][i]||1e-30));
+  const v=[0,...x.slice(0,N)];const I=x.slice(N);   // I = current flowing from + terminal into the node network is -I
+  return {v,I:I.map(i=>-i)};
+};
+/** solve with a current limited supply: if current exceeds lim the supply folds back */
+K.solveLimited=function(nNodes,elems,src,lim){
+  let r=K.solve(nNodes,elems,[src]);let I=r.I[0];
+  if(Math.abs(I)>lim){const k=lim/Math.abs(I);r.v=r.v.map(x=>x*k);I=I*k;}
+  return {v:r.v,I};
+};
+
+/* ---------- formatting ---------- */
+K.fR=r=>r>=1e6?fmt(r/1e6)+' MΩ':r>=1000?fmt(r/1000)+' kΩ':fmt(r)+' Ω';
+K.fV=v=>fmt(v)+' V';
+
+/* ---------- schematics ---------- */
+const V=S.vSym,Hs=S.hSym,L=S.line,dot=S.dot;
+/** battery (vertical) with optional reversed polarity */
+K.bat=(x,y,label,flip,side='left')=>{
+  const g=flip?`<g transform="rotate(180 ${x} ${y})">${V('dc',x,y,null)}</g>`:V('dc',x,y,null);
+  const lx=side==='left'?x-24:x+24;const anc=side==='left'?'end':'start';
+  return g+(label?`<text x="${lx}" y="${y+5}" text-anchor="${anc}" font-size="13" font-weight="700" stroke="none" fill="currentColor">${esc(label)}</text>`:'');
+};
+K.wrap=(w,h,inner)=>S.wrap(w+12,h+14,`<g transform="translate(12,14)">${inner}</g>`);
+/** R1 in series with (R2 || R3) */
+K.sp3=(lab=['R1','R2','R3'],src='VS')=>K.wrap(330,200,
+  L([[40,30],[80,30]])+Hs('R',110,30,lab[0])+L([[140,30],[270,30],[270,70]])+L([[190,30],[190,70]])+V('R',190,100,lab[1])+V('R',270,100,lab[2])+
+  L([[190,130],[190,170]])+L([[270,130],[270,170],[40,170]])+L([[40,30],[40,70]])+K.bat(40,100,src)+L([[40,130],[40,170]])+dot(190,30)+dot(190,170));
+/** R1 in series with R3 || (R2 + R4) */
+K.sp4=(lab=['R1','R2','R3','R4'],src='VS')=>K.wrap(340,200,
+  L([[40,30],[80,30]])+Hs('R',110,30,lab[0])+L([[140,30],[200,30]])+Hs('R',230,30,lab[1])+L([[260,30],[285,30],[285,70]])+L([[180,30],[180,70]])+
+  V('R',180,100,lab[2])+V('R',285,100,lab[3])+L([[180,130],[180,170]])+L([[285,130],[285,170],[40,170]])+L([[40,30],[40,70]])+K.bat(40,100,src)+L([[40,130],[40,170]])+dot(180,30)+dot(180,170));
+/** (R1 || R2) in series with R3 — Basic Circuits layout */
+K.spB=(lab=['R1','R2','R3'],src='VS')=>K.wrap(320,200,
+  L([[40,30],[80,30],[80,80]])+L([[80,30],[90,30]])+Hs('R',120,30,lab[0])+L([[80,80],[90,80]])+Hs('R',120,80,lab[1],{below:true})+L([[150,30],[160,30],[160,80],[150,80]])+
+  L([[160,30],[240,30],[240,70]])+V('R',240,100,lab[2])+L([[240,130],[240,170],[40,170],[40,130]])+L([[40,30],[40,70]])+K.bat(40,100,src)+dot(80,30)+dot(160,30));
+/** two-source network: V1 - R1 - node - R2 - V2, R3 from node to ground */
+K.net=(f1,f2)=>K.wrap(360,200,
+  L([[50,30],[80,30]])+Hs('R',110,30,'R1')+L([[140,30],[220,30]])+Hs('R',250,30,'R2')+L([[280,30],[310,30],[310,70]])+
+  L([[180,30],[180,70]])+V('R',180,100,'R3')+L([[180,130],[180,170]])+L([[50,30],[50,70]])+K.bat(50,100,'V1',f1)+L([[50,130],[50,170],[310,170],[310,130]])+K.bat(310,100,'V2',f2,'right')+dot(180,30)+dot(180,170));
+/** simple battery + one resistor (or lamp) loop */
+K.simple=(lab='R',t='R')=>S.wrap(230,170,L([[50,25],[170,25],[170,55]])+V(t,170,85,lab)+L([[170,115],[170,145],[50,145],[50,115]])+L([[50,25],[50,55]])+K.bat(50,85,'V'));
+
+/* ---------- resistor with color bands ---------- */
+K.COL=[['black','#111'],['brown','#7a4a24'],['red','#d32f2f'],['orange','#f57c00'],['yellow','#fbc02d'],['green','#2e7d32'],['blue','#1565c0'],['violet','#7b1fa2'],['gray','#8d8d8d'],['white','#f5f5f5']];
+K.GOLD=['gold','#c9a227'];K.SILVER=['silver','#c0c0c0'];
+K.resistorSVG=(bands,showNames)=>{
+  const five=bands.length>=5;const xs=five?[110,136,162,188,250]:[118,150,182,250];
+  const H=showNames?150:110;
+  let g=`<svg viewBox="0 0 380 ${H}" width="380" height="${H}" role="img" aria-label="resistor with color bands ${bands.map(b=>b?b[0]:'none').join(', ')}">
+  <defs><linearGradient id="mGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3dd8a"/><stop offset=".5" stop-color="#b8892a"/><stop offset="1" stop-color="#7d5c14"/></linearGradient>
+  <linearGradient id="mSilver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#a8a8a8"/><stop offset="1" stop-color="#6e6e6e"/></linearGradient></defs>
+  <line x1="10" y1="55" x2="370" y2="55" stroke="#9a9a9a" stroke-width="5"/>
+  <path d="M80,25 q-14,0 -14,15 v30 q0,15 14,15 h20 q10,0 16,-6 h148 q6,6 16,6 h20 q14,0 14,-15 v-30 q0,-15 -14,-15 h-20 q-10,0 -16,6 h-148 q-6,-6 -16,-6z" fill="#e6cf9c" stroke="#9b7b44" stroke-width="2"/>`;
+  const fill=b=>b[0]==='gold'?'url(#mGold)':b[0]==='silver'?'url(#mSilver)':b[1];
+  bands.forEach((b,i)=>{if(!b)return;const x=xs[i];const top=i===0?27:31,h=i===0?56:48;g+=`<rect x="${x-7}" y="${top}" width="14" height="${h}" fill="${fill(b)}" stroke="rgba(0,0,0,.25)"/>`;});
+  if(showNames)bands.forEach((b,i)=>{g+=`<text x="${xs[i]}" y="${i%2?136:118}" text-anchor="middle" font-size="12" fill="var(--ink)">${b?b[0]:'none'}</text>`;});
+  return g+'</svg>';
+};
+
+/* ---------- workaround for core problemSet choice highlighting ----------
+   core.js marks choice labels with $$('label',field), which also counts the field's own heading label,
+   so the "correct"/"wrong" highlight lands one option too low. Re-mark the option labels after grading.
+   Idempotent, so it stays harmless once core is fixed. */
+document.addEventListener('click',e=>{const b=e.target.closest('#pg');if(!b||!b.dataset.done)return;
+  const probs=CC._last;if(!Array.isArray(probs))return;const pn=document.querySelector('#pn');if(!pn)return;
+  const idx=+(pn.textContent.match(/\d+/)||[0])[0]-1;const p=probs[idx];if(!p)return;
+  const fields=document.querySelectorAll('#pf > .field');
+  p.fields.forEach((f,k)=>{if(!f.choices||!fields[k])return;const labs=fields[k].querySelectorAll('.faults label');
+    labs.forEach((lb,ci)=>{const inp=lb.querySelector('input');lb.classList.remove('correct','wrong');
+      if(ci===f.answer)lb.classList.add('correct');else if(inp&&inp.checked)lb.classList.add('wrong');});
+    const fl=fields[k].querySelector(':scope > label');if(fl)fl.classList.remove('correct','wrong');});});
+
+/* ---------- tabs for multi-page introductions ---------- */
+K.tabs=function(pages){
+  const id='t'+Math.random().toString(36).slice(2,7);
+  const nav=pages.map((p,i)=>`<button class="btn sm ${i?'':'blue'}" data-tab="${i}" role="tab" aria-selected="${i?'false':'true'}">${esc(p.title)}</button>`).join('');
+  const body=pages.map((p,i)=>`<div data-page="${i}" class="${i?'hide':''}" role="tabpanel">${p.html}</div>`).join('');
+  return `<div class="dck-tabs" id="${id}"><div class="row" role="tablist" style="margin-bottom:12px">${nav}</div>${body}</div>`;
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;const w=b.closest('.dck-tabs');if(!w)return;
+  $$('[data-tab]',w).forEach(x=>{x.classList.toggle('blue',x===b);x.setAttribute('aria-selected',x===b);});
+  $$('[data-page]',w).forEach(p=>p.classList.toggle('hide',p.dataset.page!==b.dataset.tab));});
+K.introMod=(body)=>el=>{el.innerHTML=body;};
+
+/* ---------- worksheet item helpers ---------- */
+const it=(sym,name,unit,value,help,extra={})=>Object.assign({sym,name,unit,value,help},extra);
+K.it=it;
+
+/* ---------- weighted problem runner (color codes etc.) ----------
+   gen() -> {title,prompt,diagram,fields:[{label,unit,value,weight,show}],explain, extraHTML}  */
+K.weightedSet=function(root,s,spec){
+  const probs=Array.from({length:spec.count},(_,k)=>spec.gen(k));CC._last=probs;
+  let i=0,pts=0,max=0;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="wn"></span><span class="pill" id="wp">Points: 0</span><span class="pill" id="wt">0:00</span></div><div class="progress"><i id="wb" style="width:0"></i></div><div id="wbody" class="mt"></div></div>`);
+  root.appendChild(w);s.every(()=>{$('#wt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const show=()=>{const p=probs[i];$('#wn',w).textContent=`Problem ${i+1} of ${probs.length}`;$('#wb',w).style.width=(i/probs.length*100)+'%';
+    const b=$('#wbody',w);b.innerHTML='';
+    const card=el(`<div class="card"><div class="cols2"><div>${p.title?`<h2 style="margin-top:0">${p.title}</h2>`:''}<div class="diagram" id="wd">${p.diagram||''}</div>${p.extraHTML||''}${p.prompt||''}</div><div><div class="fields" id="wf"></div><div id="wfb"></div><div class="row end mt"><button class="btn primary" id="wg">Grade answers</button></div></div></div></div>`);
+    b.appendChild(card);
+    p.fields.forEach(f=>{f._el=el(`<div class="field"><label>${f.label}${f.unit?` <span class="muted">(${esc(f.unit)})</span>`:''}</label><input type="text" inputmode="decimal" autocomplete="off" class="ask"></div>`);$('#wf',card).appendChild(f._el);
+      $('input',f._el).addEventListener('keydown',e=>{if(e.key==='Enter'){const all=$$('#wf input',card);const k=all.indexOf(e.target);if(all[k+1])all[k+1].focus();else $('#wg',card).click();}});});
+    if(p.onShow)p.onShow(card);
+    $('#wg',card).onclick=()=>{const btn=$('#wg',card);if(btn.dataset.done){i++;if(i>=probs.length)return end();return show();}
+      const fb=[];let got=0,mx=0;
+      p.fields.forEach(f=>{const inp=$('input',f._el);const v=CC.parse(inp.value);const ok=CC.close(v,f.value,f.tol??0.02,f.absTol??null);mx+=f.weight;if(ok)got+=f.weight;inp.classList.add(ok?'ok':'bad');inp.readOnly=true;
+        fb.push(ok?`${f.label}: <b style="color:var(--ok)">Right!</b>`:`${f.label}: correct answer is <b>${f.show||fmt(f.value)}${f.unit?' '+esc(f.unit):''}</b>`);});
+      pts+=got;max+=mx;$('#wp',w).textContent=`Points: ${pts} of ${max}`;
+      $('#wfb',card).innerHTML=`<p class="verdict ${got===mx?'ok':'bad'}">${got===mx?'Correct!':got?'Partly correct':'Incorrect'}</p><p class="small">${fb.join('<br>')}</p>${p.explain?`<div class="formula mt">${p.explain}</div>`:''}${CC.workHTML(typeof p.work==='function'?p.work():p.work)}`;
+      btn.dataset.done='1';btn.textContent=i+1<probs.length?'Next problem':'Finish';btn.focus();};
+  };
+  const end=()=>{$('#wb',w).style.width='100%';s.finish(max?pts/max*100:0,`You have earned ${pts} of a possible ${max} points.`);
+    const again=el('<div class="card mt center"><p>Exercise finished.</p><div class="row" style="justify-content:center"><a class="btn" href="#/">Main menu</a><button class="btn primary">New problem set</button></div></div>');$('button',again).onclick=()=>s.restart();$('#wbody',w).appendChild(again);};
+  show();
+};
+
+/* ---------- multiple-choice set helper (for problemSet) ---------- */
+K.mcq=function(bank,count){
+  return CC.shuffle(bank).slice(0,count||bank.length).map(q=>{
+    const opts=CC.shuffle(q.o.map((t,i)=>({t,ok:i===0})));
+    return {title:q.fig?'':'',prompt:`<p style="font-size:1.08rem"><b>${q.q}</b></p>${q.fig?`<div class="diagram mt">${q.fig}</div>`:''}`,
+      fields:[{key:'a',label:'Select the best answer',choices:opts.map(o=>o.t),answer:opts.findIndex(o=>o.ok)}],explain:q.why?`<p class="small">${q.why}</p>`:''};
+  });
+};
+
+/* ---------- symbols used in component questions ---------- */
+K.sym=t=>S.wrap(120,90,`<g transform="translate(60,45) rotate(-90)">${V(t,0,0,null)}</g>`);
+K.symL=(core)=>S.wrap(120,90,`<g transform="translate(60,45) rotate(-90)">${V('L',0,0,null,{core})}</g>`);
+K.symPot=()=>S.wrap(120,90,`<g transform="translate(60,52) rotate(-90)">${V('R',0,0,null)}</g><line x1="60" y1="18" x2="60" y2="42"/><path d="M55,36 L60,44 L65,36" fill="currentColor"/>`);
+K.symNPN=(pnp)=>S.wrap(120,100,`<circle cx="62" cy="50" r="30"/><line x1="15" y1="50" x2="50" y2="50"/><line x1="50" y1="30" x2="50" y2="70"/><line x1="50" y1="40" x2="74" y2="24"/><line x1="74" y1="24" x2="74" y2="8"/><line x1="50" y1="60" x2="74" y2="76"/><line x1="74" y1="76" x2="74" y2="92"/>${pnp?'<path d="M54,62 L62,62 L58,69Z" fill="currentColor" transform="rotate(30 58 64)"/>':'<path d="M74,76 L64,75 L69,68Z" fill="currentColor"/>'}`);
+K.symBat=()=>S.wrap(120,90,`<g transform="translate(60,45) rotate(-90)">${V('dc',0,0,null)}</g>`);
+K.symSwitch=()=>S.wrap(120,90,`<g transform="translate(60,45) rotate(-90)">${V('SW',0,0,null)}</g>`);
+K.symFuse=()=>S.wrap(120,90,`<g transform="translate(60,45) rotate(-90)">${V('F',0,0,null)}</g>`);
+K.symLamp=()=>S.wrap(120,90,`<g transform="translate(60,45) rotate(-90)">${V('lamp',0,0,null)}</g>`);
+K.symCapPol=()=>S.wrap(120,90,`<line x1="15" y1="45" x2="54" y2="45"/><line x1="54" y1="28" x2="54" y2="62"/><path d="M68,28 q-8,17 0,34" fill="none"/><line x1="64" y1="45" x2="105" y2="45"/><text x="42" y="30" font-size="12" stroke="none" fill="currentColor">+</text>`);
+})();
+
+</script>
+<script>(function(){
+'use strict';
+const {fmt,pick,rnd,ri,shuffle,eVal,m,M,svg:S,esc,el,$,$$}=CC;
+const K=DCK,fR=K.fR,it=K.it,TOL=0.05;
+const P=(...a)=>a.map(t=>`<p>${t}</p>`).join('');
+
+/* ---------------- texts ---------------- */
+const T={
+purpose:P('<b>What this program is for</b>','Electricity is invisible: we describe what happens inside a circuit with models and math, and that can feel abstract at first. Basic Circuits Challenge gives you a place to practice those ideas with instant feedback, so they start to make sense through doing.','<b>Practice with feedback</b>','Every activity checks your work right away. If you make a mistake you find out immediately, before it becomes a habit, and most problems come with a worked solution that shows each step with your numbers.','<b>Scores and certificates</b>','When you finish an activity you can print a certificate or save the result to the grade file on this device. Instructors can use certificates and the grade file instead of hand-marking practice work.'),
+howto:P('<b>Main menu</b>','The main menu lists every activity. It also has an interactive lamp circuit: tap the wires to open or close connections and watch how series and parallel lamps respond.','<b>Introductions</b>','Each activity starts with an introduction that explains the key ideas and formulas, often with worked examples. Some introductions have several pages; use the tabs at the top to move between them. Choose <b>Begin</b> whenever you are ready.','<b>Activities</b>','Some activities are multiple-choice question sets. Others give you a series of short calculations, or a complete circuit to analyze. Values are chosen at random and questions are shuffled each time, so you can repeat an activity and get new problems, and classmates working side by side will have different numbers.','The program also records how long you take on each activity.','<b>Scores</b>','At the end of an activity you can print a certificate showing your name, ID, the date and time, your time on task, your score and a validity code. The validity code lets an instructor check that the certificate has not been altered. Scores are also saved in the grade file on this device.'),
+accurate:P('<b>How accurate must answers be?</b>','Numeric answers within <b>±5%</b> of the correct value are marked correct (the color code activity asks for the exact value).','<b>Significant digits</b>','A calculator may show ten or more digits. You only need enough digits for the job, and the easiest way to describe that is with significant digits. The rules are:','(1) Nonzero digits are always significant.<br>(2) Zeros between nonzero digits are significant.<br>(3) Leading zeros (zeros before the first nonzero digit) are never significant.<br>(4) Trailing zeros after a decimal point are significant.<br>(5) Trailing zeros in a whole number with no decimal point are ambiguous; use powers of ten to make the meaning clear.')+
+  `<div class="tablewrap"><table class="t" style="max-width:560px"><tbody><tr><td>436</td><td>3 significant digits</td></tr><tr><td>20.05</td><td>4 significant digits (the zeros between 2 and 5 count)</td></tr><tr><td>0.0032</td><td>2 significant digits (leading zeros do not count)</td></tr><tr><td>13.200</td><td>5 significant digits (trailing zeros after the decimal point count)</td></tr><tr><td>1500</td><td>ambiguous: write ${m('1.5\\times10^{3}')} for 2 digits or ${m('1.500\\times10^{3}')} for 4</td></tr></tbody></table></div>`+
+  P('Rounding to 2 significant digits can be off by as much as 5%. Rounding to 3 significant digits keeps you within about 0.5%, which is plenty for a single answer. However, many problems use one answer to calculate the next, and rounding errors grow each time. Keep <b>at least 3, and preferably 4, significant digits</b> in every intermediate result.','<b>Example: how errors cascade</b>','A series circuit has a 100 V source. A student rounds the total current too far, and gets 96 V for V<sub>R1</sub> instead of the correct 95 V. That is only about 1% off, so V<sub>R1</sub> is marked correct. The student then uses Kirchhoff\'s voltage law: V<sub>R2</sub> = 100 V − 96 V = 4 V. The correct value is 5 V, so this answer is 20% off and is marked wrong, even though the method was right. Carrying 4 digits in the total current would have avoided both problems.'),
+ideasIntro:P('This activity covers basic ideas about electricity: static charge, current, voltage sources, and how voltage, current and resistance are related. Many of these ideas come up again in later activities. Use the tabs above to move between topics.','When you are ready, choose <b>Begin</b>. You will get 25 multiple-choice questions drawn from these pages. The questions and the order of the answer choices change every time.'),
+stat:P('Everyone has met static electricity. You walk across a carpet and a spark jumps from your finger to a doorknob. Two sheets of plastic cling together. Your hair stands on end after you pull off a sweater. Lightning is the most dramatic example of all.','Most static electricity comes from <b>rubbing two materials together</b> (more precisely, from touching and then separating them). One material tends to give up electrons and the other tends to collect them. The material that gains extra electrons becomes <b>negatively</b> charged. The material that loses electrons becomes <b>positively</b> charged.','Charged objects follow two simple rules:','<b>Like charges repel.</b><br><b>Unlike charges attract.</b>','Try the buttons below to see charged balloons push apart or pull together. Plus signs stand for positive charge and minus signs for negative charge.'),
+motion:P('Most of the time we use electricity with charges <b>in motion</b>. Metals such as copper contain many free electrons that can move easily. A voltage source has a negative terminal and a positive terminal: the negative terminal pushes electrons out into the circuit and the positive terminal pulls them back in. The push, or electrical pressure, is called <b>voltage</b> and is measured in volts.','The flow of charge through a circuit is called <b>current</b> and is measured in amperes. The animation shows electrons moving around a circuit.','Individual electrons actually drift very slowly, typically less than a millimeter per second in a wire. Yet a lamp lights the instant you close the switch, because the push travels along the wire at nearly the speed of light. A garden hose that is already full of water works the same way: water comes out of the end the moment you open the tap, even though each bit of water moves slowly, because each bit pushes the next.','<b>Electron flow and conventional current.</b> Electrons move from the negative terminal, through the circuit, to the positive terminal. Many textbooks instead use <i>conventional current</i>, which is drawn flowing from positive to negative. Both describe the same circuit and give the same numbers; only the arrow direction differs.'),
+voltsrc:P('Voltage can be produced in several ways. Here are the most common.','<b>Chemical sources (batteries)</b><br>Flashlight, phone and car batteries are chemical voltage sources. A cell has two different electrodes in an electrolyte (a liquid, paste or gel). A chemical reaction leaves extra electrons on one electrode, the negative terminal, and removes electrons from the other, the positive terminal. When a circuit is connected, electrons flow through it from the negative terminal to the positive terminal. The cell keeps working until its chemicals are used up. Many electrolytes are corrosive, so handle damaged batteries with care.','<b>Electromagnetic sources (generators)</b><br>A voltage is produced in a conductor that moves through a magnetic field, and a coil gives a much larger voltage than a single wire. Moving a magnet inside a coil has the same effect. Most of the world\'s electricity is produced this way: steam, water or wind turns a turbine, and the turbine spins powerful magnets inside large coils. Machines that work like this are called generators; in cars the generator is called an alternator.','<b>Piezoelectric sources</b><br>Some crystals produce a voltage when they are squeezed or bent. The voltage can be high, but very little current is available. The igniter on a gas grill and many lighters use a piezoelectric crystal.','<b>Photoelectric sources (solar cells)</b><br>Solar cells convert light directly into electrical energy. They power calculators, garden lights, satellites, and rooftop solar systems.','<b>Thermoelectric sources (thermocouples)</b><br>Joining two different metals makes a thermocouple. Heating the junction produces a small voltage that depends on the temperature. The voltage is too small for most power uses, so thermocouples are mainly used to measure temperature.'),
+vao:P('<b>Voltage</b><br>Voltage is the electrical pressure that causes charge to move. It is measured in <b>volts (V)</b>, and the letter V stands for voltage in formulas. A car battery is 12 volts, standard wall outlets in U.S. homes supply about 120 volts (about 230 volts in Europe), and a single alkaline AA, C or D cell supplies 1.5 volts.','<b>Current</b><br>Current is the flow of charge through a circuit. It is measured in <b>amperes (A)</b>, often shortened to amps, and the letter I stands for current in formulas. One ampere means one coulomb of charge passes a point every second; a coulomb is the charge of about '+m('6.25\\times10^{18}')+' electrons. Current can flow only through a <b>complete circuit</b>: an unbroken path from one terminal of the source, through the load, and back to the other terminal.','<b>Resistance</b><br>Resistance is the opposition to current. It is measured in <b>ohms</b>, written with the Greek letter omega (<b>Ω</b>), and the letter R stands for resistance in formulas. Every material has some resistance, even good conductors. One ohm allows one ampere of current when one volt is applied.','<b>Ohm\'s law</b><br>Voltage, current and resistance are linked by Ohm\'s law. It can be written three ways:'),
+compIntro:P('Circuits are built from components. Resistors, capacitors and inductors are the three basic <i>passive</i> components, each named for the property it provides: resistance, capacitance and inductance. Each comes in many shapes and sizes. Other parts control or protect circuits: switches, fuses, and semiconductor devices such as diodes, transistors and integrated circuits.','This activity is about recognizing parts, not yet about understanding how they work in detail. The goals are to:','(1) recognize common schematic symbols,<br>(2) recognize common components, and<br>(3) know the unit of measure for resistors, capacitors and inductors.','A schematic symbol shows what a part <i>does</i>, not how big it is. A line on a schematic is a wire, but it tells you nothing about the wire\'s actual size.','Use the tabs to move between topics. When you are ready, choose <b>Begin</b> for 25 multiple-choice questions. The questions and answer order change each time.'),
+csf:P('<b>Conductors</b><br>Wires and other conductors are drawn as plain lines. The line could stand for a hair-thin wire or one as thick as your finger. A conductor is chosen for the current it must carry: every conductor has some resistance, and a <b>larger conductor has less resistance</b> than a smaller one of the same material and length, so it can carry more current without overheating. <b>Stranded</b> wire is made of many fine strands and is more flexible than <b>solid</b> wire.','<b>Switches</b><br>A switch opens or closes a circuit. <b>Open</b> means there is a gap, so no current flows. <b>Closed</b> means the path is complete, so current can flow. The symbol below is a single-pole, single-throw (SPST) switch. Switches are rated for both the current and the voltage they can handle.','<b>Fuses and circuit breakers</b><br>Too much current makes wires and parts overheat, which can damage them or start a fire. A <b>fuse</b> protects a circuit with a thin metal link that melts at a set current, and must then be replaced. A <b>circuit breaker</b> does the same job but can be reset after the problem is fixed.'),
+resistor:P('Resistors oppose current and convert electrical energy into heat. Small resistors are marked with colored bands that give their value and tolerance (the Color Codes activity teaches you to read them). Resistors that must handle more power are physically larger so they can get rid of more heat.','A <b>variable resistor</b> has a resistance you can change by turning a shaft or moving a slider. A <b>potentiometer</b> is a common type.','Resistance is measured in ohms. The three most important ratings of a resistor are its <b>resistance</b> (ohms), its <b>tolerance</b> (percent) and its <b>power rating</b> (watts). Tolerance tells you how far the actual value may be from the marked value. For example, a 10 Ω resistor with 10% tolerance can measure anywhere from 9 Ω to 11 Ω.'),
+cap:P('Capacitors oppose changes in voltage. A capacitor stores charge on two conducting plates separated by an insulator called the <b>dielectric</b>. Capacitors are usually named for their dielectric. <b>Electrolytic</b> capacitors use a very thin layer of aluminum oxide, which packs a large capacitance into a small case. They are <b>polarized</b>: the + lead must go to the more positive point in the circuit. They also wear out sooner than most other types. <b>Ceramic</b> and <b>plastic film</b> capacitors are not polarized, are very reliable, and are used for smaller values.','Capacitance is measured in <b>farads (F)</b>. A farad is a very large unit, so practical values are given in microfarads (µF, '+m('10^{-6}')+' F), nanofarads (nF, '+m('10^{-9}')+' F) and picofarads (pF, '+m('10^{-12}')+' F). Every capacitor also has a voltage rating: if it is exceeded, the dielectric can break down and the capacitor is destroyed.'),
+ind:P('Inductors oppose changes in current. An inductor is a coil of wire. The first symbol below is for an inductor with an air core (or another non-magnetic core). An iron core greatly increases the inductance; the second symbol, with lines beside the coil, shows an iron-core inductor.','When current tries to increase, the inductor\'s magnetic field grows and stores energy. When current tries to decrease, the field shrinks and returns that energy to the circuit, helping to keep the current flowing. The overall effect is to keep the current steady.','Inductors range from a few turns of fine wire to heavy coils that weigh hundreds of pounds.','Inductance is measured in <b>henrys (H)</b>. Common inductors range from a few microhenrys to several henrys. The current an inductor can carry is limited by the size of the wire in its coil: thicker wire can carry more current.'),
+semi:P('A <b>diode</b> is a two-terminal semiconductor device that lets current flow in only one direction. Conventional current flows in the direction of the arrow in the symbol (electrons flow against it). The band on one end of a diode marks the <b>cathode</b>. Diodes are used to convert AC to DC, and there are many special types, such as light-emitting diodes (LEDs).','A <b>transistor</b> is a semiconductor device, usually with three terminals, used to amplify signals or to act as an electronic switch. A small signal at one terminal controls a larger current through the other two. NPN and PNP are the two kinds of bipolar transistor.','An <b>integrated circuit</b> (IC, or chip) contains many transistors, diodes, resistors and other parts in one small package. A single chip can hold anything from a handful to billions of parts.'),
+act:n=>P('This activity has 25 multiple-choice items. The items, and the order of the answer choices, change every time you use the activity.','Select an answer and choose <b>Grade answer</b>. You will see right away whether you were correct, with a short explanation. Then choose <b>Next problem</b>.','<b>Scoring:</b> each item is worth one point, and your score is the percentage of items answered correctly.')+(n?P('These questions test exact conversions, so there is no rounding: exactly one choice is equal to the given number.'):''),
+ohms1:'Voltage, current and resistance are linked by <b>Ohm\'s law</b>. V stands for voltage in volts, I for current in amperes, and R for resistance in ohms. If you know any two of them, you can calculate the third: pick the form of the formula that has the unknown on the left and the two known values on the right. The Examples tab shows each case.',
+ohms2:'Anyone who works with electricity needs to use Ohm\'s law quickly and accurately. This activity gives you 20 problems in random order, with new values each time. Some ask for voltage, some for current and some for resistance, so read each one carefully.',
+ohms5:'Type your answer in the box, in the unit shown, and choose <b>Grade answers</b>. Answers within <b>±5%</b> are correct. Each problem is worth one point, and your score is the percentage correct. After each problem you can see a worked solution. Choose <b>Next problem</b> to continue.',
+watts1:'Resistance converts electrical energy into heat, and the rate at which it does so is <b>power</b>, measured in <b>watts (W)</b>. An LED light bulb uses about 9 watts, a toaster about 1000 watts, and one horsepower equals 746 watts. In some integrated circuits, even one milliwatt is a lot of power.</p><p>To calculate power you need two of the three quantities voltage, current and resistance. Use the formula that contains the two you know.</p><p>Try the demonstration: use the arrow buttons to change the voltage and resistance and watch the current and power.',
+watts2:'Calculating power is a basic skill in many electrical jobs. This activity gives you 20 power problems in random order, with new values each time.',
+watts5:'Type your answer in watts and choose <b>Grade answers</b>. Answers within <b>±5%</b> are correct. Each problem is worth one point, and your score is the percentage correct. After each problem you can see a worked solution. Choose <b>Next problem</b> to continue.',
+sources1:P('Voltage sources can be connected in series in two ways. When they are connected <b>plus to minus</b> (+ − + −), they are <b>series aiding</b>: both push current the same way around the loop, and the total voltage is the sum of the sources.'),
+sources1b:P('When they are connected <b>plus to plus</b> or <b>minus to minus</b>, they are <b>series opposing</b>: they push in opposite directions, and the total voltage is the difference between them.'),
+sources1c:P('The vertical bars mean "absolute value": subtract the smaller voltage from the larger. The total has the polarity of the larger source. Opposing sources are common in electronics; a battery charger, for example, is a larger source that opposes the battery and pushes current backward through it, transferring energy into the battery.','For any number of sources in series:','(1) Add up the voltages of all the sources that push current clockwise.<br>(2) Add up the voltages of all the sources that push current counterclockwise.<br>(3) Subtract the smaller total from the larger.','A source pushes conventional current out of its <b>+</b> terminal. To decide which way a source pushes, follow the loop out of its + terminal.'),
+sources3:'This activity gives you 20 circuits with aiding and opposing sources, in random order. <b>Read each problem carefully:</b> some ask for the lamp voltage and others for the lamp current. Treat the lamp as a fixed resistance. Type your answer and choose <b>Grade answers</b>. Answers within <b>±5%</b> are correct; each problem is worth one point and your score is the percentage correct. A worked solution is shown after each problem.',
+series1:P('A series circuit has only <b>one path</b> for current, so exactly the same current flows through every part. Trace the path from one battery terminal, through each part, back to the other terminal: if there is only one way around, the circuit is series. Series circuits are simple and cheap to build, but a break anywhere stops all current.','Series circuits are not always drawn in a straight line, so trace the path rather than relying on the layout.','If a series circuit opens at any point, the result is the same wherever the break is: all the lamps go out. In the circuit shown, two 1.5 V cells connected series aiding give 3 V. Two identical lamps in series share the voltage equally, so each gets 1.5 V.'),
+para1:P('A parallel circuit has a <b>separate path</b> for each part, and every part is connected directly across the source, so every part gets the full source voltage. For example, with a 12 V source each lamp gets 12 V. If each lamp is 4 Ω, each draws 3 A. With three lamps, the wires next to the source carry 9 A, the wire between the first and second lamps carries 6 A, and only 3 A flows to the last lamp.','Each part of a parallel circuit can be switched on and off on its own, which is a big advantage over series circuits. Opening the connection to the source turns everything off.','Parallel circuits are everywhere: the wiring in homes, businesses, cars, planes and ships is mostly parallel. Two reasons are that every load gets the full supply voltage and that each load can be switched separately.'),
+sepa1:P('A series-parallel circuit has both series and parallel connections. In the circuit below, lamps 2 and 3 are in parallel, and that pair is in series with lamp 1. Lamp 1 carries the sum of the currents in lamps 2 and 3. If lamp 2 draws 4 A and lamp 3 draws 4 A, lamp 1 carries 8 A.','With identical lamps, four situations can occur:','(1) With all connections closed, all three lamps light. Lamp 1 is the brightest because it carries twice the current of each of the others.<br>(2) If lamp 1\'s connection opens, all the lamps go out: there is no longer any path for current.<br>(3) If lamp 2\'s connection opens, lamps 1 and 3 stay lit.<br>(4) If lamp 3\'s connection opens, lamps 1 and 2 stay lit.','Series-parallel circuits are very common inside electronic equipment but are rarely used for power distribution.'),
+series3:'Type each answer in the box, in the unit shown. Answers within <b>±5%</b> are correct. Carry at least 3, preferably 4, significant digits from one step to the next.</p><p><b>Scoring:</b> your score is the percentage of answers that are correct when you choose <b>Grade</b>. The <b>✓</b> button checks one answer: it is free if the answer is right and costs 2 points if it is wrong. The <b>?</b> button shows formulas and hints for an item and costs 3 points. After grading, each item shows a worked solution. You can then print a certificate.',
+color1:'Most small resistors are marked with colored bands. The most common code has <b>four bands</b>: the first two bands are the first two digits of the value, the third band is the multiplier (the power of ten), and the fourth band is the tolerance. Precision resistors (1% and 2%) use <b>five bands</b>: three digit bands, then the multiplier, then the tolerance. Read from the end that has a band closest to the edge; the tolerance band is usually set apart from the others, and gold or silver is never a first band. Larger resistors often have their value printed on them instead.',
+color2:'Reading color codes quickly is a useful skill for anyone who works with electronic circuits. This activity shows you 20 resistors in random order, mostly four-band parts with some five-band precision parts. The values are standard values, as you would find in a parts drawer.',
+color3:'Type the resistance in ohms and the tolerance in percent, then choose <b>Grade answers</b>. You can type the full number (<span class="kbd">4700</span>) or use an engineering suffix (<span class="kbd">4.7k</span>, <span class="kbd">1M</span>). Answers must be exact.</p><p><b>Scoring:</b> a correct resistance is worth 4 points and a correct tolerance 1 point, for 100 possible points; your score is the percentage of points earned. A worked reading of each resistor is shown after you grade it.</p><p>If colors are hard to tell apart on your screen, turn on <b>Show color names</b>.'
+};
+
+/* ---------------- small drawings ---------------- */
+const batV=(x,y,plusTop,label)=>`<g transform="translate(${x},${y}) ${plusTop?'':'rotate(180)'}"><line x1="0" y1="-30" x2="0" y2="-6"/><line x1="-15" y1="-6" x2="15" y2="-6"/><line x1="-8" y1="4" x2="8" y2="4" stroke-width="4"/><line x1="0" y1="4" x2="0" y2="30"/></g>
+  <text x="${x+20}" y="${y+(plusTop?-8:16)}" font-size="15" font-weight="800" stroke="none" fill="var(--brand)">+</text><text x="${x+20}" y="${y+(plusTop?16:-8)}" font-size="15" font-weight="800" stroke="none" fill="currentColor">−</text>${label?`<text x="${x-22}" y="${y+5}" text-anchor="end" font-size="13" font-weight="700" stroke="none" fill="currentColor">${esc(label)}</text>`:''}`;
+const batH=(x,y,plusRight,label)=>`<g transform="translate(${x},${y}) rotate(${plusRight?90:-90})"><line x1="0" y1="-30" x2="0" y2="-6"/><line x1="-15" y1="-6" x2="15" y2="-6"/><line x1="-8" y1="4" x2="8" y2="4" stroke-width="4"/><line x1="0" y1="4" x2="0" y2="30"/></g>
+  <text x="${x+(plusRight?10:-16)}" y="${y-18}" font-size="15" font-weight="800" stroke="none" fill="var(--brand)">+</text><text x="${x+(plusRight?-16:10)}" y="${y-18}" font-size="15" font-weight="800" stroke="none" fill="currentColor">−</text>${label?`<text x="${x}" y="${y+32}" text-anchor="middle" font-size="13" font-weight="700" stroke="none" fill="currentColor">${esc(label)}</text>`:''}`;
+/** battery + resistor loop with value labels */
+function ohmDia(vl,il,rl,lamp){
+  return S.wrap(370,190,`<g transform="translate(50,0)"><polyline points="60,30 230,30 230,65"/>${S.vSym(lamp?'lamp':'R',230,95,null)}<polyline points="230,125 230,160 60,160 60,125"/><polyline points="60,30 60,65"/>${batV(60,95,true,null)}
+  <text x="40" y="100" text-anchor="end" font-size="14" font-weight="700" stroke="none" fill="currentColor">${esc(vl)}</text><text x="250" y="100" font-size="14" font-weight="700" stroke="none" fill="currentColor">${esc(rl)}</text>
+  <path d="M120,18 h50 l-7,-5 M170,18 l-7,5" stroke="var(--accent)" fill="none"/><text x="145" y="52" text-anchor="middle" font-size="14" font-weight="700" stroke="none" fill="var(--accent)">${esc(il)}</text></g>`);
+}
+const ohmArrowFix=s=>s;
+/* lamp demo + Ohm demo used in intros (wired up by a delegated click handler) */
+function demoBox(kind){
+  return `<div class="card mt" data-demo="${kind}"><div class="row" style="justify-content:space-between"><b>${kind==='pw'?'Power demonstration':'Ohm\'s law demonstration'}</b></div>
+  <div class="row mt"><span>Voltage</span><button class="btn sm" data-d="v-">▼</button><span class="lcd" data-o="v">12.00 V</span><button class="btn sm" data-d="v+">▲</button>
+  <span style="margin-left:12px">Resistance</span><button class="btn sm" data-d="r-">▼</button><span class="lcd" data-o="r">6.00 Ω</span><button class="btn sm" data-d="r+">▲</button></div>
+  <div class="row mt"><span>Current</span><span class="lcd" data-o="i">2.00 A</span>${kind==='pw'?'<span>Power</span><span class="lcd" data-o="p">24.0 W</span>':''}</div></div>`;
+}
+const demoState=new WeakMap();
+document.addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;const box=b.closest('[data-demo]');if(!box)return;
+  const s=demoState.get(box)||{v:12,r:6};const d=b.dataset.d;if(d==='v+')s.v=Math.min(48,s.v+1);if(d==='v-')s.v=Math.max(0,s.v-1);if(d==='r+')s.r=Math.min(40,s.r+1);if(d==='r-')s.r=Math.max(1,s.r-1);demoState.set(box,s);
+  const i=s.v/s.r;$('[data-o=v]',box).textContent=s.v.toFixed(2)+' V';$('[data-o=r]',box).textContent=s.r.toFixed(2)+' Ω';$('[data-o=i]',box).textContent=i.toFixed(2)+' A';const p=$('[data-o=p]',box);if(p)p.textContent=(i*s.v).toFixed(1)+' W';});
+/* balloons */
+function balloons(){return `<div class="card mt" data-bal><div class="diagram"><svg viewBox="0 0 300 150" width="300" height="150" role="img" aria-label="charged balloons"><g data-b1 style="transition:transform 1s"><ellipse cx="120" cy="65" rx="30" ry="38" fill="#e57373"/><text x="120" y="72" font-size="22" text-anchor="middle" fill="#fff" data-s1>+</text></g><g data-b2 style="transition:transform 1s"><ellipse cx="180" cy="65" rx="30" ry="38" fill="#64b5f6"/><text x="180" y="72" font-size="22" text-anchor="middle" fill="#fff" data-s2>+</text></g><line x1="120" y1="103" x2="150" y2="148" stroke="var(--ink2)"/><line x1="180" y1="103" x2="150" y2="148" stroke="var(--ink2)"/></svg></div>
+  <div class="row mt" style="justify-content:center"><button class="btn sm" data-bb="pp">Two positive charged objects</button><button class="btn sm" data-bb="nn">Two negative charged objects</button><button class="btn sm" data-bb="pn">A positive and a negative object</button></div></div>`;}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-bb]');if(!b)return;const box=b.closest('[data-bal]');const k=b.dataset.bb;
+  $('[data-s1]',box).textContent=k[0]==='p'?'+':'−';$('[data-s2]',box).textContent=k[1]==='p'?'+':'−';
+  const apart=k[0]===k[1];$('[data-b1]',box).style.transform=apart?'translateX(-40px) rotate(-8deg)':'translateX(14px)';$('[data-b2]',box).style.transform=apart?'translateX(40px) rotate(8deg)':'translateX(-14px)';});
+/* animated electrons */
+const electrons=()=>`<div class="diagram mt"><svg viewBox="0 0 300 160" width="300" height="160" role="img" aria-label="electrons moving through a circuit"><path id="ep" d="M60,30 H240 V130 H60 Z" fill="none" stroke="var(--copper)" stroke-width="6"/>${S.vSym('lamp',240,80,null).replace('<g>','<g stroke="currentColor" stroke-width="2" fill="var(--surface2)">')}<rect x="45" y="60" width="30" height="40" fill="var(--surface)" stroke="currentColor"/><text x="60" y="75" font-size="12" text-anchor="middle" fill="currentColor">−</text><text x="60" y="95" font-size="12" text-anchor="middle" fill="var(--brand)">+</text>
+  ${Array.from({length:10},(_,i)=>`<circle r="4" fill="var(--accent)"><animateMotion dur="8s" repeatCount="indefinite" begin="${-i*0.8}s" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#ep"/></animateMotion></circle>`).join('')}</svg></div>`;
+
+
+/* ---------------- multiple choice banks (first option is the correct one; options are shuffled) ---------------- */
+const IDEAS=[
+ {q:'Objects with like electrical charges will:',o:['Repel each other','Attract each other','Have no effect on each other'],why:'Like charges repel; unlike charges attract.'},
+ {q:'Objects with unlike electrical charges will:',o:['Attract each other','Repel each other','Have no effect on each other'],why:'Unlike (opposite) charges attract; like charges repel.'},
+ {q:'Most static electricity is caused by:',o:['Rubbing two materials together','Heating a conductor','Moving a magnet near a coil','Shining light on a crystal'],why:'Rubbing (touching and separating) two materials moves electrons from one to the other, leaving both charged.'},
+ {q:'A material that gains extra electrons by friction becomes:',o:['Negatively charged','Positively charged','Neutral'],why:'Electrons carry negative charge, so extra electrons make an object negative.'},
+ {q:'A material that loses electrons by friction becomes:',o:['Positively charged','Negatively charged','Neutral'],why:'Losing negative electrons leaves more positive charge than negative, so the object becomes positive.'},
+ {q:'The flow of charge through a circuit is called:',o:['Current','Voltage','Resistance','Power'],why:'Current is the flow of charge. Voltage is the push that causes it; resistance opposes it.'},
+ {q:'Electrical current is measured in:',o:['Amperes','Volts','Ohms','Watts'],why:'Current is measured in amperes (A). Volts measure voltage, ohms resistance, and watts power.'},
+ {q:'The electrical pressure that causes charge to move is called:',o:['Voltage','Current','Resistance','Capacitance'],why:'Voltage is the electrical pressure; current is the resulting flow.'},
+ {q:'Voltage is measured in:',o:['Volts','Amperes','Ohms','Henrys'],why:'Voltage is measured in volts (V).'},
+ {q:'The opposition to current is called:',o:['Resistance','Voltage','Current','Charge'],why:'Resistance opposes current and is measured in ohms.'},
+ {q:'Resistance is measured in:',o:['Ohms','Volts','Amperes','Farads'],why:'Resistance is measured in ohms (Ω).'},
+ {q:'In electrical formulas, the letter I stands for:',o:['Current','Voltage','Resistance','Power'],why:'I stands for current (from the French "intensité"). V is voltage, R is resistance and P is power.'},
+ {q:'The Greek letter omega, Ω, is the symbol for:',o:['Ohms','Amperes','Volts','Watts'],why:'Ω is the symbol for ohms, the unit of resistance.'},
+ {q:'How fast do individual electrons drift along a wire carrying a steady current?',o:['Very slowly, typically less than a millimeter per second','At nearly the speed of light','At the speed of sound','About 1000 miles per hour'],why:'Electrons themselves drift very slowly. It is the push (the electrical signal) that travels at nearly the speed of light.'},
+ {q:'When a switch is closed, the electrical push travels along the wires:',o:['At nearly the speed of light','Less than a millimeter per second','At the speed of sound','About one mile per hour'],why:'Each electron pushes the next, so the effect travels at nearly the speed of light even though each electron moves slowly.'},
+ {q:'The negative terminal of a voltage source:',o:['Pushes electrons out into the circuit','Pulls electrons in from the circuit','Has no effect on electrons'],why:'Electrons leave the negative terminal, flow through the circuit, and return to the positive terminal.'},
+ {q:'A current of one ampere means that:',o:['One coulomb of charge passes a point each second','One volt is applied to any circuit','One electron passes a point each second','One watt is used each hour'],why:'One ampere is one coulomb per second.'},
+ {q:'A coulomb is the charge of about:',o:[m('6.25\\times10^{18}')+' electrons','1000 electrons',m('6.25\\times10^{6}')+' electrons','One electron'],why:'One coulomb is the charge of about '+m('6.25\\times10^{18}')+' electrons.'},
+ {q:'A typical car battery supplies:',o:['12 volts','1.5 volts','120 volts','9 volts'],why:'Car batteries are nominally 12 V (six 2 V lead-acid cells).'},
+ {q:'Standard wall outlets in U.S. homes supply about:',o:['120 volts','12 volts','1.5 volts','9 volts'],why:'U.S. household outlets supply about 120 V AC.'},
+ {q:'A single alkaline AA, C or D cell supplies:',o:['1.5 volts','12 volts','9 volts','120 volts'],why:'Alkaline cells of every common size supply about 1.5 V; size affects how long they last, not their voltage.'},
+ {q:'Most of the world\'s electricity is produced by:',o:['Electromagnetic generators','Chemical batteries','Solar cells','Thermocouples'],why:'Power stations turn generators: magnets spinning inside coils, driven by steam, water or wind turbines.'},
+ {q:'Some crystals produce a voltage when they are squeezed or bent. This is called:',o:['Piezoelectric','Photoelectric','Thermoelectric','Chemical'],why:'Piezoelectric crystals produce voltage under pressure; gas-grill igniters use them.'},
+ {q:'Solar (photoelectric) cells convert:',o:['Light directly into electrical energy','Heat into electrical energy','Pressure into electrical energy','Chemical energy into electrical energy'],why:'Photoelectric cells turn light directly into electrical energy.'},
+ {q:'Thermocouples are mainly used to:',o:['Measure temperature','Power homes','Store electrical charge','Charge car batteries'],why:'A thermocouple\'s small voltage depends on temperature, so it makes a good temperature sensor.'},
+ {q:'The alternator in a car is a type of:',o:['Generator','Battery','Thermocouple','Fuse'],why:'An alternator is an AC generator driven by the engine.'},
+ {q:'If the resistance stays the same and the voltage increases, the current will:',o:['Increase','Decrease','Stay the same'],why:m('I=\\frac{V}{R}')+': with R fixed, current rises in proportion to voltage.'},
+ {q:'If the voltage stays the same and the resistance increases, the current will:',o:['Decrease','Increase','Stay the same'],why:m('I=\\frac{V}{R}')+': with V fixed, a larger R gives a smaller current.'},
+ {q:'True or false: one ohm of resistance allows one ampere of current when one volt is applied.',o:['True','False'],why:m('I=\\frac{V}{R}=\\frac{1\\,\\text{V}}{1\\,\\Omega}=1\\,\\text{A}')+'. This is how the ohm is defined.'},
+ {q:'True or false: current can flow without a complete circuit.',o:['False','True'],why:'Current needs a complete, unbroken path from the source, through the load, and back to the source.'},
+ {q:'Conventional current is drawn as flowing:',o:['From the positive terminal, through the circuit, to the negative terminal','From the negative terminal, through the circuit, to the positive terminal','Only inside the source','Back and forth in a DC circuit'],why:'Conventional current goes from + to − through the circuit. Electrons actually move the other way; both descriptions give the same answers.'},
+];
+const COMP=[
+ {q:'What component does this symbol represent?',fig:K.sym('R'),o:['Resistor','Capacitor','Inductor','Fuse'],why:'The zigzag line is the symbol for a fixed resistor.'},
+ {q:'What component does this symbol represent?',fig:K.symPot(),o:['Variable resistor','Fixed resistor','Diode','Switch'],why:'A resistor symbol with an arrow (the wiper) is a variable resistor or potentiometer.'},
+ {q:'What component does this symbol represent?',fig:K.sym('C'),o:['Capacitor','Battery','Resistor','Switch'],why:'Two equal parallel plates are the capacitor symbol. A battery has one long and one short plate.'},
+ {q:'What component does this symbol represent?',fig:K.symL(false),o:['Air-core inductor','Iron-core inductor','Resistor','Fuse'],why:'A coil with no lines beside it is an air-core inductor.'},
+ {q:'What component does this symbol represent?',fig:K.symL(true),o:['Iron-core inductor','Air-core inductor','Capacitor','Resistor'],why:'The parallel lines beside the coil show an iron core.'},
+ {q:'What component does this symbol represent?',fig:K.symFuse(),o:['Fuse','Resistor','Lamp','Capacitor'],why:'A small rectangle with a line through it is the fuse symbol.'},
+ {q:'What component does this symbol represent?',fig:K.symSwitch(),o:['Switch','Fuse','Diode','Capacitor'],why:'A hinged contact that can bridge a gap is a switch; this one is shown open.'},
+ {q:'What component does this symbol represent?',fig:K.symBat(),o:['Battery','Capacitor','Switch','Resistor'],why:'Alternating long and short plates are a battery; the long plate is positive.'},
+ {q:'What component does this symbol represent?',fig:K.sym('D'),o:['Diode','Transistor','Capacitor','Fuse'],why:'A triangle pointing at a bar is a diode. The bar is the cathode.'},
+ {q:'What component does this symbol represent?',fig:K.symNPN(false),o:['Transistor','Diode','Integrated circuit','Inductor'],why:'Three leads (base, collector, emitter) with an arrow on the emitter: an NPN bipolar transistor.'},
+ {q:'What component does this symbol represent?',fig:K.symLamp(),o:['Lamp','Fuse','Resistor','Switch'],why:'A circle with a cross inside is a lamp (light bulb).'},
+ {q:'The unit of capacitance is the:',o:['Farad','Henry','Ohm','Volt'],why:'Capacitance is measured in farads (F).'},
+ {q:'The unit of inductance is the:',o:['Henry','Farad','Ohm','Ampere'],why:'Inductance is measured in henrys (H).'},
+ {q:'The unit of resistance is the:',o:['Ohm','Farad','Henry','Watt'],why:'Resistance is measured in ohms (Ω).'},
+ {q:'One microfarad (µF) equals:',o:[m('10^{-6}')+' farad',m('10^{-3}')+' farad',m('10^{6}')+' farads',m('10^{-12}')+' farad'],why:'Micro means one millionth, '+m('10^{-6}')+'.'},
+ {q:'One picofarad (pF) equals:',o:[m('10^{-12}')+' farad',m('10^{-9}')+' farad',m('10^{-6}')+' farad',m('10^{-3}')+' farad'],why:'Pico means '+m('10^{-12}')+'. (Nano is '+m('10^{-9}')+' and micro is '+m('10^{-6}')+'.)'},
+ {q:'Capacitors oppose a change in:',o:['Voltage','Current','Resistance','Frequency'],why:'Capacitors oppose changes in voltage; inductors oppose changes in current.'},
+ {q:'Inductors oppose a change in:',o:['Current','Voltage','Resistance','Capacitance'],why:'Inductors oppose changes in current; capacitors oppose changes in voltage.'},
+ {q:'The insulator between the plates of a capacitor is called the:',o:['Dielectric','Core','Electrode','Cathode'],why:'The insulating layer between a capacitor\'s plates is the dielectric.'},
+ {q:'Which capacitor type uses a thin aluminum-oxide layer to pack a large capacitance into a small case?',o:['Electrolytic','Ceramic','Plastic film','Air'],why:'Aluminum electrolytic capacitors use a very thin oxide dielectric, giving large capacitance in a small size.'},
+ {q:'Which kind of capacitor is polarized, so its + lead must go to the more positive point in the circuit?',o:['Electrolytic','Ceramic','Plastic film','Air variable'],why:'Aluminum electrolytic capacitors are polarized and can fail if connected backward.'},
+ {q:'What happens if the voltage rating of a capacitor is exceeded?',o:['The dielectric can break down','The capacitance doubles','Nothing happens','The capacitor becomes an inductor'],why:'Too much voltage can punch through the dielectric and destroy the capacitor.'},
+ {q:'A 10 Ω resistor with 10% tolerance can have an actual value between:',o:['9 Ω and 11 Ω','10 Ω and 11 Ω','9.9 Ω and 10.1 Ω','0 Ω and 10 Ω'],why:'10% of 10 Ω is 1 Ω, so the value may be anywhere from 10 − 1 = 9 Ω to 10 + 1 = 11 Ω.'},
+ {q:'The three most important ratings of a resistor are:',o:['Resistance, tolerance and power rating','Resistance, color and size','Voltage, current and frequency','Capacitance, inductance and resistance'],why:'You choose a resistor by its value in ohms, its tolerance in percent, and its power rating in watts.'},
+ {q:'Resistors convert electrical energy mainly into:',o:['Heat','Light','Magnetism','Chemical energy'],why:'The power in a resistor is given off as heat.'},
+ {q:'Compared with a thin wire of the same material and length, a thicker wire has:',o:['Less resistance','More resistance','The same resistance'],why:'A larger cross-section gives current more room, so resistance is lower.'},
+ {q:'Which kind of wire is more flexible?',o:['Stranded','Solid'],why:'Many fine strands bend more easily than one solid conductor.'},
+ {q:'Fuses protect circuits from:',o:['Excessive current','Low voltage','Static electricity','Magnetic fields'],why:'A fuse link melts when the current is too high, opening the circuit.'},
+ {q:'An advantage of a circuit breaker over a fuse is that a breaker:',o:['Can be reset after the overload is removed','Is less expensive','Never trips','Has no current rating'],why:'A blown fuse must be replaced; a tripped breaker can simply be reset.'},
+ {q:'An open switch:',o:['Stops current','Allows current','Doubles the current'],why:'Open means there is a gap in the path, so no current can flow.'},
+ {q:'A diode:',o:['Lets current flow in only one direction','Amplifies signals','Stores energy in a magnetic field','Measures temperature'],why:'A diode conducts in one direction and blocks the other.'},
+ {q:'The band on one end of a diode marks the:',o:['Cathode','Anode','Base','Gate'],why:'The band matches the bar in the symbol: the cathode.'},
+ {q:'Transistors are mainly used to:',o:['Amplify signals or act as electronic switches','Store electrical charge','Protect circuits from excessive current','Measure resistance'],why:'A small signal at one terminal controls a larger current, so a transistor can amplify or switch.'},
+ {q:'Most transistors have how many terminals?',o:['Three','Two','Four','One'],why:'A bipolar transistor has a base, a collector and an emitter.'},
+ {q:'A single package containing many transistors, diodes, resistors and other parts is a(n):',o:['Integrated circuit','Capacitor','Inductor','Fuse'],why:'That is an integrated circuit, or chip.'},
+ {q:'Adding an iron core to an inductor will:',o:['Greatly increase the inductance','Decrease the inductance','Turn it into a capacitor','Have no effect'],why:'Iron concentrates the magnetic field, greatly increasing inductance.'},
+ {q:'The current an inductor can carry is limited mainly by:',o:['The size of the wire in its coil','The color of its coating','The number of terminals','Its dielectric'],why:'Thin wire overheats at high current, so wire size sets the current rating.'},
+];
+/* ---------------- Powers of ten (generated) ----------------
+   Numbers are handled as digit strings, so there is no floating-point rounding in the questions. */
+const PREF=[[-12,'p','pico'],[-9,'n','nano'],[-6,'µ','micro'],[-3,'m','milli'],[0,'',''],[3,'k','kilo'],[6,'M','mega'],[9,'G','giga'],[12,'T','tera']];
+const UNITS=[['V','volts'],['A','amperes'],['Ω','ohms'],['F','farads'],['H','henrys'],['Hz','hertz'],['W','watts']];
+/* realistic prefix choices for each unit */
+const UPREF={V:[-6,-3,3],A:[-6,-3],'Ω':[3,6],F:[-12,-9,-6],H:[-6,-3],Hz:[3,6,9],W:[-3,3,6]};
+/** digits: significant digits without a decimal point (first and last nonzero); E: power of ten of the first digit */
+function plain(digits,E){
+  const p=E+1;let s;
+  if(p<=0)s='0.'+'0'.repeat(-p)+digits;
+  else if(p>=digits.length){s=digits+'0'.repeat(p-digits.length);s=s.replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+  else{let ip=digits.slice(0,p);if(ip.length>3)ip=ip.replace(/\B(?=(\d{3})+(?!\d))/g,',');s=ip+'.'+digits.slice(p);}
+  return s;
+}
+const mantissa=d=>d.length>1?d[0]+'.'+d.slice(1):d;
+const sci=(d,E)=>m(mantissa(d)+'\\times10^{'+E+'}');
+/** number of 1–999 (with the decimal after n integer digits) */
+const engNum=(d,n)=>n>=d.length?d+'0'.repeat(n-d.length):d.slice(0,n)+'.'+d.slice(n);
+function powQ(){
+  const kind=ri(0,3);const nd=ri(2,3);let d=String(ri(1,9));for(let i=1;i<nd-1;i++)d+=ri(0,9);d+=ri(1,9);
+  if(kind<2){const E=pick([-9,-7,-6,-5,-4,-3,-2,2,3,4,5,6,7,9]);const sh=shuffle([1,-1,2,-2,3,-3]).slice(0,3);
+    const how=E>0?`the decimal point moves ${E} places to the right`:`the decimal point moves ${-E} places to the left`;
+    if(kind===0)return {q:`Convert ${plain(d,E)} to scientific notation.`,o:[sci(d,E),...sh.map(s=>sci(d,E+s))],why:`Place the decimal point after the first nonzero digit (${mantissa(d)}). Going from ${mantissa(d)} back to ${plain(d,E)}, ${how}, so the power of ten is ${E}: ${plain(d,E)} = ${sci(d,E)}.`};
+    return {q:`Convert ${sci(d,E)} to conventional notation.`,o:[plain(d,E),...sh.map(s=>plain(d,E+s))],why:`The power of ten is ${E}, so ${how}: ${sci(d,E)} = ${plain(d,E)}.`};}
+  const u=pick(UNITS);const P0=pick(UPREF[u[0]]);const p=PREF.find(x=>x[0]===P0);
+  const n=(u[0]==='Ω'&&P0===6)?ri(1,2):ri(1,3);const E=P0+n-1;const mm=engNum(d,n);
+  const wrong=shuffle(PREF.filter(x=>x[0]!==P0&&x[0]!==0&&Math.abs(x[0]-P0)<=6)).slice(0,3);
+  const eng=pp=>`${mm} ${pp[1]}${u[0]}`;
+  const conv=pp=>plain(d,pp[0]+n-1)+' '+u[0];
+  const why=`${p[2]} (${p[1]}) means ${m('10^{'+P0+'}')}, so ${mm} ${p[1]}${u[0]} = ${mm}${m('\\times10^{'+P0+'}')} ${u[0]} = ${plain(d,E)} ${u[0]}: the decimal point moves ${Math.abs(P0)} places to the ${P0>0?'right':'left'}.`;
+  if(kind===2)return {q:`Convert ${eng(p)} to conventional notation.`,o:[conv(p),...wrong.map(conv)],why};
+  return {q:`Convert ${plain(d,E)} ${u[0]} to engineering notation.`,o:[eng(p),...wrong.map(eng)],why:`Choose the prefix that leaves a number from 1 to 999. ${why}`};
+}
+
+/* ---------------- Ohm's law / power / sources problem sets ---------------- */
+const r2=x=>Math.round(x*100)/100;
+const tV=x=>fmt(x,6)+'\\,\\text{V}',tA=x=>fmt(x,6)+'\\,\\text{A}',tO=x=>fmt(x,6)+'\\,\\Omega',tW=x=>fmt(x,6)+'\\,\\text{W}';
+const f4=x=>fmt(x,4);
+function ohmVals(simple){let V,I,R;if(simple){I=ri(1,10);R=ri(1,20);V=I*R;}else{I=r2(rnd(0.5,9.99));R=r2(rnd(1,25));V=r2(I*R);}return {V,I,R};}
+function ohmProb(simple){
+  const {V,I,R}=ohmVals(simple);
+  const k=ri(0,2);const lab=[`V = ${k===0?'?':fmt(V,6)+' V'}`,`I = ${k===1?'?':fmt(I,6)+' A'}`,`R = ${k===2?'?':fmt(R,6)+' Ω'}`];
+  const ans=[I*R,V/R,V/I][k];const u=['V','A','Ω'][k];
+  const work=[[ 'V=I R',`V=(${tA(I)})(${tO(R)})`,`V=${f4(ans)}\\,\\text{V}`],['I=\\frac{V}{R}',`I=\\frac{${tV(V)}}{${tO(R)}}`,`I=${f4(ans)}\\,\\text{A}`],['R=\\frac{V}{I}',`R=\\frac{${tV(V)}}{${tA(I)}}`,`R=${f4(ans)}\\,\\Omega`]][k];
+  return {title:'Ohm\'s law problem',prompt:`<p>Calculate the <b>${['voltage','current','resistance'][k]}</b> for the circuit.</p>`,diagram:ohmDia(lab[0],lab[1],lab[2]),
+    fields:[{key:'a',label:['Voltage','Current','Resistance'][k],unit:u,value:ans,tol:TOL}],work,_g:{V,I,R,k}};
+}
+function powProb(simple){
+  const {V,I,R}=ohmVals(simple);
+  const k=ri(0,2);// 0: V,I known 1: V,R known 2: I,R known
+  const show=[[1,1,0],[1,0,1],[0,1,1]][k];
+  const lab=[`V = ${show[0]?fmt(V,6)+' V':'?'}`,`I = ${show[1]?fmt(I,6)+' A':'?'}`,`R = ${show[2]?fmt(R,6)+' Ω':'?'}`];
+  const Pw=[V*I,V*V/R,I*I*R][k];
+  const work=[['P=I V',`P=(${tA(I)})(${tV(V)})`],['P=\\frac{V^2}{R}',`P=\\frac{(${tV(V)})^2}{${tO(R)}}`],['P=I^2 R',`P=(${tA(I)})^2(${tO(R)})`]][k].concat([`P=${f4(Pw)}\\,\\text{W}`]);
+  return {title:'Electrical power problem',prompt:'<p>Calculate the <b>power</b> for this circuit.</p>',diagram:ohmDia(lab[0],lab[1],lab[2]),
+    fields:[{key:'p',label:'Power',unit:'W',value:Pw,tol:TOL}],work,_g:{V,I,R,k}};
+}
+function srcProb(){
+  let V1=ri(1,24),V2=ri(1,24);while(V2===V1)V2=ri(1,24);
+  const top=Math.random()<0.5,right=Math.random()<0.5,R=pick([4,5,6,8,10,12,15,20]);
+  /* clockwise around the loop: up through V1 (left), right through V2 (top), down through the lamp */
+  const E=(top?V1:-V1)+(right?V2:-V2);const VT=Math.abs(E);const aiding=(top===right);
+  const askI=Math.random()<0.5;
+  const dia=S.wrap(370,200,`<g transform="translate(50,0)"><polyline points="60,40 125,40"/>${batH(155,40,right,'V2 = '+V2+' V')}<polyline points="185,40 260,40 260,80"/>${S.vSym('lamp',260,110,null)}<polyline points="260,140 260,170 60,170 60,140"/><polyline points="60,40 60,80"/>${batV(60,110,top,'V1 = '+V1+' V')}<text x="280" y="114" font-size="13" font-weight="700" stroke="none" fill="currentColor">${R} Ω</text></g>`);
+  const d1=top?'clockwise':'counterclockwise',d2=right?'clockwise':'counterclockwise';
+  const work=['>Follow the loop out of each + terminal: V1 pushes '+d1+' and V2 pushes '+d2+'. '+(aiding?'They push the same way, so they are <b>series aiding</b>.':'They push opposite ways, so they are <b>series opposing</b>.'),
+    aiding?`V_T=V_1+V_2=${V1}\\,\\text{V}+${V2}\\,\\text{V}=${VT}\\,\\text{V}`:`V_T=|V_1-V_2|=|${V1}\\,\\text{V}-${V2}\\,\\text{V}|=${VT}\\,\\text{V}`,
+    ...(askI?[`I=\\frac{V_T}{R}=\\frac{${VT}\\,\\text{V}}{${R}\\,\\Omega}=${f4(VT/R)}\\,\\text{A}`]:['>The lamp is the only load, so it receives the whole total voltage: '+m('V_{lamp}='+VT+'\\,\\text{V}')+'.'])];
+  return {title:'Series voltage sources',prompt:`<p>The lamp has a resistance of ${R} Ω. Calculate the <b>lamp ${askI?'current':'voltage'}</b>.</p>`,diagram:dia,
+    fields:[{key:'a',label:askI?'Lamp current':'Lamp voltage',unit:askI?'A':'V',value:askI?VT/R:VT,tol:TOL,absTol:0.001}],work,_g:{V1,V2,top,right,R,askI}};
+}
+
+/* ---------------- color codes ---------------- */
+const E6=[10,15,22,33,47,68],E12=[10,12,15,18,22,27,33,39,47,56,68,82],E24=[10,11,12,13,15,16,18,20,22,24,27,30,33,36,39,43,47,51,56,62,68,75,82,91];
+const E96=[100,102,105,107,110,113,115,118,121,124,127,130,133,137,140,143,147,150,154,158,162,165,169,174,178,182,187,191,196,200,205,210,215,221,226,232,237,243,249,255,261,267,274,280,287,294,301,309,316,324,332,340,348,357,365,374,383,392,402,412,422,432,442,453,464,475,487,499,511,523,536,549,562,576,590,604,619,634,649,665,681,698,715,732,750,768,787,806,825,845,866,887,909,931,953,976];
+const MULT=e=>e===-1?K.GOLD:e===-2?K.SILVER:K.COL[e];
+const multName=e=>e>=0?'×'+fmt(Math.pow(10,e)):e===-1?'×0.1':'×0.01';
+function colorProb(){
+  const five=Math.random()<0.25;let digs,mul,tol,tb;
+  if(five){const v=pick(E96);digs=String(v).split('').map(Number);mul=ri(-1,4);const t=ri(0,1);tol=[1,2][t];tb=[K.COL[1],K.COL[2]][t];}
+  else{const t=ri(0,2);tol=[5,10,20][t];tb=[K.GOLD,K.SILVER,null][t];const v=pick([E24,E12,E6][t]);digs=String(v).split('').map(Number);mul=t===2?ri(0,5):ri(-2,5);if(mul===-2&&Math.random()<0.6)mul=ri(-1,5);}
+  const num=+digs.join('');const val=+(num*Math.pow(10,mul)).toPrecision(4);
+  const bands=[...digs.map(x=>K.COL[x]),MULT(mul),tb];
+  const lo=+(val*(1-tol/100)).toPrecision(4),hi=+(val*(1+tol/100)).toPrecision(4);
+  const dn=['1st','2nd','3rd'];
+  const work=[...digs.map((x,i)=>`>${dn[i]} band ${K.COL[x][0]} = ${x}`),`>Multiplier band ${MULT(mul)[0]} = ${multName(mul)}`,
+    `R=${num}\\times10^{${mul}}\\,\\Omega=${fmt(val,4)}\\,\\Omega${val>=1000?'='+(val>=1e6?fmt(val/1e6,4)+'\\,\\text{M}\\Omega':fmt(val/1e3,4)+'\\,\\text{k}\\Omega'):''}`,
+    `>Tolerance band ${tb?tb[0]:'none'} = ±${tol}%, so the actual resistance may be anywhere from ${fmt(lo,4)} Ω to ${fmt(hi,4)} Ω.`];
+  return {title:five?'Read the color code (5-band precision resistor)':'Read the color code',diagram:K.resistorSVG(bands,false),bands,
+    extraHTML:'<label class="row small mt" style="justify-content:center"><input type="checkbox" data-cn> Show color names</label>',
+    fields:[{key:'v',label:'Resistance',unit:'Ω',value:val,weight:4,tol:0.001,show:fmt(val,4)},{key:'t',label:'Tolerance',unit:'%',value:tol,weight:1,tol:0.001}],
+    work,_g:{digs,mul,tol,five},
+    onShow(card){const cb=$('[data-cn]',card);const shown=CC.store.get('cc:basic:names',false);cb.checked=shown;const rd=()=>{$('#wd',card).innerHTML=K.resistorSVG(bands,cb.checked);};rd();cb.onchange=()=>{CC.store.set('cc:basic:names',cb.checked);rd();};}};
+}
+const sw=c=>`<span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:${c};border:1px solid var(--line);vertical-align:-3px"></span>`;
+const colorChart=()=>{
+  const tolOf={1:'±1%',2:'±2%'};
+  const rows=K.COL.map((c,i)=>`<tr><td>${sw(c[1])} ${c[0]}</td><td>${i}</td><td>${m('\\times10^{'+i+'}')}${i<=6?' = ×'+fmt(Math.pow(10,i)):''}</td><td>${tolOf[i]||'—'}</td></tr>`).join('');
+  return `<div class="tablewrap mt"><table class="t" style="max-width:640px"><thead><tr><th>Color</th><th>Digit<br><span class="small">(digit bands)</span></th><th>Multiplier</th><th>Tolerance</th></tr></thead><tbody>${rows}
+  <tr><td>${sw('linear-gradient(#f3dd8a,#b8892a,#7d5c14)')} gold</td><td>—</td><td>×0.1</td><td>±5%</td></tr>
+  <tr><td>${sw('linear-gradient(#fff,#a8a8a8,#6e6e6e)')} silver</td><td>—</td><td>×0.01</td><td>±10%</td></tr><tr><td>no band</td><td>—</td><td>—</td><td>±20%</td></tr></tbody></table></div>
+  <p class="small">Four-band resistors have two digit bands; five-band precision resistors have three. Violet, gray and white multipliers are rarely used.</p>
+  <div class="diagram mt">${K.resistorSVG([K.COL[4],K.COL[7],K.COL[2],K.GOLD],true)}</div><p class="small center">Yellow (4), violet (7), red (×100), gold (±5%): 47 × 100 = 4700 Ω = 4.7 kΩ ± 5%</p>
+  <div class="diagram mt">${K.resistorSVG([K.COL[1],K.COL[0],K.COL[2],K.COL[1],K.COL[1]],true)}</div><p class="small center">Brown (1), black (0), red (2), brown (×10), brown (±1%): 102 × 10 = 1020 Ω = 1.02 kΩ ± 1%</p>`;
+};
+
+/* ---------------- worksheets: series / parallel / series-parallel ---------------- */
+const SMALL=[2,3,4,5,6,8,9,10,12,15,18,20,24,30,36,40,60];
+const gcd=(a,b)=>b?gcd(b,a%b):a,lcm=(a,b)=>a*b/gcd(a,b);
+const q3=x=>x===0?0:+x.toPrecision(3),ident=x=>x;
+/** one solver for answers (q = identity) and for the 3-significant-digit student check */
+function bSolve(top,R,V,q){
+  let RT,IT,I,Vr,req;
+  if(top==='ser'){RT=q(R[0]+R[1]);IT=q(V/RT);I=[IT,IT];Vr=[q(IT*R[0]),q(IT*R[1])];}
+  else if(top==='par'){RT=q(1/(1/R[0]+1/R[1]));I=[q(V/R[0]),q(V/R[1])];IT=q(V/RT);Vr=[V,V];}
+  else{req=q(1/(1/R[0]+1/R[1]));RT=q(req+R[2]);IT=q(V/RT);const v3=q(IT*R[2]);const vp=q(V-v3);I=[q(vp/R[0]),q(vp/R[1]),IT];Vr=[vp,vp,v3];}
+  return {RT,IT,I,Vr,req,P:I.map((x,k)=>q(x*Vr[k])),PT:q(V*IT)};
+}
+const bList=(mo,N)=>[mo.RT,mo.IT,...mo.I,...mo.Vr,mo.PT,...mo.P];
+function bValues(top,simple){
+  for(let t=0;t<5000;t++){
+    let R,V;
+    if(!simple){const n=top==='sp'?3:2;R=Array.from({length:n},()=>eVal(100,10000));V=Math.round(rnd(5,60)*10)/10;}
+    else if(top==='ser'){R=[ri(2,40),ri(2,40)];V=ri(1,Math.floor(120/(R[0]+R[1])))*(R[0]+R[1]);}
+    else if(top==='par'){const a=pick(SMALL),b=pick(SMALL),L=lcm(a,b);if(a===b||L>120)continue;R=[a,b];V=L*ri(1,Math.floor(120/L));}
+    else{const a=pick(SMALL),b=pick(SMALL),req=a*b/(a+b);if(!Number.isInteger(req))continue;const R3=ri(1,20),RT=req+R3;if(RT>120)continue;R=[a,b,R3];V=RT*ri(1,Math.floor(120/RT));}
+    const ex=bSolve(top,R,V,ident);
+    if(simple&&ex.IT>30)continue;
+    if(!simple&&(Math.max(...ex.P)>1||Math.min(...ex.Vr)<0.1||Math.min(...ex.I)<5e-5))continue;
+    const A=bList(ex);
+    if([q3,x=>x===0?0:+(x*1.001).toPrecision(3),x=>x===0?0:+(x*0.999).toPrecision(3)].some(q=>{const Bq=bList(bSolve(top,R,V,q));return A.some((a,i)=>!(Math.abs(Bq[i]-a)<=0.6*TOL*Math.abs(a)));}))continue;
+    return {R,V};
+  }
+}
+function bSheet(top,simple){
+  const {R,V}=bValues(top,simple);const mo=bSolve(top,R,V,ident);const N=R.length;
+  const cu=simple?'A':'mA',cf=simple?1:1e3,pu=simple?'W':'mW',pf=simple?1:1e3;
+  const ampNote=simple?'':' <b>Watch the units:</b> volts ÷ ohms gives amperes; multiply by 1000 for milliamperes (mA).';
+  const pNote=simple?' Use the current in amperes.':' Use the current in amperes (not mA), then multiply watts by 1000 for milliwatts (mW).';
+  /* TeX number helpers */
+  const o=r=>fmt(r)+'\\,\\Omega',v=x=>fmt(x)+'\\,\\text{V}',a=x=>fmt(x)+'\\,\\text{A}',w=x=>fmt(x)+'\\,\\text{W}';
+  const cur=x=>simple?a(x):fmt(x*1e3)+'\\,\\text{mA}',pwr=x=>simple?w(x):fmt(x*1e3)+'\\,\\text{mW}';
+  const tail=(lhs,x,unitA,unitB)=>simple?[]:[lhs+'='+unitB(x)];
+  const pw=i=>['$P_{R'+i+'}=I_{R'+i+'}V_{R'+i+'}','$P_{R'+i+'}=I_{R'+i+'}^2 R_'+i+'\\qquad P_{R'+i+'}=\\frac{V_{R'+i+'}^2}{R_'+i+'}','Any of the power formulas works once you know two of V, I and R for this resistor.'+pNote];
+  const h={PT:['$P_T=I_T V_S','$P_T=I_T^2 R_T\\qquad P_T=\\frac{V_S^2}{R_T}','Total power is the power delivered by the source. It also equals the sum of the resistor powers, '+m(Array.from({length:N},(_,i)=>'P_{R'+(i+1)+'}').join('+'))+', which makes a good check.'+pNote],
+    IT:['$I_T=\\frac{V_S}{R_T}','I<sub>T</sub>, the total current, is the current leaving and returning to the source. Find R<sub>T</sub> first.'+ampNote]};
+  if(top==='ser'){h.RT=['$R_T=R_1+R_2','In a series circuit, simply add the resistors. Do this first: every other answer depends on it.'];
+    for(let i=1;i<=2;i++){h['I'+i]=['$I_{R'+i+'}=I_T','A series circuit has only one path, so every part carries the same current.'];h['V'+i]=['$V_{R'+i+'}=I_{R'+i+'}R_'+i,'The voltage across a resistor is its current times its resistance (use amperes). Check: the drops add up to V<sub>S</sub>.'];}}
+  if(top==='par'){h.RT=['$R_T=\\frac{R_1 R_2}{R_1+R_2}','$R_T=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}}','Use the product-over-sum or the reciprocal formula. <b>Check:</b> R<sub>T</sub> must be smaller than the smaller resistor. A common mistake is forgetting the final reciprocal.'];
+    for(let i=1;i<=2;i++){h['I'+i]=['$I_{R'+i+'}=\\frac{V_S}{R_'+i+'}','Each branch has the full source voltage across it.'+ampNote];h['V'+i]=['$V_{R'+i+'}=V_S','Every part of a parallel circuit is connected directly across the source.'];}}
+  if(top==='sp'){h.RT=['$R_{eq}=\\frac{R_1 R_2}{R_1+R_2}','$R_T=R_{eq}+R_3','First combine the parallel pair R1 and R2 into one equivalent resistance, then add R3, which is in series with it.'];
+    h.I1=['$I_{R1}=\\frac{V_{R1}}{R_1}','Find V<sub>R1</sub> first.'+ampNote];h.I2=['$I_{R2}=\\frac{V_{R2}}{R_2}','Find V<sub>R2</sub> first. Check: '+m('I_{R1}+I_{R2}=I_T')+'.'+ampNote];
+    h.I3=['$I_{R3}=I_T','All of the circuit current flows through R3, because it is in series with the source.'];
+    h.V1=['$V_{R1}=V_S-V_{R3}','Kirchhoff\'s voltage law: the voltage left after R3 appears across the parallel pair. Find V<sub>R3</sub> first.'];h.V2=['$V_{R2}=V_{R1}','R1 and R2 are in parallel, so they have the same voltage.'];
+    h.V3=['$V_{R3}=I_{R3}R_3','R3 carries the total current, so use '+m('I_{R3}=I_T')+' (in amperes) and Ohm\'s law.']; }
+  for(let i=1;i<=N;i++)h['P'+i]=pw(i);
+  /* worked solutions */
+  const W={};
+  W.IT=['I_T=\\frac{V_S}{R_T}','I_T=\\frac{'+v(V)+'}{'+o(mo.RT)+'}='+a(mo.IT),...tail('I_T',mo.IT,a,cur)];
+  W.PT=['P_T=V_S I_T','P_T=('+v(V)+')('+a(mo.IT)+')='+w(mo.PT),...tail('P_T',mo.PT,w,pwr),'>Check: '+m(Array.from({length:N},(_,i)=>'P_{R'+(i+1)+'}').join('+')+'='+pwr(mo.P.reduce((x,y)=>x+y,0)))+'.'];
+  for(let i=1;i<=N;i++)W['P'+i]=['P_{R'+i+'}=V_{R'+i+'}I_{R'+i+'}','P_{R'+i+'}=('+v(mo.Vr[i-1])+')('+a(mo.I[i-1])+')='+w(mo.P[i-1]),...tail('P_{R'+i+'}',mo.P[i-1],w,pwr)];
+  if(top==='ser'){W.RT=['R_T=R_1+R_2',`R_T=${o(R[0])}+${o(R[1])}`,'R_T='+o(mo.RT)];
+    for(let i=1;i<=2;i++){W['I'+i]=['>A series circuit has one path, so every part carries the total current.','I_{R'+i+'}=I_T='+cur(mo.IT)];W['V'+i]=['V_{R'+i+'}=I_{R'+i+'}R_'+i,'V_{R'+i+'}=('+a(mo.IT)+')('+o(R[i-1])+')','V_{R'+i+'}='+v(mo.Vr[i-1])];}
+    W.V2.push('>Check: '+m('V_{R1}+V_{R2}='+v(mo.Vr[0]+mo.Vr[1]))+', which equals '+m('V_S')+'.');}
+  if(top==='par'){W.RT=['R_T=\\frac{R_1 R_2}{R_1+R_2}',`R_T=\\frac{(${o(R[0])})(${o(R[1])})}{${o(R[0])}+${o(R[1])}}`,'R_T='+o(mo.RT)];
+    for(let i=1;i<=2;i++){W['I'+i]=['I_{R'+i+'}=\\frac{V_S}{R_'+i+'}','I_{R'+i+'}=\\frac{'+v(V)+'}{'+o(R[i-1])+'}='+a(mo.I[i-1]),...tail('I_{R'+i+'}',mo.I[i-1],a,cur)];W['V'+i]=['>Each branch is connected straight across the source.','V_{R'+i+'}=V_S='+v(V)];}
+    W.IT.push('>Check: '+m('I_{R1}+I_{R2}='+cur(mo.I[0]+mo.I[1]))+'.');}
+  if(top==='sp'){W.RT=['R_{eq}=\\frac{R_1 R_2}{R_1+R_2}',`R_{eq}=\\frac{(${o(R[0])})(${o(R[1])})}{${o(R[0])}+${o(R[1])}}=${o(mo.req)}`,'R_T=R_{eq}+R_3='+o(mo.req)+'+'+o(R[2]),'R_T='+o(mo.RT)];
+    W.I3=['>R3 is in series with the source, so it carries the total current.','I_{R3}=I_T='+cur(mo.IT)];
+    W.V3=['V_{R3}=I_{R3}R_3','V_{R3}=('+a(mo.IT)+')('+o(R[2])+')','V_{R3}='+v(mo.Vr[2])];
+    const vp=['V_{R1}=V_{R2}=V_S-V_{R3}','V_{R1}=V_{R2}='+v(V)+'-'+v(mo.Vr[2]),'V_{R1}=V_{R2}='+v(mo.Vr[0])];W.V1=vp;W.V2=vp;
+    for(let i=1;i<=2;i++)W['I'+i]=['I_{R'+i+'}=\\frac{V_{R'+i+'}}{R_'+i+'}','I_{R'+i+'}=\\frac{'+v(mo.Vr[0])+'}{'+o(R[i-1])+'}='+a(mo.I[i-1]),...tail('I_{R'+i+'}',mo.I[i-1],a,cur)];
+    W.I2.push('>Check: '+m('I_{R1}+I_{R2}='+cur(mo.I[0]+mo.I[1]))+' = '+m('I_T')+'.');}
+  const items=[it('R_T','Total resistance','Ω',mo.RT,h.RT,{tol:TOL,work:W.RT}),it('I_T','Total current',cu,mo.IT*cf,h.IT,{tol:TOL,work:W.IT})];
+  for(let i=0;i<N;i++)items.push(it('I_{R'+(i+1)+'}','Current through R'+(i+1),cu,mo.I[i]*cf,h['I'+(i+1)],{tol:TOL,work:W['I'+(i+1)]}));
+  for(let i=0;i<N;i++)items.push(it('V_{R'+(i+1)+'}','Voltage across R'+(i+1),'V',mo.Vr[i],h['V'+(i+1)],{tol:TOL,work:W['V'+(i+1)]}));
+  items.push(it('P_T','Total power',pu,mo.PT*pf,h.PT,{tol:TOL,work:W.PT}));
+  for(let i=0;i<N;i++)items.push(it('P_{R'+(i+1)+'}','Power in R'+(i+1),pu,mo.P[i]*pf,h['P'+(i+1)],{tol:TOL,work:W['P'+(i+1)]}));
+  const lab=R.map((_,i)=>'R'+(i+1));
+  const dia=top==='ser'?S.series(lab.map(l=>({t:'R',label:l})),{src:'dc',srcLabel:'VS'}):top==='par'?S.parallel(lab.map(l=>({t:'R',label:l})),{src:'dc',srcLabel:'VS'}):K.spB(lab,'VS');
+  return {title:{ser:'Series circuit',par:'Parallel circuit',sp:'Series-parallel circuit'}[top],diagram:dia,tol:TOL,
+    givens:[{k:'Source voltage, V<sub>S</sub>',v:fmt(V,6)+' V'},...R.map((r,i)=>({k:'R'+(i+1),v:fR(r)}))],items,
+    note:`Answers within ±5% are correct. Enter currents in ${simple?'amperes (A)':'milliamperes (mA)'} and power in ${simple?'watts (W)':'milliwatts (mW)'}.`};
+}
+/* worked examples */
+/* worked examples (from the original pages) */
+function exSeries(R1,R2,V){const RT=R1+R2,I=V/RT;const sm=R1<100;const Pu=x=>sm?fmt(x)+'\\,\\mathrm{W}':fmt(x*1000)+'\\,\\mathrm{mW}';const Iu=sm?fmt(I)+'\\,\\mathrm{A}':fmt(I*1000)+'\\,\\mathrm{mA}';
+  return `<p>Calculate ${m('R_T,\\ I_T,\\ I_{R1},\\ I_{R2},\\ V_{R1},\\ V_{R2},\\ P_T,\\ P_{R1},\\ P_{R2}')} for a series circuit with ${m('R_1='+R1+'\\,\\Omega')}, ${m('R_2='+R2+'\\,\\Omega')} and ${m('V_S='+V+'\\,\\mathrm{V}')}.</p>
+  <h3>Calculate R<sub>T</sub></h3><p>R<sub>T</sub> is a label for "total resistance". The total resistance of a circuit is the resistance seen by the voltage source. A series circuit appears to the voltage source as a single resistance. This resistance is the sum of all series connected resistors.</p>${M('R_T=R_1+R_2+R_3+\\cdots')}${M('R_T='+R1+'\\,\\Omega+'+R2+'\\,\\Omega='+RT+'\\,\\Omega')}
+  <h3>Calculate I<sub>T</sub></h3><p>Ohm's law can be used to calculate the total current. Notice that the total resistance is used as the value of R in the formula.</p>${M('I_T=\\frac{V}{R_T}=\\frac{'+V+'\\,\\mathrm{V}}{'+RT+'\\,\\Omega}='+Iu)}
+  <h3>Calculate I<sub>R1</sub> and I<sub>R2</sub></h3><p>There are no alternate paths of flow in this series circuit. Therefore, I<sub>R1</sub> and I<sub>R2</sub> are equal to the value of I<sub>T</sub>.</p>${M('I_{R1}=I_{R2}=I_T='+Iu)}
+  <h3>Calculate V<sub>R1</sub> and V<sub>R2</sub></h3><p>The voltage across a resistor is always equal to the current through the resistor times the resistance.</p>${M('V_{R1}=I_{R1}R_1='+fmt(I*R1)+'\\,\\mathrm{V}')}${M('V_{R2}=I_{R2}R_2='+fmt(I*R2)+'\\,\\mathrm{V}')}<p>The sum of the voltage drops in series circuits is always equal to the voltage source. This is a good check for accuracy of series circuit solutions.</p>
+  <h3>Calculate P<sub>T</sub>, P<sub>R1</sub> and P<sub>R2</sub></h3>${M('P_T=I_T V='+Pu(I*V))}${M('P_{R1}=I_{R1}V_{R1}='+Pu(I*I*R1)+'\\qquad P_{R2}=I_{R2}V_{R2}='+Pu(I*I*R2))}<p>Notice that P<sub>R1</sub> plus P<sub>R2</sub> is equal to P<sub>T</sub>. This check helps verify the accuracy of calculations.</p>`;}
+function exPar(R1,R2,V){const RT=1/(1/R1+1/R2),IT=V/RT,I1=V/R1,I2=V/R2;const sm=R1<100;const Pu=x=>sm?fmt(x)+'\\,\\mathrm{W}':fmt(x*1000)+'\\,\\mathrm{mW}';const A=x=>sm?fmt(x)+'\\,\\mathrm{A}':fmt(x*1000)+'\\,\\mathrm{mA}';
+  return `<p>Calculate the circuit quantities for a parallel circuit with ${m('R_1='+R1+'\\,\\Omega')}, ${m('R_2='+R2+'\\,\\Omega')} and ${m('V_S='+V+'\\,\\mathrm{V}')}.</p>
+  <h3>Calculate R<sub>T</sub></h3><p>A parallel circuit appears relatively easy to push electrons through because there is more than one path for the electrons. The total resistance of a parallel circuit will be less than the smallest resistor in the circuit.</p>${M('\\frac{1}{R_T}=\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{R_3}+\\cdots')}${M('\\frac{1}{R_T}=\\frac{1}{'+R1+'}+\\frac{1}{'+R2+'}='+fmt(1/R1+1/R2,6))}${M('R_T='+fmt(RT,5)+'\\,\\Omega')}<p>The last step requires that we get the reciprocal of both sides of the equation. At least three significant digits must be used to get a reasonable accuracy.</p>
+  <h3>Calculate I<sub>T</sub>, I<sub>R1</sub> and I<sub>R2</sub></h3>${M('I_T=\\frac{V}{R_T}='+A(IT))}${M('I_{R1}=\\frac{V}{R_1}='+A(I1)+'\\qquad I_{R2}=\\frac{V}{R_2}='+A(I2))}<p>Notice that the sum of the resistor currents is equal to the total current. This is always true in parallel circuits.</p>
+  <h3>Calculate V<sub>R1</sub>, V<sub>R2</sub> and power</h3>${M('V_{R1}=V_{R2}=V_S='+V+'\\,\\mathrm{V}')}${M('P_T=I_T V='+Pu(IT*V)+'\\qquad P_{R1}='+Pu(I1*V)+'\\qquad P_{R2}='+Pu(I2*V))}`;}
+function exSp(R1,R2,R3,V){const req=1/(1/R1+1/R2),RT=req+R3,IT=V/RT,V3=IT*R3,V1=V-V3;const sm=R1<100;const Pu=x=>sm?fmt(x)+'\\,\\mathrm{W}':fmt(x*1000)+'\\,\\mathrm{mW}';const A=x=>sm?fmt(x)+'\\,\\mathrm{A}':fmt(x*1000)+'\\,\\mathrm{mA}';
+  return `<p>Resistors R1 (${R1} Ω) and R2 (${R2} Ω) are connected parallel; the combination is in series with R3 (${R3} Ω). The source is ${V} V.</p>
+  <h3>Calculate the parallel equivalent</h3><p>A parallel connection can be recognized by the fact that the terminals of the resistors are directly connected. R<sub>eq</sub> can be read as equivalent resistance.</p>${M('\\frac{1}{R_{eq}}=\\frac{1}{R_1}+\\frac{1}{R_2}=\\frac{1}{'+R1+'}+\\frac{1}{'+R2+'}\\quad\\Rightarrow\\quad R_{eq}='+fmt(req,5)+'\\,\\Omega')}
+  <h3>Calculate R<sub>T</sub> and I<sub>T</sub></h3>${M('R_T=R_{eq}+R_3='+fmt(RT,5)+'\\,\\Omega')}${M('I_T=\\frac{V}{R_T}='+A(IT))}
+  <h3>Calculate I<sub>R3</sub> and V<sub>R3</sub></h3><p>Resistor R3 is in series with the voltage source. Series connected components have equal current flow.</p>${M('I_{R3}=I_T\\qquad V_{R3}=I_{R3}R_3='+fmt(V3)+'\\,\\mathrm{V}')}
+  <h3>Use Kirchhoff's law to calculate V<sub>R1</sub> and V<sub>R2</sub></h3><p>The sum of the voltage drops in a closed loop will equal the source voltage. This way of stating Kirchhoff's law can be used so long as there is only one voltage source.</p>${M('V_T=V_{R3}+V_{R1}\\quad\\Rightarrow\\quad V_{R1}='+V+'-'+fmt(V3)+'='+fmt(V1)+'\\,\\mathrm{V}')}<p>The voltages across R1 and R2 must be equal because they are parallel connected.</p>
+  <h3>Calculate I<sub>R1</sub>, I<sub>R2</sub> and power</h3>${M('I_{R1}=\\frac{V_{R1}}{R_1}='+A(V1/R1)+'\\qquad I_{R2}=\\frac{V_{R2}}{R_2}='+A(V1/R2))}${M('P_T=I_T V='+Pu(IT*V))}<p>P<sub>R1</sub> plus P<sub>R2</sub> plus P<sub>R3</sub> is equal to P<sub>T</sub>. This check helps verify the accuracy of calculations.</p>`;}
+
+/* ---------------- hero: lamp circuit with clickable wires ---------------- */
+function hero(slot){
+  const sw=[1,1,1,1,1,1];
+  const card=el(`<div class="card"><div class="row" style="justify-content:space-between"><b>Lamp circuit</b><span class="lcd" style="font-size:1.1rem">48 V</span></div><div class="diagram mt" id="lc"></div><p class="small muted">Tap the bare wires to open or close the connections.</p></div>`);
+  slot.appendChild(card);
+  const LR=48;
+  const draw=()=>{
+    const R=i=>sw[i]?0.01:Infinity;
+    // nodes: 1 supply+, 2 top rail, 3 middle rail, 4 bottom rail, 0 supply-
+    const els=[{a:1,b:2,R:R(0)},{a:2,b:3,R:sw[1]?LR:Infinity},{a:2,b:3,R:sw[2]?LR:Infinity},{a:3,b:4,R:sw[3]?LR:Infinity},{a:3,b:4,R:sw[4]?LR:Infinity},{a:4,b:0,R:R(5)}];
+    const sol=K.solve(5,els,[{p:1,n:0,V:48,Ri:0.01}]);const v=sol.v;
+    const lampV=[v[2]-v[3],v[2]-v[3],v[3]-v[4],v[3]-v[4]].map((x,i)=>sw[i+1]?Math.abs(x):0);
+    const glow=lampV.map(x=>Math.min(1.4,(x*x/LR)/12));
+    const lamp=(x,y,g,vv,name)=>`<circle cx="${x}" cy="${y}" r="${13+8*Math.min(1,g)}" fill="#ffe94a" opacity="${g>0.02?0.25+0.5*Math.min(1,g):0}"/><circle cx="${x}" cy="${y}" r="12" fill="${g>0.02?'#fff6b0':'var(--surface)'}" stroke="var(--ink2)" stroke-width="2"/><path d="M${x-6},${y+3} q6,-12 12,0" stroke="#a88" fill="none"/><text x="${x+26}" y="${y}" font-size="11" font-weight="700" fill="var(--ink)">${name}</text><text x="${x+26}" y="${y+13}" font-size="11" fill="var(--ink2)">${fmt(vv,3)} V</text>`;
+    const wire=(i,pts)=>{const d=pts.map(p=>p.join(',')).join(' ');const [a,b]=[pts[pts.length-2],pts[pts.length-1]];const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2;
+      return `<g class="pad" data-w="${i}" tabindex="0" role="button" aria-label="Wire ${i+1} ${sw[i]?'closed':'open'}"><polyline points="${d}" fill="none" stroke="var(--copper)" stroke-width="5" ${sw[i]?'':'stroke-dasharray="10 10"'}/>${sw[i]?'':`<circle cx="${mx}" cy="${my}" r="5" fill="var(--bad)"/>`}<polyline points="${d}" fill="none" stroke="transparent" stroke-width="22"/></g>`;};
+    $('#lc',card).innerHTML=`<svg viewBox="0 0 360 250" width="360" height="250" role="img" aria-label="lamp circuit">
+      <rect x="10" y="10" width="90" height="40" rx="6" fill="#4a3b33"/><text x="55" y="36" text-anchor="middle" font-size="14" font-weight="700" fill="#7fffd4" font-family="monospace">48 V</text><text x="85" y="62" font-size="13" fill="var(--brand)">+</text><text x="22" y="62" font-size="14" fill="var(--ink)">−</text>
+      ${wire(0,[[85,50],[85,80],[150,80]])}<polyline points="150,80 290,80" stroke="var(--copper)" stroke-width="5"/>
+      ${wire(1,[[170,80],[170,100]])}${wire(2,[[270,80],[270,100]])}${lamp(170,118,glow[0],lampV[0],'L1')}${lamp(270,118,glow[1],lampV[1],'L2')}
+      <polyline points="170,136 170,150 270,150 270,136" stroke="var(--copper)" stroke-width="5" fill="none"/>
+      ${wire(3,[[170,150],[170,168]])}${wire(4,[[270,150],[270,168]])}${lamp(170,186,glow[2],lampV[2],'L3')}${lamp(270,186,glow[3],lampV[3],'L4')}
+      <polyline points="170,204 170,225 270,225 270,204" stroke="var(--copper)" stroke-width="5" fill="none"/>${wire(5,[[170,225],[25,225],[25,50]])}</svg>`;
+    $$('[data-w]',card).forEach(g=>{const f=()=>{sw[+g.dataset.w]^=1;draw();};g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+  };
+  draw();
+}
+
+/* ---------------- intros ---------------- */
+const tabs=K.tabs;
+const fbox=list=>`<div class="formulas">${list.map(f=>`<div class="formula">${f.cap?`<span class="cap">${f.cap}</span>`:''}${M(f.tex)}</div>`).join('')}</div>`;
+const OHMF=[{cap:'Voltage',tex:'V=I R'},{cap:'Current',tex:'I=\\frac{V}{R}'},{cap:'Resistance',tex:'R=\\frac{V}{I}'}];
+const PWF=[{cap:'Voltage and current known',tex:'P=I V'},{cap:'Voltage and resistance known',tex:'P=\\frac{V^2}{R}'},{cap:'Current and resistance known',tex:'P=I^2 R'}];
+const ex=(title,lines)=>`<h3>${title}</h3>${lines.map(l=>l.startsWith('$')?M(l.slice(1)):`<p>${l}</p>`).join('')}`;
+const ohmEx1=ex('Example One — Calculate Voltage',['The current and resistance of the circuit are known: '+m('I=3\\,\\mathrm{A}')+' and '+m('R=6\\,\\Omega')+'.','$V=I R=(3\\,\\mathrm{A})(6\\,\\Omega)=18\\,\\mathrm{V}'])+ex('Example Two — Calculate Current',['The voltage and resistance are known: '+m('V=12\\,\\mathrm{V}')+' and '+m('R=4\\,\\Omega')+'.','$I=\\frac{V}{R}=\\frac{12\\,\\mathrm{V}}{4\\,\\Omega}=3\\,\\mathrm{A}'])+ex('Example Three — Calculate Resistance',['The voltage and current are known: '+m('V=16\\,\\mathrm{V}')+' and '+m('I=2\\,\\mathrm{A}')+'.','$R=\\frac{V}{I}=\\frac{16\\,\\mathrm{V}}{2\\,\\mathrm{A}}=8\\,\\Omega']);
+const ohmEx2=ex('Example One — Calculate Voltage',['The current and resistance are known: '+m('I=2.3\\,\\mathrm{A}')+' and '+m('R=7.4\\,\\Omega')+'.','$V=I R=(2.3\\,\\mathrm{A})(7.4\\,\\Omega)=17.02\\,\\mathrm{V}'])+ex('Example Two — Calculate Current',['The voltage and resistance are known: '+m('V=14.73\\,\\mathrm{V}')+' and '+m('R=3.45\\,\\Omega')+'.','$I=\\frac{V}{R}=\\frac{14.73\\,\\mathrm{V}}{3.45\\,\\Omega}=4.27\\,\\mathrm{A}','(Result rounded to 3 significant digits)'])+ex('Example Three — Calculate Resistance',['The voltage and current are known: '+m('V=9.35\\,\\mathrm{V}')+' and '+m('I=2.12\\,\\mathrm{A}')+'.','$R=\\frac{V}{I}=\\frac{9.35\\,\\mathrm{V}}{2.12\\,\\mathrm{A}}=4.41\\,\\Omega','(Result rounded to 3 significant digits)']);
+const pwEx1=ex('Example One',['The voltage and current are known: '+m('V=20\\,\\mathrm{V}')+' and '+m('I=12\\,\\mathrm{A}')+'.','$P=I V=(12\\,\\mathrm{A})(20\\,\\mathrm{V})=240\\,\\mathrm{W}'])+ex('Example Two',['The voltage and resistance are known: '+m('V=12\\,\\mathrm{V}')+' and '+m('R=4\\,\\Omega')+'.','$P=\\frac{V^2}{R}=\\frac{(12\\,\\mathrm{V})^2}{4\\,\\Omega}=\\frac{144}{4}=36\\,\\mathrm{W}'])+ex('Example Three',['The resistance and current are known: '+m('R=16\\,\\Omega')+' and '+m('I=5\\,\\mathrm{A}')+'.','$P=I^2 R=(5\\,\\mathrm{A})^2(16\\,\\Omega)=(25)(16)=400\\,\\mathrm{W}']);
+const pwEx2=ex('Example One',['The voltage and current are known: '+m('V=13.7\\,\\mathrm{V}')+' and '+m('I=4.65\\,\\mathrm{A}')+'.','$P=I V=(4.65\\,\\mathrm{A})(13.7\\,\\mathrm{V})=63.705\\,\\mathrm{W}'])+ex('Example Two',['The voltage and resistance are known: '+m('V=71.3\\,\\mathrm{V}')+' and '+m('R=15.2\\,\\Omega')+'.','$P=\\frac{V^2}{R}=\\frac{(71.3\\,\\mathrm{V})^2}{15.2\\,\\Omega}=\\frac{5083.69}{15.2}=334.45\\,\\mathrm{W}'])+ex('Example Three',['The resistance and current are known: '+m('R=23.54\\,\\Omega')+' and '+m('I=3.71\\,\\mathrm{A}')+'.','$P=I^2 R=(3.71\\,\\mathrm{A})^2(23.54\\,\\Omega)=(13.7641)(23.54)=324.007\\,\\mathrm{W}']);
+const srcDia=(v1,v2,top,right)=>S.wrap(370,200,`<g transform="translate(50,0)"><polyline points="60,40 125,40"/>${batH(155,40,right,'V2 = '+v2+' V')}<polyline points="185,40 260,40 260,80"/>${S.vSym('lamp',260,110,null)}<polyline points="260,140 260,170 60,170 60,140"/><polyline points="60,40 60,80"/>${batV(60,110,top,'V1 = '+v1+' V')}</g>`);
+const srcEx=ex('Example One — Series Aiding Sources',['The two sources below are connected series aiding. We can determine this by the minus, plus, minus, plus connection of the sources. The total voltage is the sum of the two sources.','$V_T=V_1+V_2=20\\,\\mathrm{V}+8\\,\\mathrm{V}=28\\,\\mathrm{V}','$I=\\frac{V_T}{R}=\\frac{28\\,\\mathrm{V}}{4\\,\\Omega}=7\\,\\mathrm{A}'])+`<div class="diagram">${srcDia(20,8,true,true)}</div>`+
+  ex('Example Two — Series Opposing Sources',['The figure below shows two sources connected series opposing. Sources connected positive to positive or negative to negative give opposing results. The vertical bars in the formula mean use the difference without regard to the sign.','$V_T=|V_1-V_2|=|24\\,\\mathrm{V}-16\\,\\mathrm{V}|=8\\,\\mathrm{V}','$I=\\frac{V_T}{R}=\\frac{8\\,\\mathrm{V}}{4\\,\\Omega}=2\\,\\mathrm{A}'])+`<div class="diagram">${srcDia(24,16,true,false)}</div>`;
+const pwr101=P('The study of electricity and electronics involves working with a wide range of number sizes. The table below shows several numbers that are common in electricity and electronics. The left side shows some numbers in conventional decimal notation. The right side shows the equivalent scientific notation form of the numbers. Notice the compact form of the scientific notation numbers. The exponential variation of scientific notation is frequently used with computer and calculator displays.')+
+  `<div class="tablewrap"><table class="t" style="max-width:620px"><thead><tr><th>Conventional notation</th><th>Scientific notation</th><th>Exponential notation</th></tr></thead><tbody>${[['6,250,000,000,000,000,000','6.25','18'],['2,700,000','2.7','6'],['0.0000013','1.3','-6'],['0.0000000000056','5.6','-12']].map(r=>`<tr><td>${r[0]}</td><td>${m(r[1]+'\\times10^{'+r[2]+'}')}</td><td>${r[1]}E${r[2]}</td></tr>`).join('')}</tbody></table></div>`+
+  P('<b>Converting Scientific Notation to Conventional Notation</b>','Scientific notation is a compact way to express both large and small numbers. The sign on the power of ten tells us which way to move the decimal. The decimal should move right if the power is positive. The decimal should be moved to the left if the power is negative. In many cases zeros must be added to obtain the necessary number of decimal places.')+
+  [['4.13','5','413000','The power of ten is a positive 5. Therefore the decimal must move right 5 decimal places. Three zeros were added.'],['6.794','7','67940000','The power of ten is a positive 7. The decimal must move right 7 decimal places. Four zeros were added.'],['3.6','-3','0.0036','The power of ten is a negative 3. The decimal must move left 3 decimal places. Two zeros were added to the left of the number.'],['2.59','-6','0.00000259','The power of ten is a negative 6. The decimal must move left 6 decimal places. Five zeros were added to the left of the number.']].map(([a,e,c,t],i)=>`<p><b>Example ${i+1}</b> — ${m(a+'\\times10^{'+e+'}='+c)}<br><span class="small">${t}</span></p>`).join('')+
+  P('<b>Converting Conventional Notation to Scientific Notation</b>','Move the decimal to the right of the leftmost non-zero digit in the number. The number of decimal places moved is the power of ten to be used. The power will be negative if the decimal is moved right. The power will be positive if the decimal is moved left. Leading zeros can be removed. Non-significant trailing zeros can also be removed.')+
+  [['0.0000945','9.45','-5'],['0.000000284','2.84','-7'],['5600000','5.6','6'],['8470','8.47','3']].map(([c,a,e],i)=>`<p><b>Example ${i+5}</b> — ${m(c+'='+a+'\\times10^{'+e+'}')}</p>`).join('');
+const pwr102=P('We use engineering notation instead of strict scientific notation for most electrical quantities. Only the powers of ten that are multiples of 3 are used in engineering notation. Each power has a standard prefix that can be used with any standard units including voltage, current, resistance, inductance and capacitance.')+
+  `<div class="tablewrap"><table class="t" style="max-width:560px"><thead><tr><th>Power</th><th>Prefix</th><th>Symbol</th><th>Convert to conventional</th></tr></thead><tbody>${PREF.map(p=>`<tr><td>${m('10^{'+p[0]+'}')}</td><td>${p[2]||'unit'}</td><td>${p[1]||'—'}</td><td>${p[0]?Math.abs(p[0])+' places '+(p[0]<0?'left':'right'):''}</td></tr>`).join('')}</tbody></table></div>
+  <div class="tablewrap mt"><table class="t" style="max-width:420px"><thead><tr><th>Quantity</th><th>Unit</th><th>Symbol</th></tr></thead><tbody>${[['Voltage','Volt','V'],['Current','Ampere','A'],['Resistance','Ohm','Ω'],['Inductance','Henry','H'],['Capacitance','Farad','F']].map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('')}</tbody></table></div>`+
+  P('Prefixes and symbols are combined to designate electrical quantities. 5 kV means 5 kilovolts. 16 mA means 16 milliamperes. 320 µH means 320 microhenrys. Nano (n) is common too: for example 4.7 nF or 20 ns.','<b>Converting Engineering Notation to Conventional Notation</b>')+
+  [['4.32 kV','4320 V','The letter k indicates kilo meaning '+m('10^{3}')+'. The decimal must move right 3 places.'],['15 MΩ','15000000 Ω','The letter M indicates mega meaning '+m('10^{6}')+'. Six zeros were added.'],['4.25 mA','0.00425 A','The letter m indicates milli meaning '+m('10^{-3}')+'. The decimal must move left 3 places.'],['87 µV','0.000087 V','The symbol µ indicates micro meaning '+m('10^{-6}')+'.'],['27 pF','0.000000000027 F','The symbol p indicates pico meaning '+m('10^{-12}')+'.']].map(([a,b,t])=>`<p><b>${a} = ${b}</b><br><span class="small">${t}</span></p>`).join('')+
+  P('<b>Converting Conventional Notation to Engineering Notation</b>','Choose the prefix that leaves a number of at least 1 but less than 1000. Some fields bend this rule; for example, capacitor values are often written as 0.1 µF instead of 100 nF.')+
+  [['53210 V','53.21 kV'],['2200000 Ω','2.2 MΩ'],['0.0257 A','25.7 mA'],['0.000033 F','33 µF'],['0.00000000068 F','680 pF'],['0.00015 H','150 µH']].map(([a,b])=>`<p><b>${a} = ${b}</b></p>`).join('');
+
+const wsIntro=(desc,example,dia)=>K.introMod(tabs([{title:'Description',html:`<div class="cols2" style="align-items:center"><div class="intro-text">${desc}</div><div class="diagram">${dia}</div></div>`},{title:'Example',html:`<div class="intro-text">${example}</div>`},{title:'Instructions',html:`<div class="intro-text"><p>${T.series3}</p></div>`}]));
+const serD=S.series([{t:'lamp',label:'Lamp 1'},{t:'lamp',label:'Lamp 2'}],{src:'dc',srcLabel:'3 V'});
+const parD=S.parallel([{t:'lamp',label:'L1'},{t:'lamp',label:'L2'},{t:'lamp',label:'L3'}],{src:'dc',srcLabel:'12 V',gap:80});
+const spD=K.wrap(320,200,S.line([[40,30],[80,30]])+S.hSym('lamp',110,30,'Lamp 1')+S.line([[140,30],[270,30],[270,70]])+S.line([[190,30],[190,70]])+S.vSym('lamp',190,100,'Lamp 2')+S.vSym('lamp',270,100,'Lamp 3')+S.line([[190,130],[190,170]])+S.line([[270,130],[270,170],[40,170],[40,130]])+S.line([[40,30],[40,70]])+K.bat(40,100,'VS')+S.dot(190,30)+S.dot(190,170));
+const set20=(fn)=>(el,s)=>CC.problemSet(el,s,{count:20,gen:fn,tol:TOL});
+const mcRun=(bank)=>(el,s)=>CC.problemSet(el,s,{list:()=>K.mcq(typeof bank==='function'?bank():bank,25),gradeLabel:'Grade answer'});
+
+window.BCK={powQ,ohmProb,powProb,srcProb,colorProb,bSheet,bSolve,IDEAS,COMP,plain};
+CC.App.init({
+  id:'basic',title:'Basic Circuits Challenge',tagline:'Interactive basic electricity · offline edition',
+  blurb:'Practice activities for the first steps in electricity and electronics: basic ideas, components, powers of ten, Ohm\'s law, power, series sources, color codes, and series, parallel and series-parallel circuits. Values change on every use.',
+  footer:'Based on Basic Circuits Challenge 5.0 © 2004 ETCAI Products. Offline HTML edition.',pass:80,hero,
+  manual:`<h2>About this program</h2><p>Basic Circuits Challenge is a set of practice activities for the early stages of learning electricity and electronics. It goes alongside your textbook, lectures and lab work rather than replacing them. Activities include multiple-choice question sets, short calculation drills and complete circuit worksheets, all with instant feedback and worked solutions.</p><p>While you are learning a topic, practice without worrying about your score or time. Once the ideas make sense, work on getting a perfect score in less time. You can report progress by handing in printed certificates, by sharing the grade file, or by completing an activity while your instructor watches.</p><p>The program also works well for classroom demonstrations on a projector or large screen.</p><h2>Required accuracy</h2><p>Numeric answers within ±5% of the correct value are marked correct (color codes must be exact). Carry at least 3, preferably 4, significant digits through your calculations.</p>`,
+  groups:[
+    {title:'Getting started',items:[
+      {id:'intro',title:'Program Introduction',icon:'book',sub:'purpose, operation, accuracy',graded:false,intro:K.introMod(tabs([{title:'Program Purpose',html:`<div class="intro-text">${T.purpose}</div>`},{title:'How It Works',html:`<div class="intro-text">${T.howto}</div>`},{title:'Required Accuracy',html:`<div class="intro-text">${T.accurate}</div>`}])),
+        run:(el)=>{el.appendChild(CC.el('<div class="card center"><p>This introduction has no graded activity. Choose another activity from the main menu to begin.</p><a class="btn primary" href="#/">Main menu</a></div>'));}},
+      {id:'ideas',title:'Electric Ideas',icon:'power',sub:'static, current, sources, Ohm',intro:K.introMod(tabs([{title:'Introduction',html:`<div class="intro-text">${T.ideasIntro}${T.act(0)}</div>`},{title:'Static Electricity',html:`<div class="intro-text">${T.stat}</div>${balloons()}`},{title:'Electricity in Motion',html:`<div class="intro-text">${T.motion}</div>${electrons()}`},{title:'Voltage Sources',html:`<div class="intro-text">${T.voltsrc}</div>`},{title:'Volts, Amps and Ohms',html:`<div class="intro-text">${T.vao}</div>${fbox(OHMF)}${demoBox('ohm')}<p class="small mt">Try it: (1) What happens to the current when the voltage goes up? (2) When it goes down? (3) When the resistance goes up? (4) When the resistance goes down?</p>`}])),run:mcRun(IDEAS)},
+      {id:'parts',title:'Electrical Components',icon:'chip',sub:'symbols and parts',intro:K.introMod(tabs([{title:'Introduction',html:`<div class="intro-text">${T.compIntro}${T.act(0)}</div>`},{title:'Wires, Switches and Fuses',html:`<div class="intro-text">${T.csf}</div><div class="row" style="justify-content:center"><div class="diagram">${K.symSwitch()}<span class="small">Switch (open)</span></div><div class="diagram">${K.symFuse()}<span class="small">Fuse</span></div></div>`},{title:'Resistors',html:`<div class="intro-text">${T.resistor}</div><div class="row" style="justify-content:center"><div class="diagram">${K.sym('R')}<span class="small">Fixed</span></div><div class="diagram">${K.symPot()}<span class="small">Variable</span></div></div>`},{title:'Capacitors',html:`<div class="intro-text">${T.cap}</div><div class="row" style="justify-content:center"><div class="diagram">${K.sym('C')}<span class="small">Non-polarized</span></div><div class="diagram">${K.symCapPol()}<span class="small">Electrolytic (polarized)</span></div></div>`},{title:'Inductors',html:`<div class="intro-text">${T.ind}</div><div class="row" style="justify-content:center"><div class="diagram">${K.symL(false)}<span class="small">Air core</span></div><div class="diagram">${K.symL(true)}<span class="small">Iron core</span></div></div>`},{title:'Semiconductors',html:`<div class="intro-text">${T.semi}</div><div class="row" style="justify-content:center"><div class="diagram">${K.sym('D')}<span class="small">Diode</span></div><div class="diagram">${K.symNPN(false)}<span class="small">NPN</span></div><div class="diagram">${K.symNPN(true)}<span class="small">PNP</span></div></div>`}])),run:mcRun(COMP)},
+      {id:'pow',title:'Powers of Ten',icon:'num',sub:'scientific and engineering notation',intro:K.introMod(tabs([{title:'Scientific Notation',html:`<div class="intro-text">${pwr101}</div>`},{title:'Engineering Notation',html:`<div class="intro-text">${pwr102}</div>`},{title:'Instructions',html:`<div class="intro-text">${T.act(1)}</div>`}])),run:mcRun(()=>Array.from({length:25},powQ))},
+    ]},
+    {title:'Ohm\'s law and power',items:[
+      {id:'ohm1',title:'Ohm\'s Law I',icon:'ohm',sub:'20 problems, whole numbers',intro:K.introMod(tabs([{title:'Formulas',html:`<div class="intro-text"><p>${T.ohms1}</p></div>${fbox(OHMF)}${demoBox('ohm')}`},{title:'Examples',html:`<div class="intro-text">${ohmEx1}</div>`},{title:'Instructions',html:`<div class="intro-text"><p>${T.ohms2}</p><p>${T.ohms5}</p></div>`}])),run:set20(()=>ohmProb(true))},
+      {id:'ohm2',title:'Ohm\'s Law II',icon:'ohm',sub:'20 problems, decimal values',intro:K.introMod(tabs([{title:'Formulas',html:`<div class="intro-text"><p>${T.ohms1}</p></div>${fbox(OHMF)}`},{title:'Examples',html:`<div class="intro-text">${ohmEx2}</div>`},{title:'Instructions',html:`<div class="intro-text"><p>${T.ohms2}</p><p>${T.ohms5}</p></div>`}])),run:set20(()=>ohmProb(false))},
+      {id:'pw1',title:'Electrical Power One',icon:'power',sub:'20 problems, whole numbers',intro:K.introMod(tabs([{title:'Formulas',html:`<div class="intro-text"><p>${T.watts1}</p></div>${fbox(PWF)}${demoBox('pw')}`},{title:'Examples',html:`<div class="intro-text">${pwEx1}</div>`},{title:'Instructions',html:`<div class="intro-text"><p>${T.watts2}</p><p>${T.watts5}</p></div>`}])),run:set20(()=>powProb(true))},
+      {id:'pw2',title:'Electrical Power Two',icon:'power',sub:'20 problems, decimal values',intro:K.introMod(tabs([{title:'Formulas',html:`<div class="intro-text"><p>${T.watts1}</p></div>${fbox(PWF)}${demoBox('pw')}`},{title:'Examples',html:`<div class="intro-text">${pwEx2}</div>`},{title:'Instructions',html:`<div class="intro-text"><p>${T.watts2}</p><p>${T.watts5}</p></div>`}])),run:set20(()=>powProb(false))},
+      {id:'src',title:'Series Sources',icon:'plug',sub:'aiding and opposing batteries',intro:K.introMod(tabs([{title:'Formulas',html:`<div class="intro-text">${T.sources1}${M('V_T=V_1+V_2')}${T.sources1b}${M('V_T=|V_1-V_2|')}${T.sources1c}</div>`},{title:'Examples',html:`<div class="intro-text">${srcEx}</div>`},{title:'Instructions',html:`<div class="intro-text"><p>${T.sources3}</p></div>`}])),run:set20(srcProb)},
+      {id:'color',title:'Color Codes',icon:'res',sub:'read 20 resistors',intro:K.introMod(tabs([{title:'Color Code Chart',html:`<div class="intro-text"><p>${T.color1}</p></div>${colorChart()}`},{title:'Instructions',html:`<div class="intro-text"><p>${T.color2}</p><p>${T.color3}</p></div>`}])),run:(el,s)=>K.weightedSet(el,s,{count:20,gen:colorProb})},
+    ]},
+    {title:'Circuits',items:[
+      {id:'ser1',title:'Series One',icon:'res',sub:'two resistors, whole numbers',intro:wsIntro(T.series1,exSeries(9,7,64),serD),run:(el,s)=>CC.worksheet(el,s,bSheet('ser',true))},
+      {id:'ser2',title:'Series Two',icon:'res',sub:'two resistors, real values',intro:wsIntro(T.series1,exSeries(2700,1000,18.5),serD),run:(el,s)=>CC.worksheet(el,s,bSheet('ser',false))},
+      {id:'par1',title:'Parallel One',icon:'res',sub:'two resistors, whole numbers',intro:wsIntro(T.para1,exPar(20,60,90),parD),run:(el,s)=>CC.worksheet(el,s,bSheet('par',true))},
+      {id:'par2',title:'Parallel Two',icon:'res',sub:'two resistors, real values',intro:wsIntro(T.para1,exPar(680,1000,12),parD),run:(el,s)=>CC.worksheet(el,s,bSheet('par',false))},
+      {id:'sp1',title:'Series-Parallel I',icon:'res',sub:'three resistors, whole numbers',intro:wsIntro(T.sepa1,exSp(18,9,2,80),spD),run:(el,s)=>CC.worksheet(el,s,bSheet('sp',true))},
+      {id:'sp2',title:'Series-Parallel II',icon:'res',sub:'three resistors, real values',intro:wsIntro(T.sepa1,exSp(1500,2200,470,24),spD),run:(el,s)=>CC.worksheet(el,s,bSheet('sp',false))},
+    ]}
+  ]
+});
+})();
+</script>
+<a href="index.html" style="position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;background:#1d2733;color:#f3f0ea;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:.92">&larr; Study home</a></body>
+</html>

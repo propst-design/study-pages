@@ -1,0 +1,1458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>AC Circuits Challenge</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b3261e'/%3E%3Cpath d='M5 16q5.5-12 11 0t11 0' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<style>:root{
+  --bg:#f4f1ea; --surface:#fffdf8; --surface2:#f0ece2; --ink:#1d2228; --ink2:#55606b; --line:#d9d2c3;
+  --brand:#b3261e; --brand-ink:#fff; --accent:#1f5fa8; --ok:#1e7d43; --ok-bg:#e3f3e8; --bad:#b3261e; --bad-bg:#fbe6e4;
+  --warn:#9a6400; --warn-bg:#fdf1d8; --board:#c9a66b; --board-dark:#9c7a42; --trace:#e8c48a; --copper:#b5652b;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06); --r:12px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+math{font-size:1.1em}
+math[display="block"]{margin:.4em 0;overflow-x:auto;overflow-y:hidden;max-width:100%}
+
+/* header */
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);}
+.topbar .in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.logo{width:34px;height:34px;flex:none}
+.brand{font-weight:800;color:var(--brand);letter-spacing:-.01em;line-height:1.1;font-size:1.05rem;text-decoration:none}
+.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;color:var(--ink2);font-weight:500;font-size:.72rem;letter-spacing:0}
+.topbar .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:.85rem;cursor:pointer;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{border:1px solid var(--line);background:var(--surface2);border-radius:10px;width:38px;height:38px;display:inline-grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn svg{width:20px;height:20px}
+
+main{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:1.6rem;line-height:1.2;margin:.2em 0 .4em;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:1.2em 0 .5em}
+h3{font-size:1rem;margin:1em 0 .4em}
+p{margin:.5em 0}
+.muted{color:var(--ink2)}
+.small{font-size:.875rem}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.card+.card{margin-top:14px}
+.grid{display:grid;gap:12px}
+.cols2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.cols2{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:42px;text-decoration:none;color:var(--ink)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible,input:focus-visible,.menu-item:focus-visible,.pad:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.blue{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:34px;padding:5px 10px;font-size:.875rem;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+
+/* home */
+.hero{display:grid;gap:16px;grid-template-columns:1fr;align-items:center;margin-bottom:8px}
+@media (min-width:860px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero h1{font-size:2rem;color:var(--brand);margin:0}
+.group-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:22px 0 8px;font-weight:700}
+.menu{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.menu-item{display:flex;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);min-height:64px;width:100%;color:var(--ink)}
+.menu-item:hover{border-color:var(--brand)}
+.menu-item .ic{width:42px;height:42px;flex:none;border-radius:10px;background:var(--surface2);display:grid;place-items:center;color:var(--brand)}
+.menu-item .ic svg{width:30px;height:30px}
+.menu-item b{display:block;line-height:1.25}
+.menu-item span{font-size:.8rem;color:var(--ink2)}
+.menu-item .best{margin-left:auto;font-size:.75rem;font-weight:700;color:var(--ok);white-space:nowrap}
+.utils{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+
+/* intro */
+.intro-text p{max-width:68ch}
+.formulas{display:grid;gap:8px 18px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));align-items:center}
+.formula{background:var(--surface2);border-radius:10px;padding:8px 12px;overflow-x:auto}
+.formula .cap{font-size:.78rem;color:var(--ink2);display:block}
+.diagram{display:flex;justify-content:center;align-items:center;background:var(--surface2);border-radius:10px;padding:10px;overflow:hidden}
+.diagram svg{max-width:100%;height:auto}
+.where{font-size:.85rem;color:var(--ink2);margin:.2em 0 0;padding-left:1em}
+
+/* status bar */
+.statusbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.pill{border-radius:999px;background:var(--surface2);border:1px solid var(--line);padding:3px 10px;font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.pill.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+/* givens */
+.givens{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.given{background:var(--warn-bg);border-radius:10px;padding:6px 10px}
+.given .k{font-size:.8rem;color:var(--ink2)}
+.given .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:1.05rem}
+
+/* worksheet rows */
+.ws{display:grid;gap:8px}
+.wrow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface)}
+.wrow .lab{font-weight:600;text-align:center}
+.wrow .inp{display:flex;align-items:center;gap:6px;min-width:0}
+.wrow input{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 10px;font-variant-numeric:tabular-nums;font-size:1rem}
+.wrow .unit{color:var(--ink2);min-width:2.2em;font-size:.95rem}
+.wrow .acts{display:flex;gap:6px}
+.wrow .fb{grid-column:1/-1;font-size:.875rem;display:none}
+.wrow.ok{border-color:var(--ok);background:var(--ok-bg)}
+.wrow.bad{border-color:var(--bad);background:var(--bad-bg)}
+.wrow.ok .fb,.wrow.bad .fb,.wrow.info .fb{display:block}
+.wrow.ok .fb{color:var(--ok)} .wrow.bad .fb{color:var(--bad)}
+input.ok{border-color:var(--ok)!important;background:var(--ok-bg)!important}
+input.bad{border-color:var(--bad)!important;background:var(--bad-bg)!important}
+input.known{background:#dbe8fb!important;border-color:#9dbbe6!important;font-weight:700}
+:root[data-theme="dark"] input.known{background:#1d2d47!important;border-color:#35507c!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) input.known{background:#1d2d47!important;border-color:#35507c!important}}
+input.ask{background:var(--warn-bg)!important}
+
+/* problems list */
+.prob{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.prob-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.field{display:grid;gap:4px;margin:8px 0}
+.field label{font-size:.875rem;color:var(--ink2)}
+.field input{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px;width:100%}
+.fields{display:grid;gap:4px 14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.verdict{font-weight:800;font-size:1.25rem}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+.progress{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--brand);transition:width .3s}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(10,12,15,.5);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:18px}
+.modal h3{margin-top:0}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:120;font-weight:600;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+
+/* tables */
+table.t{border-collapse:collapse;width:100%;font-size:.9rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.tablewrap{overflow-x:auto}
+
+/* board / troubleshooting */
+.board-wrap{background:var(--surface2);border-radius:12px;padding:8px;overflow:hidden}
+.board-wrap svg{width:100%;height:auto;display:block;touch-action:manipulation}
+.pad{cursor:pointer}
+.pad circle.hit{fill:transparent}
+.pad:hover circle.ring{stroke:var(--accent);stroke-width:3}
+.meter{display:flex;gap:10px;flex-wrap:wrap}
+.lcd{font-family:var(--mono);background:#9fb59a;color:#0f1a0e;border-radius:6px;padding:4px 10px;font-size:1.35rem;min-width:7.5ch;text-align:right;box-shadow:inset 0 2px 4px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.meterbox{background:#3b3f45;color:#eee;border-radius:10px;padding:8px 10px;display:grid;gap:4px;justify-items:start}
+.meterbox .ml{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:#c9cdd2}
+.faults{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.faults label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;background:var(--surface)}
+.faults input{accent-color:var(--brand);width:18px;height:18px}
+.faults label.correct{border-color:var(--ok);background:var(--ok-bg)}
+.faults label.wrong{border-color:var(--bad);background:var(--bad-bg)}
+
+/* certificate */
+.cert{background:#fffdf4;color:#222;border:10px double #8a6d1f;padding:28px;text-align:center;border-radius:6px;max-width:760px;margin:0 auto}
+.cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2em 0;color:#7a1610}
+.cert .big{font-family:Georgia,serif;font-size:1.6rem;margin:.3em 0}
+.cert dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;text-align:left;max-width:460px;margin:18px auto 0}
+.cert dt{color:#666}
+.cert dd{margin:0;font-weight:600}
+
+.kbd{font-family:var(--mono);background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.85em}
+.hide{display:none!important}
+.center{text-align:center}
+.mt{margin-top:14px}
+.anim-bulb{transition:opacity .3s}
+
+@media print{
+  .topbar,.noprint,.toast,.scrim{display:none!important}
+  body{background:#fff;color:#000}
+  main{padding:0;max-width:none}
+  .card{box-shadow:none;border:none}
+  .cert{border-color:#8a6d1f}
+}
+
+@media (max-width:520px){.brand small{display:none}.brand{font-size:1rem}h1{font-size:1.35rem}.hero h1{font-size:1.6rem}main{padding:12px 12px 60px}.card{padding:12px}.wrow{grid-template-columns:48px minmax(0,1fr) auto;padding:6px}}
+
+.work{margin-top:6px;color:var(--ink)}.work summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:.875rem}.work[open]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}.work math{font-size:1em}
+</style>
+</head>
+<body>
+<noscript><p style="padding:16px">This page needs JavaScript turned on.</p></noscript>
+<script>/* Circuits Challenge offline engine. No network access, no external libraries. */
+(function(){
+'use strict';
+const CC = window.CC = {};
+
+/* ---------- small utils ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+CC.$ = $; CC.$$ = $$;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+CC.esc = esc;
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+CC.el = el;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+Object.assign(CC,{rnd,ri,pick,shuffle});
+CC.E12=[1,1.2,1.5,1.8,2.2,2.7,3.3,3.9,4.7,5.6,6.8,8.2];
+CC.E6=[1,1.5,2.2,3.3,4.7,6.8];
+/** random value from an E-series between lo and hi (inclusive) */
+CC.eVal=function(lo,hi,series=CC.E12){const out=[];for(let d=-15;d<=9;d++){for(const m of series){const v=+(m*Math.pow(10,d)).toPrecision(3);if(v>=lo*0.999&&v<=hi*1.001)out.push(v);}}return pick(out);};
+/** round to nearest E-series value */
+CC.eNear=function(x,series=CC.E12){const d=Math.floor(Math.log10(x));let best=null,bd=1e99;for(const dd of [d-1,d,d+1])for(const m of series){const v=+(m*Math.pow(10,dd)).toPrecision(3);const e=Math.abs(Math.log(v/x));if(e<bd){bd=e;best=v;}}return best;};
+CC.sig=(x,n=3)=>x===0?0:+x.toPrecision(n);
+/** format number for display: up to `n` significant figures, no exponent, trims zeros */
+CC.fmt=function(x,n=4){
+  if(x===null||x===undefined||isNaN(x))return '—';
+  if(!isFinite(x))return '∞';
+  if(Math.abs(x)<1e-12)return '0';
+  let v=+x.toPrecision(n);
+  let s;
+  const a=Math.abs(v);
+  if(a>=1e15||a<1e-9) s=v.toExponential(n-1);
+  else { const dec=Math.max(0,n-1-Math.floor(Math.log10(a))); s=v.toFixed(Math.min(dec,12)); if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,''); }
+  // thousands separators for readability on integers part
+  const parts=s.split('.'); if(Math.abs(v)>=10000) parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,','); return parts.join('.');
+};
+/** parse a typed number. Accepts "1,234.5", "1.2e3", "−5", and SI suffixes k, M, m, u/µ, n, p if allowSuffix */
+CC.parse=function(str,allowSuffix=true){
+  if(str===null||str===undefined)return NaN;
+  let s=String(str).trim().replace(/[−–]/g,'-').replace(/\s+/g,'');
+  if(!s)return NaN;
+  s=s.replace(/,(?=\d{3}(\D|$))/g,'');
+  s=s.replace(/,/g,'.');
+  let mult=1;
+  if(allowSuffix){const m=s.match(/^(.*?)([kKMmuµnp])$/);if(m&&m[1]!==''&&!isNaN(+m[1])){mult={k:1e3,K:1e3,M:1e6,m:1e-3,u:1e-6,'µ':1e-6,n:1e-9,p:1e-12}[m[2]];s=m[1];}}
+  if(!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(s))return NaN;
+  return parseFloat(s)*mult;
+};
+/** compare typed value with correct value */
+CC.prefixed=u=>/^(m|k|µ|μ|M|n|p|G)./.test(u||'');
+CC.close=function(user,correct,tol=0.02,absTol=null){
+  if(isNaN(user))return false;
+  if(absTol===null) absTol=Math.max(1e-9,Math.abs(correct)*1e-6);
+  if(Math.abs(user-correct)<=absTol)return true;
+  return Math.abs(user-correct)<=Math.abs(correct)*tol;
+};
+CC.fmtTime=function(ms){const s=Math.round(ms/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(ss).padStart(2,'0');};
+CC.deg=r=>r*180/Math.PI;
+CC.rad=d=>d*Math.PI/180;
+
+/* complex numbers */
+const Cx=CC.Cx={
+  c:(re,im=0)=>({re,im}),
+  add:(a,b)=>({re:a.re+b.re,im:a.im+b.im}),
+  sub:(a,b)=>({re:a.re-b.re,im:a.im-b.im}),
+  mul:(a,b)=>({re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re}),
+  div:(a,b)=>{const d=b.re*b.re+b.im*b.im;return {re:(a.re*b.re+a.im*b.im)/d,im:(a.im*b.re-a.re*b.im)/d};},
+  abs:a=>Math.hypot(a.re,a.im),
+  inv:a=>Cx.div({re:1,im:0},a),
+  par:(a,b)=>Cx.div(Cx.mul(a,b),Cx.add(a,b))
+};
+
+/* ---------- storage (best effort) ---------- */
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+CC.store=store;
+
+/* ---------- TeX-subset → MathML ---------- */
+const GREEK={alpha:'α',beta:'β',gamma:'γ',delta:'δ',theta:'θ',pi:'π',omega:'ω',phi:'φ',lambda:'λ',tau:'τ',mu:'μ',rho:'ρ',sigma:'σ',epsilon:'ε',eta:'η',
+  Omega:'Ω',Delta:'Δ',Sigma:'Σ',Phi:'Φ',Theta:'Θ',Lambda:'Λ'};
+const OPS={cdot:'·',times:'×',approx:'≈',pm:'±',to:'→',ne:'≠',le:'≤',ge:'≥',angle:'∠',infty:'∞',deg:'°',div:'÷',parallel:'∥',cdots:'⋯',ldots:'…',
+  overline:null,rightarrow:'→',leftarrow:'←',Rightarrow:'⇒',equiv:'≡',neg:'¬',oplus:'⊕',odot:'⊙',vee:'∨',wedge:'∧',bar:null};
+function texToMathML(src,block){
+  const p={s:src,i:0,up:0};
+  const body=seq(p,null);
+  return '<math'+(block?' display="block"':'')+'><mrow>'+body+'</mrow></math>';
+}
+CC.tex=texToMathML;
+CC.m=s=>texToMathML(s,false);
+CC.M=s=>texToMathML(s,true);
+function seq(p,end){
+  let out='';
+  while(p.i<p.s.length){
+    const c=p.s[p.i];
+    if(end&&c===end){p.i++;return out;}
+    if(c===' '){p.i++;continue;}
+    let base=atom(p); if(base===null)continue;
+    let sub=null,sup=null;
+    for(;;){
+      while(p.s[p.i]===' ')p.i++;
+      const d=p.s[p.i];
+      if(d==='_'){p.i++;p.up++;sub=arg(p);p.up--;}
+      else if(d==='^'){p.i++;sup=arg(p);}
+      else break;
+    }
+    if(sub!==null&&sup!==null)out+='<msubsup>'+base+sub+sup+'</msubsup>';
+    else if(sub!==null)out+='<msub>'+base+sub+'</msub>';
+    else if(sup!==null)out+='<msup>'+base+sup+'</msup>';
+    else out+=base;
+  }
+  return out;
+}
+function arg(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  return atom(p)||'<mrow></mrow>';
+}
+function rawBraced(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]!=='{'){const c=p.s[p.i];p.i++;return c;}
+  let depth=0,start=++p.i;
+  for(;p.i<p.s.length;p.i++){const c=p.s[p.i];if(c==='{')depth++;else if(c==='}'){if(depth===0)break;depth--;}}
+  const t=p.s.slice(start,p.i);p.i++;return t;
+}
+function mi(ch,p){return p.up?'<mi mathvariant="normal">'+esc(ch)+'</mi>':'<mi>'+esc(ch)+'</mi>';}
+function atom(p){
+  const s=p.s;let c=s[p.i];
+  if(c==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  if(c==='\\'){
+    p.i++;
+    let m=s.slice(p.i).match(/^[A-Za-z]+/);
+    if(!m){const ch=s[p.i];p.i++;
+      if(ch===',')return '<mspace width="0.17em"/>';
+      if(ch===';')return '<mspace width="0.28em"/>';
+      if(ch==='!')return '';
+      if(ch==='%')return '<mo>%</mo>';
+      return '<mo>'+esc(ch)+'</mo>';}
+    const name=m[0];p.i+=name.length;
+    switch(name){
+      case 'frac':{const a=arg(p),b=arg(p);return '<mfrac>'+a+b+'</mfrac>';}
+      case 'dfrac':{const a=arg(p),b=arg(p);return '<mstyle displaystyle="true"><mfrac>'+a+b+'</mfrac></mstyle>';}
+      case 'sqrt':{
+        if(s[p.i]==='['){const j=s.indexOf(']',p.i);const n=s.slice(p.i+1,j);p.i=j+1;const a=arg(p);return '<mroot>'+a+'<mrow>'+seq({s:n,i:0,up:0},null)+'</mrow></mroot>';}
+        return '<msqrt>'+arg(p)+'</msqrt>';}
+      case 'text':return '<mtext>'+esc(rawBraced(p))+'</mtext>';
+      case 'mathrm':case 'rm':case 'operatorname':case 'mathrm*':return '<mi mathvariant="normal">'+esc(rawBraced(p))+'</mi>';
+      case 'mathbf':return '<mi mathvariant="bold">'+esc(rawBraced(p))+'</mi>';
+      case 'quad':return '<mspace width="1em"/>';
+      case 'qquad':return '<mspace width="2em"/>';
+      case 'left':case 'right':{const ch=s[p.i];p.i++;if(ch==='.')return '';if(ch==='\\'){const mm=s.slice(p.i).match(/^[A-Za-z]+/);if(mm){p.i+=mm[0].length;return '<mo stretchy="true">'+(mm[0]==='lbrace'?'{':mm[0]==='rbrace'?'}':'|')+'</mo>';}const c2=s[p.i];p.i++;return '<mo stretchy="true">'+esc(c2)+'</mo>';}return '<mo stretchy="true">'+esc(ch)+'</mo>';}
+      case 'overline':case 'bar':{const a=arg(p);return '<mover>'+a+'<mo stretchy="true">¯</mo></mover>';}
+      case 'arctan':case 'tan':case 'sin':case 'cos':case 'log':case 'ln':case 'atan':return '<mi>'+name+'</mi><mo>&#x2061;</mo>';
+    }
+    if(GREEK[name]){const g=GREEK[name];return (name[0]===name[0].toUpperCase())?'<mi mathvariant="normal">'+g+'</mi>':mi(g,p);}
+    if(OPS[name])return '<mo>'+OPS[name]+'</mo>';
+    return '<mi>'+esc(name)+'</mi>';
+  }
+  if(/[0-9.]/.test(c)){const m=s.slice(p.i).match(/^[0-9]*\.?[0-9]+|^[0-9]+\.?/);p.i+=m[0].length;return '<mn>'+m[0]+'</mn>';}
+  if(/[A-Za-z]/.test(c)){p.i++;return mi(c,p);}
+  if(c==='°'||c==='Ω'||c==='µ'||c==='μ'){p.i++;return '<mi mathvariant="normal">'+c+'</mi>';}
+  if(c==='}'){p.i++;return null;}
+  p.i++;
+  const map={'*':'·','-':'−'};
+  const ch=map[c]||c;
+  if(c==='('||c===')'||c==='['||c===']'||c==='|')return '<mo stretchy="false">'+esc(ch)+'</mo>';
+  return '<mo>'+esc(ch)+'</mo>';
+}
+
+/* ---------- SVG schematic primitives ---------- */
+const S=CC.svg={};
+S.stroke='currentColor';
+function vSym(t,x,y,label,o={}){
+  // vertical symbol centred at (x,y), occupying y-30..y+30, leads included
+  let g='';
+  const L=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  switch(t){
+    case 'R':{g+=L(x,y-30,x,y-21);let d=`M${x},${y-21}`;for(let i=0;i<6;i++){d+=` L${x+(i%2?-7:7)},${y-17.5+i*7}`;}d+=` L${x},${y+21}`;g+=`<path d="${d}" fill="none"/>`+L(x,y+21,x,y+30);break;}
+    case 'C':g+=L(x,y-30,x,y-4)+L(x-13,y-4,x+13,y-4)+L(x-13,y+4,x+13,y+4)+L(x,y+4,x,y+30);break;
+    case 'L':{g+=L(x,y-30,x,y-20);let d=`M${x},${y-20}`;for(let i=0;i<4;i++){d+=` a5,5 0 0 1 0,10`;}g+=`<path d="${d}" fill="none"/>`+L(x,y+20,x,y+30);if(o.core)g+=L(x+10,y-20,x+10,y+20)+L(x+13,y-20,x+13,y+20);break;}
+    case 'F':g+=L(x,y-30,x,y-14)+`<rect x="${x-6}" y="${y-14}" width="12" height="28" rx="2" fill="none"/>`+L(x,y-14,x,y+14)+L(x,y+14,x,y+30);break;
+    case 'W':g+=L(x,y-30,x,y+30);break;
+    case 'lamp':g+=L(x,y-30,x,y-13)+`<circle cx="${x}" cy="${y}" r="13" fill="none"/>`+L(x-9,y-9,x+9,y+9)+L(x+9,y-9,x-9,y+9)+L(x,y+13,x,y+30);break;
+    case 'ac':g+=L(x,y-30,x,y-17)+`<circle cx="${x}" cy="${y}" r="17" fill="none"/><path d="M${x-10},${y} q5,-11 10,0 t10,0" fill="none"/>`+L(x,y+17,x,y+30);break;
+    case 'dc':g+=L(x,y-30,x,y-6)+L(x-15,y-6,x+15,y-6)+`<line x1="${x-8}" y1="${y+3}" x2="${x+8}" y2="${y+3}" stroke-width="4"/>`+L(x-15,y+12,x+15,y+12)+`<line x1="${x-8}" y1="${y+21}" x2="${x+8}" y2="${y+21}" stroke-width="4"/>`+L(x,y+21,x,y+30)+`<text x="${x+18}" y="${y-8}" font-size="12" stroke="none" fill="currentColor">+</text>`;break;
+    case 'D':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+L(x-10,y+8,x+10,y+8)+L(x,y+8,x,y+30);break;
+    case 'Dz':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+`<path d="M${x-13},${y+12} L${x-10},${y+8} L${x+10},${y+8} L${x+13},${y+4}" fill="none"/>`+L(x,y+8,x,y+30);break;
+    case 'SW':g+=L(x,y-30,x,y-12)+`<circle cx="${x}" cy="${y-12}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+12}" r="2.5" fill="currentColor"/>`+(o.closed?L(x,y-12,x,y+12):L(x,y+12,x-12,y-8))+L(x,y+12,x,y+30);break;
+    case 'open':g+=L(x,y-30,x,y-8)+L(x,y+8,x,y+30)+`<circle cx="${x}" cy="${y-8}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+8}" r="2.5" fill="currentColor"/>`;break;
+  }
+  let lab='';
+  if(label){const side=o.side||'right';const off=(t==='ac'||t==='dc')?24:16;const lx=side==='right'?x+off:x-off;const anchor=side==='right'?'start':'end';
+    const lines=String(label).split('\n');
+    lab=lines.map((ln,i)=>`<text x="${lx}" y="${y+5+(i-(lines.length-1)/2)*15}" text-anchor="${anchor}" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g>${g}</g>${lab}`;
+}
+S.vSym=vSym;
+function hSym(t,x,y,label,o={}){
+  // horizontal: rotate a vertical symbol
+  const inner=vSym(t,0,0,null,o);
+  let lab='';if(label){const lines=String(label).split('\n');lab=lines.map((ln,i)=>`<text x="${x}" y="${y-(o.below?-30-i*15:22+(lines.length-1-i)*15)}" text-anchor="middle" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g transform="translate(${x},${y}) rotate(-90)">${inner}</g>${lab}`;
+}
+S.hSym=hSym;
+S.wrap=(w,h,inner,cls='')=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="${cls}" role="img" aria-label="circuit schematic" style="color:var(--ink)"><g stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</g></svg>`;
+S.dot=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.5" fill="currentColor" stroke="none"/>`;
+S.line=(pts)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none"/>`;
+/** source on left; components stacked vertically on the right side (series loop) */
+S.series=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length;
+  const step=74, top=24, h=top*2+Math.max(n*step,120), xs=46, xr=o.wide?220:190, w=xr+(o.labelW||110);
+  let g=S.line([[xs,top],[xr,top]])+S.line([[xs,h-top],[xr,h-top]]);
+  const my=h/2;g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  const span=(h-2*top), seg=span/n;
+  comps.forEach((c,i)=>{const cy=top+seg*(i+.5);g+=S.line([[xr,top+seg*i],[xr,cy-30]])+vSym(c.t,xr,cy,c.label,c)+S.line([[xr,cy+30],[xr,top+seg*(i+1)]]);});
+  return S.wrap(w,h,g);
+};
+/** source on left, parallel branches to the right */
+S.parallel=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length, top=24, h=o.h||170, xs=46, gap=o.gap||92, x0=xs+(o.first||96);
+  const w=x0+gap*(n-1)+(o.labelW||70);
+  const my=h/2;
+  let g=S.line([[xs,top],[x0+gap*(n-1),top]])+S.line([[xs,h-top],[x0+gap*(n-1),h-top]]);
+  g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  comps.forEach((c,i)=>{const x=x0+gap*i;g+=S.line([[x,top],[x,my-30]])+vSym(c.t,x,my,c.label,Object.assign({side:'right'},c))+S.line([[x,my+30],[x,h-top]]);if(i<n-1){g+=S.dot(x,top)+S.dot(x,h-top);}});
+  return S.wrap(w,h,g);
+};
+/** phasor diagram. vecs:[{x,y,label,color,dash}] in arbitrary units; origin auto-placed */
+S.phasor=function(vecs,o={}){
+  const W=o.w||280,H=o.h||220,pad=34;
+  let maxX=0,minX=0,maxY=0,minY=0;
+  vecs.forEach(v=>{maxX=Math.max(maxX,v.x,v.x0||0);minX=Math.min(minX,v.x,v.x0||0);maxY=Math.max(maxY,v.y,v.y0||0);minY=Math.min(minY,v.y,v.y0||0);});
+  const sx=(W-2*pad)/Math.max(1e-9,maxX-minX||1), sy=(H-2*pad)/Math.max(1e-9,maxY-minY||1); const k=Math.min(sx,sy);
+  const ox=pad-minX*k+((W-2*pad)-(maxX-minX)*k)/2, oy=pad+maxY*k+((H-2*pad)-(maxY-minY)*k)/2;
+  let g=`<line x1="${pad/2}" y1="${oy}" x2="${W-pad/2}" y2="${oy}" stroke="var(--ink2)" stroke-width="1"/><line x1="${ox}" y1="${pad/2}" x2="${ox}" y2="${H-pad/2}" stroke="var(--ink2)" stroke-width="1"/>`;
+  vecs.forEach((v,i)=>{const x0=ox+(v.x0||0)*k,y0=oy-(v.y0||0)*k,x1=ox+v.x*k,y1=oy-v.y*k;const col=v.color||'var(--accent)';
+    const ang=Math.atan2(y1-y0,x1-x0),len=Math.hypot(x1-x0,y1-y0);
+    g+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="${v.w||2.5}" ${v.dash?'stroke-dasharray="4 4"':''}/>`;
+    if(len>8&&!v.noArrow)g+=`<path d="M${x1},${y1} L${x1-9*Math.cos(ang-0.4)},${y1-9*Math.sin(ang-0.4)} L${x1-9*Math.cos(ang+0.4)},${y1-9*Math.sin(ang+0.4)} Z" fill="${col}" stroke="none"/>`;
+    if(v.label){const lx=(v.lx!==undefined?ox+v.lx*k:(x0+x1)/2)+(v.ldx||0),ly=(v.ly!==undefined?oy-v.ly*k:(y0+y1)/2)+(v.ldy||0);g+=`<text x="${lx}" y="${ly}" font-size="13" font-weight="700" fill="${col}" stroke="none" text-anchor="middle">${esc(v.label)}</text>`;}
+  });
+  if(o.theta!==undefined&&Math.abs(o.theta)>0.5){const r=30,a=CC.rad(o.theta);const x1=ox+r,y1=oy,x2=ox+r*Math.cos(a),y2=oy-r*Math.sin(a);g+=`<path d="M${x1},${y1} A${r},${r} 0 0 ${o.theta>0?0:1} ${x2},${y2}" stroke="var(--brand)" fill="none" stroke-width="1.5"/><text x="${ox+r+12}" y="${oy-(o.theta>0?6:-16)}" font-size="13" fill="var(--brand)" stroke="none">θ</text>`;}
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="vector diagram">${g}</svg>`;
+};
+
+/* ---------- icons ---------- */
+const IC={
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>',
+  wave:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="16" cy="16" r="12"/><path d="M8 16q4-9 8 0t8 0"/></svg>',
+  res:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M2 16h6l2-6 4 12 4-12 4 12 2-6h6"/></svg>',
+  cap:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M2 16h11M19 16h11M13 7v18M19 7v18"/></svg>',
+  ind:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 18h4a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0h3"/></svg>',
+  xfmr:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6M23 5a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6M15 4v24M17 4v24"/></svg>',
+  meter:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="24" height="24" rx="3"/><path d="M9 20a8 8 0 0 1 14 0M16 20l4-7"/></svg>',
+  wrench:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M20 4a7 7 0 0 0-6 9L4 23l5 5 10-10a7 7 0 0 0 9-6l-4 2-4-1-1-4z"/></svg>',
+  res2:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 26C10 26 12 6 16 6s6 20 12 20"/><path d="M2 26h28"/></svg>',
+  chip:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="6" width="16" height="20" rx="2"/><path d="M4 10h4M4 16h4M4 22h4M24 10h4M24 16h4M24 22h4"/></svg>',
+  gate:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h8a9 9 0 0 1 0 18H8z M2 12h6M2 20h6M25 16h5"/></svg>',
+  num:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><text x="3" y="22" font-size="13" fill="currentColor" stroke="none" font-family="monospace">101</text></svg>',
+  amp:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M8 5v22l18-11z M2 11h6M2 21h6M26 16h4"/><text x="9.5" y="14" font-size="7" fill="currentColor" stroke="none">−</text><text x="9.5" y="23" font-size="7" fill="currentColor" stroke="none">+</text></svg>',
+  diode:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16h8M22 16h8M10 8v16l12-8z M22 8v16"/></svg>',
+  trans:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="17" cy="16" r="11"/><path d="M4 16h8M12 9v14M12 13l9-6M12 19l9 6M21 7v-4M21 25v4"/></svg>',
+  bulb:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20a8 8 0 1 1 10 0v4H11z M12 28h8"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z M20 4h-4a2 2 0 0 0-2 2"/></svg>',
+  plug:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 3v7M21 3v7M8 10h16v5a8 8 0 0 1-16 0zM16 23v6"/></svg>',
+  wire:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 24c6 0 6-16 13-16s7 16 13 16"/><circle cx="3" cy="24" r="2" fill="currentColor"/><circle cx="29" cy="24" r="2" fill="currentColor"/></svg>',
+  ohm:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">Ω</text></svg>',
+  volt:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">V</text></svg>',
+  power:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M18 3L7 18h8l-2 11 11-15h-8z"/></svg>',
+  clock:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="9" width="22" height="14" rx="2"/><path d="M9 19v-6h3v6h3v-6h3v6h3v-6"/></svg>',
+  ff:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="5" width="16" height="22" rx="1"/><text x="11" y="14" font-size="7" fill="currentColor" stroke="none">J</text><text x="11" y="25" font-size="7" fill="currentColor" stroke="none">K</text><text x="19" y="14" font-size="7" fill="currentColor" stroke="none">Q</text><path d="M8 17l3 2-3 2"/></svg>',
+  bread:'<svg viewBox="0 0 32 32" fill="currentColor"><rect x="3" y="6" width="26" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>'+[9,13,19,23].map(y=>[7,11,15,19,23].map(x=>`<circle cx="${x+1}" cy="${y}" r="1.3"/>`).join('')).join('')+'</svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg>',
+};
+CC.icons=IC;
+
+/* ---------- modal / toast ---------- */
+CC.modal=function(html,buttons=[{label:'Close',primary:true}],opts={}){
+  return new Promise(res=>{
+    const sc=el(`<div class="scrim" role="dialog" aria-modal="true"><div class="modal">${html}<div class="row end mt modal-btns"></div></div></div>`);
+    const bb=$('.modal-btns',sc);
+    const close=v=>{sc.remove();document.removeEventListener('keydown',onKey);res(v);};
+    buttons.forEach((b,i)=>{const x=el(`<button class="btn ${b.primary?'primary':''} ${b.cls||''}">${b.label}</button>`);x.onclick=()=>{if(b.onClick&&b.onClick(sc)===false)return;close(b.value!==undefined?b.value:i);};bb.appendChild(x);});
+    const onKey=e=>{if(e.key==='Escape'&&!opts.noEscape)close(-1);};
+    document.addEventListener('keydown',onKey);
+    sc.addEventListener('click',e=>{if(e.target===sc&&!opts.noEscape)close(-1);});
+    document.body.appendChild(sc);
+    const f=$('input',sc)||$('.btn.primary',sc);if(f)setTimeout(()=>f.focus(),30);
+    if(opts.onOpen)opts.onOpen(sc);
+  });
+};
+CC.confirm=(msg,yes='Yes',no='Cancel')=>CC.modal(`<p>${msg}</p>`,[{label:no,value:false},{label:yes,primary:true,value:true}]).then(v=>v===true);
+CC.toast=function(msg,ms=2200){const t=el(`<div class="toast" role="status">${msg}</div>`);document.body.appendChild(t);setTimeout(()=>t.remove(),ms);};
+
+/* ---------- validity code ---------- */
+function hashStr(s){let h1=0x811c9dc5,h2=0x1b873593;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822507);h2^=h2>>>13;}return [h1>>>0,h2>>>0];}
+CC.validity=function(prog,name,id,title,score,time,date){
+  const norm=[prog,name.trim().toUpperCase(),String(id).trim(),title.trim().toUpperCase(),String(score).trim(),String(time).trim(),String(date).trim()].join('|');
+  const [a,b]=hashStr(norm);const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let out='';let x=a,y=b;
+  for(let i=0;i<10;i++){const v=(i<5?x:y);out+=A[v%A.length];if(i<5)x=Math.floor(x/A.length);else y=Math.floor(y/A.length);}
+  return out.slice(0,5)+'-'+out.slice(5);
+};
+
+/* ---------- App shell ---------- */
+const App=CC.App={mods:{},order:[],cfg:null,last:null,running:null};
+App.key=k=>'cc:'+App.cfg.id+':'+k;
+App.student=()=>store.get('cc:student',null);
+App.opts=()=>Object.assign({certs:true,theme:'auto'},store.get('cc:opts',{}));
+App.applyTheme=function(){const t=App.opts().theme;if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);};
+App.init=function(cfg){
+  App.cfg=cfg;
+  cfg.groups.forEach(g=>g.items.forEach(m=>{App.mods[m.id]=m;m.group=g.title;App.order.push(m.id);}));
+  document.title=cfg.title;
+  App.applyTheme();
+  document.body.innerHTML=`<header class="topbar noprint"><div class="in">
+    <a class="brand" href="#/" aria-label="Home">${esc(cfg.title)}<small>${esc(cfg.tagline||'Interactive exercises')}</small></a>
+    <span class="sp"></span>
+    <button class="chip" id="who" title="Student name and ID">${IC.user.replace('<svg','<svg width="16" height="16"')}<span></span></button>
+    <a class="iconbtn" href="#/" title="Main menu" aria-label="Main menu">${IC.home}</a>
+  </div></header><main id="view"></main>`;
+  $('#who').onclick=()=>App.askStudent(true);
+  App.refreshWho();
+  window.addEventListener('hashchange',App.route);
+  App.route();
+};
+App.refreshWho=function(){const s=App.student();$('#who span').textContent=s?s.name:'Sign in';};
+App.askStudent=function(force){
+  return new Promise(res=>{
+    const cur=App.student();
+    if(cur&&!force)return res(cur);
+    CC.modal(`<h3>Student information</h3><p class="small muted">Your name and ID appear on certificates and in the grade file stored on this device.</p>
+      <div class="field"><label for="sn">Name</label><input id="sn" autocomplete="name" value="${cur?esc(cur.name):''}"></div>
+      <div class="field"><label for="sid">ID code (2–9 digits)</label><input id="sid" inputmode="numeric" value="${cur?esc(cur.id):''}"></div>
+      <p class="small" id="serr" style="color:var(--bad)"></p>`,
+      [{label:'Practice without signing in',value:'skip'},{label:'Save',primary:true,value:'ok',onClick:sc=>{
+        const n=$('#sn',sc).value.trim(),i=$('#sid',sc).value.trim();
+        if(n.length<2){$('#serr',sc).textContent='Name must be at least two characters.';return false;}
+        if(!/^\d{2,9}$/.test(i)){$('#serr',sc).textContent='ID code must have between 2 and 9 digits.';return false;}
+        store.set('cc:student',{name:n,id:i});App.refreshWho();}}]).then(v=>{
+          if(v==='skip'){App.guest=true;}
+          res(App.student());});
+  });
+};
+App.view=()=>$('#view');
+App.route=function(){
+  const h=location.hash.replace(/^#\/?/,'');const [r,a]=h.split('/');
+  if(App.running&&App.running.cleanup){App.running.cleanup();}
+  App.running=null;
+  window.scrollTo(0,0);
+  const v=App.view();v.innerHTML='';
+  if(!r)return App.home(v);
+  if(r==='m'&&App.mods[a])return App.intro(v,App.mods[a]);
+  if(r==='run'&&App.mods[a])return App.run(v,App.mods[a]);
+  if(r==='grades')return App.grades(v);
+  if(r==='validity')return App.validityView(v);
+  if(r==='manual')return App.manual(v);
+  if(r==='options')return App.options(v);
+  if(r==='cert')return App.certificate(v);
+  if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
+  App.home(v);
+};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.home=function(v){
+  const c=App.cfg;
+  v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
+    <div class="utils noprint"><a class="btn sm" href="#/manual">${IC.book.replace('<svg','<svg width="18" height="18"')} Manual</a><a class="btn sm" href="#/grades">Grade file</a><a class="btn sm" href="#/validity">Check validity</a><a class="btn sm" href="#/options">Options</a></div></div>
+    <div id="heroSlot"></div></section>`));
+  if(c.hero)c.hero($('#heroSlot',v));
+  c.groups.forEach(g=>{
+    v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
+    const m=el('<div class="menu"></div>');
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    v.appendChild(m);
+  });
+  v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
+};
+App.intro=function(v,m){
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px"><a class="btn sm ghost" href="#/">← Main menu</a></div><h1>${esc(m.title)}</h1><div class="card" id="introBody"></div>
+    <div class="row end mt"><a class="btn" href="#/">Quit</a><button class="btn primary" id="begin">Begin</button></div></div>`);
+  v.appendChild(wrap);
+  const body=$('#introBody',wrap);
+  if(typeof m.intro==='function')m.intro(body);else body.innerHTML=m.intro||'';
+  $('#begin',wrap).onclick=async()=>{
+    if(m.graded!==false&&!App.student()&&!App.guest)await App.askStudent(false);
+    location.hash='#/run/'+m.id;
+  };
+};
+App.run=function(v,m){
+  const s=new Session(m);
+  App.running=s;
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px;justify-content:space-between"><button class="btn sm ghost" id="quitx">← Quit</button><span class="small muted">${esc(m.title)}</span></div><div id="ex"></div></div>`);
+  v.appendChild(wrap);
+  $('#quitx',wrap).onclick=async()=>{if(s.done||await CC.confirm('Quit this exercise without grading?','Quit'))location.hash='#/';};
+  m.run($('#ex',wrap),s);
+};
+class Session{
+  constructor(m){this.m=m;this.t0=Date.now();this.done=false;this.timers=[];}
+  elapsed(){return Date.now()-this.t0;}
+  every(fn,ms){const t=setInterval(fn,ms);this.timers.push(t);return t;}
+  cleanup(){this.timers.forEach(clearInterval);}
+  restart(){location.hash='#/run/'+this.m.id;App.route();}
+  finish(score,summary){
+    if(this.done)return;this.done=true;this.cleanup();
+    score=Math.max(0,Math.min(100,Math.round(score)));
+    const st=App.student();
+    const time=CC.fmtTime(this.elapsed());
+    const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const rec={mid:this.m.id,title:this.m.title,score,time,date,name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
+    App.last=rec;
+    const pass=App.cfg.pass||80;
+    const certOk=App.opts().certs&&rec.id;
+    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${score>=pass?'ok':'bad'}">Score: ${score}%</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
+      [{label:'Main menu',value:'menu'},{label:'Review',value:'review'},...(certOk?[{label:'Certificate',value:'cert'}]:[]),{label:'Try again',primary:true,value:'again'}],{noEscape:false}).then(v=>{
+        if(v==='menu')location.hash='#/';
+        else if(v==='cert')location.hash='#/cert';
+        else if(v==='again')this.restart();
+      });
+  }
+}
+CC.Session=Session;
+
+App.certificate=function(v){
+  const r=App.last;
+  if(!r){v.appendChild(el('<div class="card"><p>No exercise has been completed in this session yet.</p><a class="btn" href="#/">Main menu</a></div>'));return;}
+  const code=CC.validity(App.cfg.id,r.name,r.id,r.title,r.score,r.time,r.date);
+  v.appendChild(el(`<div><div class="cert"><div style="font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:#7a5b10">Certificate of Completion</div>
+  <h2>${esc(App.cfg.title)}</h2><p>This certifies that</p><div class="big">${esc(r.name)}</div><p>has completed the exercise</p><div class="big" style="font-size:1.3rem">${esc(r.title)}</div>
+  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${r.score}%</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
+  <div class="row end mt noprint"><a class="btn" href="#/">Main menu</a><button class="btn primary" onclick="window.print()">Print certificate</button></div></div>`));
+};
+App.validityView=function(v){
+  const titles=App.order.map(id=>App.mods[id].title);
+  v.appendChild(el(`<div><h1>Check certificate validity</h1><div class="card"><p class="small muted">Type the information exactly as it appears on the certificate. A matching validity code means the certificate was very likely produced by this program and has not been altered.</p>
+  <div class="fields">
+   <div class="field"><label>Student name</label><input id="vn"></div>
+   <div class="field"><label>Student ID</label><input id="vi" inputmode="numeric"></div>
+   <div class="field"><label>Topic title</label><select id="vt" style="border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px">${titles.map(t=>`<option>${esc(t)}</option>`).join('')}</select></div>
+   <div class="field"><label>Exercise score (number only)</label><input id="vs" inputmode="numeric"></div>
+   <div class="field"><label>Time on task</label><input id="vtm" placeholder="e.g. 12:34"></div>
+   <div class="field"><label>Date / time</label><input id="vd"></div>
+   <div class="field"><label>Validity code</label><input id="vc" style="font-family:var(--mono)"></div>
+  </div><div class="row end"><button class="btn primary" id="vgo">Evaluate validity</button></div><p id="vres" class="verdict"></p></div></div>`));
+  $('#vgo',v).onclick=()=>{const code=CC.validity(App.cfg.id,$('#vn',v).value,$('#vi',v).value,$('#vt',v).value,$('#vs',v).value.replace('%',''),$('#vtm',v).value,$('#vd',v).value);
+    const ok=code.replace('-','')===$('#vc',v).value.trim().toUpperCase().replace(/[^A-Z]/g,'');const r=$('#vres',v);r.className='verdict '+(ok?'ok':'bad');r.textContent=ok?'Valid code — the data matches.':'Not valid — check each entry carefully, including capitalization of the date.';};
+};
+App.grades=function(v){
+  const g=store.get(App.key('grades'),[]);
+  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
+  v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored only in this browser on this device.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
+  <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
+  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
+  $('#gclr',v).onclick=async()=>{if(await CC.confirm('Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
+};
+App.manual=function(v){
+  v.appendChild(el(`<div><h1>Manual</h1><div class="card intro-text">${App.cfg.manual||''}
+  <h2>Using this offline edition</h2>
+  <p>This page is a self-contained web version of the original Windows program. It needs no internet connection and runs in any modern browser on phones, tablets, Chromebooks, Macs and PCs. Copy the file to any device and open it.</p>
+  ${App.cfg.numericAnswers===false?'':`<p>${App.cfg.tolNote||'Numeric answers are accepted within the tolerance stated on each exercise\'s intro page, so normal rounding is fine.'} Type plain numbers in the unit shown next to each answer box (for example <span class="kbd">4.7</span> in a box marked mA). In a box with a plain unit such as V, Ω or A you may also use an engineering suffix such as <span class="kbd">4.7k</span> or <span class="kbd">22m</span>.</p>`}
+  <p>Your name, ID and grade file are stored in this browser only. Use <b>Grade file</b> on the main menu to print or download them.</p></div></div>`));
+};
+App.options=function(v){
+  const o=App.opts();
+  v.appendChild(el(`<div><h1>Options</h1><div class="card">
+   <label class="row"><input type="checkbox" id="oc" ${o.certs?'checked':''}> Certificate printing enabled</label>
+   <div class="field mt"><label>Appearance</label><div class="row"><label class="row"><input type="radio" name="th" value="auto" ${o.theme==='auto'?'checked':''}> Match device</label><label class="row"><input type="radio" name="th" value="light" ${o.theme==='light'?'checked':''}> Light</label><label class="row"><input type="radio" name="th" value="dark" ${o.theme==='dark'?'checked':''}> Dark</label></div></div>
+   <div class="row mt"><button class="btn" id="ostu">Change student name / ID</button><button class="btn" id="oout">Sign out</button></div></div></div>`));
+  const save=()=>{const n={certs:$('#oc',v).checked,theme:($('input[name=th]:checked',v)||{}).value||'auto'};store.set('cc:opts',n);App.applyTheme();};
+  $$('input',v).forEach(i=>i.onchange=save);
+  $('#ostu',v).onclick=()=>App.askStudent(true);
+  $('#oout',v).onclick=()=>{store.del('cc:student');App.guest=false;App.refreshWho();CC.toast('Signed out');};
+};
+
+/* ---------- exercise kit: helpers for intro pages ---------- */
+CC.introPage=function({text,formulas,diagram,extra,how}){
+  let h='';
+  if(diagram)h+=`<div class="diagram" style="margin-bottom:12px">${diagram}</div>`;
+  if(text)h+=`<div class="intro-text">${text}</div>`;
+  if(formulas&&formulas.length){h+=`<h3>Key relationships</h3><div class="formulas">${formulas.map(f=>`<div class="formula">${f.cap?`<span class="cap">${f.cap}</span>`:''}${CC.M(f.tex||f)}${f.where?`<div class="where">${f.where}</div>`:''}</div>`).join('')}</div>`;}
+  if(extra)h+=extra;
+  if(how)h+=`<h3>How this exercise works</h3><div class="small intro-text">${how}</div>`;
+  return h;
+};
+
+/* worked solution renderer: steps are TeX strings (math) or strings starting with '>' (prose) */
+CC.workHTML=function(steps,label='Show worked solution'){
+  if(!steps||!steps.length)return '';
+  const body=steps.map(t=>typeof t==='string'&&t.startsWith('>')?`<p class="small">${t.slice(1)}</p>`:CC.M(t)).join('');
+  return `<details class="work"><summary>${label}</summary>${body}</details>`;
+};
+/* ---------- Worksheet: one circuit, many answers, Check (-2) Help (-3) Grade ---------- */
+CC.worksheet=function(root,s,spec){
+  CC._last=spec;
+  const checkCost=spec.checkCost??2, helpCost=spec.helpCost??3, N=spec.items.length;
+  let pen=0;const helped=new Set();
+  const w=el(`<div>
+    <div class="statusbar"><span class="pill" id="wpen">Deductions: 0</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
+    <div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title||'Circuit')}</h2><div class="diagram">${spec.diagram||''}</div><div class="givens">${spec.givens.map(g=>`<div class="given"><div class="k">${g.k}</div><div class="v">${g.v}</div></div>`).join('')}</div>${spec.note?`<p class="small muted">${spec.note}</p>`:''}</div><div id="wextra"></div></div>
+    <div><div class="card"><h2 style="margin-top:0">Find</h2><div class="ws" id="ws"></div>
+    <div class="row end mt"><button class="btn primary" id="wgrade">Grade</button></div></div></div></div></div>`);
+  root.appendChild(w);
+  const wsEl=$('#ws',w);
+  const upd=()=>{$('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  s.every(()=>{$('#wtime',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const ok=(it,val)=>{if(it.signFree)return CC.close(Math.abs(val),Math.abs(it.value),it.tol??spec.tol??0.02,it.absTol??null);return CC.close(val,it.value,it.tol??spec.tol??0.02,it.absTol??null);};
+  spec.items.forEach((it,i)=>{
+    const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
+      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points." aria-label="Help">?</button></div><div class="fb"></div></div>`);
+    it._row=r;const inp=$('input',r);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
+    $('[data-a=c]',r).onclick=()=>{
+      const val=CC.parse(inp.value,!CC.prefixed(it.unit));
+      if(isNaN(val)){CC.toast('Type a number first.');return;}
+      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';}
+      else{pen+=checkCost;r.className='wrow bad';$('.fb',r).textContent=`Not right — ${checkCost} points deducted.`;upd();}
+    };
+    $('[data-a=h]',r).onclick=async()=>{
+      const first=!helped.has(i);
+      if(first){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. It costs ${helpCost} points, charged once per item.</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
+        if(go!==true)return;helped.add(i);pen+=helpCost;upd();}
+      CC.modal(`<h3>${CC.m(it.sym)}${it.name?` — ${esc(it.name)}`:''}</h3>${(it.help||[]).map(h=>typeof h==='string'&&h.startsWith('$')?CC.M(h.slice(1)):`<p>${h}</p>`).join('')}`);
+    };
+    wsEl.appendChild(r);
+  });
+  $('#wgrade',w).onclick=async()=>{
+    const blanks=spec.items.filter(it=>!$('input',it._row).value.trim()).length;
+    if(blanks&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
+    let right=0;
+    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good)right++;inp.disabled=true;
+      it._row.className='wrow '+(good?'ok':'bad');$('.fb',it._row).innerHTML=(good?'Right! ':'')+`Correct answer: <b>${CC.fmt(it.value)} ${esc(it.unit||'')}</b>`+CC.workHTML(typeof it.work==='function'?it.work():it.work);$$('button',it._row).forEach(b=>b.disabled=true);});
+    $('#wgrade',w).disabled=true;
+    const raw=right/N*100;const score=raw-pen;
+    if(spec.after)spec.after($('#wextra',w));
+    s.finish(score,`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
+    const again=el('<div class="row end mt noprint"><button class="btn primary">New problem</button></div>');$('button',again).onclick=()=>s.restart();$('#wgrade',w).parentNode.after(again);
+  };
+};
+
+/* ---------- Problem set: N problems one at a time, each graded immediately ---------- */
+CC.problemSet=function(root,s,spec){
+  const N=spec.count;let i=0,right=0,total=0;const log=[];
+  const probs=spec.list?spec.list():Array.from({length:N},(_,k)=>spec.gen(k));
+  CC._last=probs;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="pn"></span><span class="pill" id="ps">Correct: 0</span><span class="pill" id="pt">0:00</span></div><div class="progress"><i id="pb" style="width:0"></i></div><div id="pbody" class="mt"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#pt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const show=()=>{
+    const p=probs[i];
+    $('#pn',w).textContent=`Problem ${i+1} of ${probs.length}`;$('#pb',w).style.width=(i/probs.length*100)+'%';
+    const body=$('#pbody',w);body.innerHTML='';
+    const card=el(`<div class="card"><div class="cols2"><div>${p.title?`<h2 style="margin-top:0">${p.title}</h2>`:''}${p.prompt?`<div>${p.prompt}</div>`:''}${p.diagram?`<div class="diagram mt">${p.diagram}</div>`:''}</div>
+      <div><div class="fields" id="pf"></div><div id="pfb"></div><div class="row end mt"><button class="btn primary" id="pg">${spec.gradeLabel||'Grade answers'}</button></div></div></div></div>`);
+    body.appendChild(card);
+    const pf=$('#pf',card);
+    p.fields.forEach(f=>{
+      let fe;
+      if(f.choices){
+        fe=el(`<div class="field"><label>${f.label}</label><div class="faults">${f.choices.map((c,ci)=>`<label><input type="radio" name="ch_${f.key}" value="${ci}"> <span>${c}</span></label>`).join('')}</div></div>`);
+      } else {
+        fe=el(`<div class="field"><label>${f.label}${f.unit?` <span class="muted">(${esc(f.unit)})</span>`:''}</label><input type="text" inputmode="${f.text?'text':'decimal'}" autocomplete="off" ${f.given?'readonly':''} class="${f.given?'known':'ask'}" value="${f.given?esc(f.show||CC.fmt(f.value)):''}"></div>`);
+        const inp=$('input',fe);inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const all=$$('input:not([readonly])',pf);const k=all.indexOf(inp);if(all[k+1])all[k+1].focus();else $('#pg',card).click();}});
+      }
+      f._el=fe;pf.appendChild(fe);
+    });
+    const firstAsk=$('input:not([readonly])',pf);if(firstAsk&&window.innerWidth>700)firstAsk.focus();
+    $('#pg',card).onclick=()=>{
+      const btn=$('#pg',card);
+      if(btn.dataset.done){i++;if(i>=probs.length)return end();return show();}
+      let pr=0,pt=0;const fbs=[];
+      p.fields.forEach(f=>{if(f.given)return;pt++;let good;
+        if(f.choices){const c=$('input:checked',f._el);good=c&&+c.value===f.answer;$$('.faults label',f._el).forEach((lb,ci)=>{if(ci===f.answer)lb.classList.add('correct');else if(c&&+c.value===ci)lb.classList.add('wrong');});$$('input',f._el).forEach(x=>x.disabled=true);}
+        else{const inp=$('input',f._el);
+          if(f.check)good=f.check(inp.value);
+          else if(f.text)good=inp.value.trim().toUpperCase().replace(/\s+/g,'')===String(f.value).toUpperCase().replace(/\s+/g,'');
+          else{const v=CC.parse(inp.value,f.suffix!==false&&!CC.prefixed(f.unit));good=f.signFree?CC.close(Math.abs(v),Math.abs(f.value),f.tol??spec.tol??0.02,f.absTol??null):CC.close(v,f.value,f.tol??spec.tol??0.02,f.absTol??null);}
+          inp.classList.add(good?'ok':'bad');inp.readOnly=true;
+          if(!good)fbs.push(`${f.label}: correct answer is <b>${f.show||CC.fmt(f.value)}${f.unit?' '+esc(f.unit):''}</b>`);}
+        if(good)pr++;});
+      right+=pr;total+=pt;log.push({i,pr,pt});
+      $('#ps',w).textContent=`Correct: ${right} of ${total}`;
+      const allGood=pr===pt;
+      $('#pfb',card).innerHTML=`<p class="verdict ${allGood?'ok':'bad'}">${allGood?'Correct!':(pr?`${pr} of ${pt} correct`:'Incorrect')}</p>${fbs.length?`<p class="small">${fbs.join('<br>')}</p>`:''}${p.explain?`<div class="formula mt">${p.explain}</div>`:''}${CC.workHTML(typeof p.work==='function'?p.work():p.work)}`;
+      btn.dataset.done='1';btn.textContent=i+1<probs.length?'Next problem':'Finish';btn.focus();
+    };
+  };
+  const end=()=>{$('#pb',w).style.width='100%';const score=total?right/total*100:0;s.finish(score,`${right} of ${total} answers correct.`);
+    const again=el('<div class="card mt center"><p>Exercise finished.</p><div class="row" style="justify-content:center"><a class="btn" href="#/">Main menu</a><button class="btn primary">New problem set</button></div></div>');$('button',again).onclick=()=>s.restart();$('#pbody',w).appendChild(again);};
+  show();
+};
+
+/* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}]}} */
+CC.trouble=function(root,s,spec){
+  const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const next=()=>{
+    const b=spec.build(k);let pts=P;CC._last=b;
+    if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
+    $('#tn',w).textContent=`Problem ${k+1} of ${N}`;
+    const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for this item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};
+    updP();
+    const body=$('#tbody',w);body.innerHTML='';
+    const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button></div></div>
+      <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
+      <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
+      <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
+    body.appendChild(card);
+    $('#info',card).innerHTML=b.info?b.info():'';
+    const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
+    const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
+    $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    const meterHTML=()=>{
+      const ms=(b.meters?b.meters():[]).map(m=>`<div class="meterbox"><span class="ml">${m.label}</span><span class="lcd">${m.text}</span></div>`).join('');
+      let main='----';
+      if(probe.red&&probe.black){main=b.measure(probe.red,probe.black).text;}
+      return `<div class="meterbox"><span class="ml">${spec.meterLabel||'Voltmeter'}</span><span class="lcd">${main}</span></div>`+ms;
+    };
+    const draw=()=>{
+      const pads=b.pads.map(p=>{const r=probe.red===p.id,bl=probe.black===p.id;
+        return `<g class="pad" data-id="${p.id}" tabindex="0" role="button" aria-label="Test point ${esc(p.label||p.id)}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="7" fill="#d8d8d8" stroke="#777" stroke-width="2"/><circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#555"/>${r?`<circle cx="${p.x}" cy="${p.y}" r="11" fill="none" stroke="#d32f2f" stroke-width="4"/><text x="${p.x+12}" y="${p.y-10}" fill="#d32f2f" font-weight="800" font-size="14">+</text>`:''}${bl?`<circle cx="${p.x}" cy="${p.y}" r="${r?15:11}" fill="none" stroke="#111" stroke-width="4"/><text x="${p.x-20}" y="${p.y-10}" fill="#111" font-weight="800" font-size="16">−</text>`:''}<circle class="hit" cx="${p.x}" cy="${p.y}" r="16"/></g>`;}).join('');
+      $('#bw',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
+      $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+      $('#mt',card).innerHTML=meterHTML();
+    };
+    const tap=id=>{
+      if(card.dataset.graded)return;
+      probe[probe.active]=id;
+      setActive(probe.active==='red'?'black':'red');
+      if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
+        const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
+        $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
+      draw();
+    };
+    draw();
+    $('#tg',card).onclick=()=>{
+      const btn=$('#tg',card);
+      if(card.dataset.graded){k++;if(k>=N)return end();return next();}
+      const c=$('input:checked',fl);
+      if(!c){CC.modal('<p>You did not select a fault. Select a fault, then choose Grade item.</p>');return;}
+      card.dataset.graded='1';
+      const good=+c.value===b.answer;const got=good?pts:0;earned+=got;
+      $$('label',fl).forEach((lb,i)=>{if(i===b.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
+      $$('input',fl).forEach(x=>x.disabled=true);
+      $('#ts',w).textContent=`Score: ${earned}`;
+      $('#tfb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Correct!':'Incorrect'}</p><p class="small">${good?`You earned ${got} point${got===1?'':'s'} on this item.`:`The correct answer is highlighted: <b>${esc(b.faults[b.answer])}</b>.`} Your total score so far is ${earned} point${earned===1?'':'s'}.</p>${b.explain?`<p class="small muted">${b.explain()}</p>`:''}${CC.workHTML(typeof b.work==='function'?b.work():b.work,'Show how to find this fault')}`;
+      btn.textContent=k+1<N?'Continue':'Finish';
+    };
+  };
+  const end=()=>{const score=earned/(N*P)*100;s.finish(score,`${earned} of ${N*P} possible points.`);};
+  next();
+};
+
+/* meter helpers */
+CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.008,0.008));};
+CC.lcd=(v,dec=2)=>{if(!isFinite(v))return 'OL';const a=Math.abs(v);if(a<0.005)return (0).toFixed(dec);return v.toFixed(a>=100?1:dec);};
+
+/* ---------- PC-board drawing kit ---------- */
+const B=CC.board={};
+B.svg=(w,h,inner)=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="printed circuit board" font-family="system-ui,sans-serif">${inner}</svg>`;
+B.pcb=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="var(--board)" stroke="var(--board-dark)" stroke-width="3"/>`+[[x+10,y+10],[x+w-10,y+10],[x+10,y+h-10],[x+w-10,y+h-10]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--board-dark)"/>`).join('');
+B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--trace)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>`+(label?`<text x="${lp[0]}" y="${lp[1]}" font-size="11" font-weight="700" fill="#5a3b12" ${lp[2]?`transform="rotate(${lp[2]} ${lp[0]} ${lp[1]})"`:''} text-anchor="middle">${label}</text>`:'');
+B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
+/** component between two pad points (horizontal or vertical) */
+B.part=(type,a,b,label)=>{
+  const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+  let body='';const bl=Math.min(L-26,64);
+  const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
+  if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
+  if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
+  if(type==='F')body=`<rect x="${-bl/2}" y="-7" width="${bl}" height="14" rx="3" fill="#e9f3f7" stroke="#8aa"/><rect x="${-bl/2}" y="-7" width="8" height="14" fill="#bbb"/><rect x="${bl/2-8}" y="-7" width="8" height="14" fill="#bbb"/><line x1="${-bl/2+8}" y1="0" x2="${bl/2-8}" y2="0" stroke="#777" stroke-width="1"/>`;
+  if(type==='D')body=`<rect x="${-bl/2}" y="-6" width="${bl}" height="12" rx="3" fill="#222"/><rect x="${bl/2-9}" y="-6" width="4" height="12" fill="#ddd"/>`;
+  const flip=Math.abs(ang)>90;
+  const lab=label?`<text x="${cx+(Math.abs(ang)===90?14:0)}" y="${cy+(Math.abs(ang)===90?4:22)}" font-size="12" font-weight="700" fill="#2b1a05" text-anchor="${Math.abs(ang)===90?'start':'middle'}">${esc(label)}</text>`:'';
+  return `<g transform="translate(${cx},${cy}) rotate(${flip?ang-180:ang})">${lead}${body}</g>${lab}`;
+};
+B.xfmr=(x,y,w,h,label)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#2a8c8c" stroke="#145"/><rect x="${x+w*.25}" y="${y-6}" width="${w*.5}" height="${h+12}" rx="3" fill="#cfd8dc" stroke="#78909c"/><text x="${x+w/2}" y="${y+h/2+4}" font-size="11" font-weight="800" text-anchor="middle" fill="#455a64" transform="rotate(-90 ${x+w/2} ${y+h/2})">ACME</text>${label?B.label(x+w/2,y+h+24,label):''}`;
+B.supply=(x,y,w,h,title,readout)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#4a3b33" stroke="#2a201b" stroke-width="2"/><rect x="${x+8}" y="${y+8}" width="${w-16}" height="${h-16}" rx="5" fill="#e9e4dc"/><text x="${x+w/2}" y="${y+26}" font-size="11" font-weight="800" text-anchor="middle" fill="#b3261e">${esc(title)}</text>${readout?`<text x="${x+w/2}" y="${y+46}" font-size="13" font-weight="700" text-anchor="middle" fill="#333">${esc(readout)}</text>`:''}`;
+
+})();
+</script>
+<script></script>
+<script>(function(){
+'use strict';
+const {fmt,pick,rnd,ri,shuffle,eNear,eVal,m,M,svg:S,board:B,Cx}=CC;
+const esc=CC.esc;
+const TP=2*Math.PI;
+
+/* ---------- value helpers ---------- */
+const fR=r=>r>=1e6?fmt(r/1e6)+' MΩ':r>=1000?fmt(r/1000)+' kΩ':fmt(r)+' Ω';
+const fC=c=>{const u=c*1e6;return u>=0.001?fmt(u,3)+' µF':fmt(c*1e12,3)+' pF';};
+const fL=l=>l>=1?fmt(l,3)+' H':fmt(l*1000,3)+' mH';
+const fF=f=>f>=1000?fmt(f/1000)+' kHz':fmt(f)+' Hz';
+const pickV=()=>pick([5,6,9,10,12,15,18,20,24,30]);
+const pickF=()=>pick([60,100,200,400,500,1000,2000,2500,5000,10000]);
+const capFor=(F,X)=>eNear(1/(TP*F*X)*1e6)*1e-6;          // farads, E12 rounded
+const indFor=(F,X)=>eNear(X/(TP*F));                      // henries, E12 rounded
+/* realistic part ranges used by every generator */
+const C_OK=c=>c>=1e-9&&c<=10e-6;     // 1 nF … 10 µF (non-polarized)
+const L_OK=l=>l>=1e-3&&l<=1;         // 1 mH … 1 H
+
+/* ---------- TeX helpers for worked solutions (numbers formatted exactly as CC.fmt shows them) ---------- */
+const n=(x,s=4)=>fmt(x,s).replace(/,/g,'\\,');
+const UT={'Ω':'\\,\\Omega','°':'°','':''};
+const q=(x,u,s=4)=>n(x,s)+(u in UT?UT[u]:'\\,\\text{'+u+'}');
+const capF=C=>`${n(C*1e6,3)}\\times10^{-6}\\,\\text{F}`;
+const indH=L=>L>=1?`${n(L,3)}\\,\\text{H}`:`${n(L*1e3,3)}\\times10^{-3}\\,\\text{H}`;
+const amp=I=>`${n(I)}\\,\\text{A}`;
+const toMA=I=>`I=${amp(I)}=${q(I*1e3,'mA')}`;
+
+/* ---------- shared help text ---------- */
+const H={
+  XC:[`Start here: impedance, current and the voltages all depend on ${m('X_C')}.`,'$X_C=\\frac{1}{2\\pi F C}',`Use hertz and farads, for example ${m('0.22\\,\\text{µF}=0.22\\times10^{-6}\\,\\text{F}')}.`,'<b>Common mistakes:</b> leaving out the 2π, or entering microfarads as if they were farads.'],
+  XL:[`Start here: impedance, current and the voltages all depend on ${m('X_L')}.`,'$X_L=2\\pi F L',`Use hertz and henries, for example ${m('68\\,\\text{mH}=0.068\\,\\text{H}')}.`,'<b>Common mistakes:</b> leaving out the 2π, or entering millihenries as if they were henries.'],
+  ma:`Ohm's law gives amperes. Multiply by 1000 for milliamperes: ${m('0.0025\\,\\text{A}=2.5\\,\\text{mA}')}.`,
+  same:x=>[`A series circuit has only one path, so the same current flows through every part: ${m(x+'=I_T')}.`,`Find ${m('I_T=\\frac{V_S}{Z}')} first.`],
+  vsame:x=>[`Every branch of a parallel circuit is connected straight across the source, so ${m(x+'=V_S')}.`],
+  pa:['$P_A=V_S I_T','Apparent power is the source voltage times the total current, in volt-amperes (VA). Volts times milliamperes gives mVA.'],
+  ptS:['$P_T=I_T^2 R=V_R I_T','Only the resistance turns electrical energy into heat, so true power uses the resistor only. Volts times milliamperes gives mW.','<b>Common mistake:</b> using the source voltage or the impedance here. That gives apparent power, not true power.'],
+  ptP:['$P_T=V_S I_R','Only the resistor branch dissipates power. Volts times milliamperes gives mW.','<b>Common mistake:</b> using the total current. That gives apparent power.'],
+};
+const it=(sym,name,unit,value,help,work,extra={})=>Object.assign({sym,name,unit,value,help,work},extra);
+const PH_TOL={absTol:0.6};
+
+/* ---------- intro / how-it-works text ---------- */
+const TOLNOTE='An answer is accepted when it is within 2% of the exact value, so rounding to three or four significant figures is fine. Phase angles are also accepted within 0.6°.';
+const PHASE=`<p><b>Phase angle sign.</b> In this program θ is the impedance angle: the angle by which the source voltage leads the total current. It is <b>positive</b> for an inductive circuit (current lags the voltage) and <b>negative</b> for a capacitive circuit (current leads the voltage).</p>`;
+const howWS=signNote=>`<p>One circuit is shown with its values. Work out every quantity in the list and type each answer in the unit shown beside its box. You can type plain numbers or use prefixes such as <span class="kbd">4.7k</span>.</p>
+<ul><li><b>✓ (Check)</b> tests a single answer. A right answer costs nothing; a wrong one costs 2 points.</li>
+<li><b>? (Help)</b> shows the formula and method for that item. It costs 3 points the first time you open it for an item.</li>
+<li><b>Grade</b> marks the whole sheet. Your score is the percentage of answers that are right, minus any deductions. Blank answers count as wrong.</li></ul>
+<p>${TOLNOTE} ${signNote}</p><p>After grading, every item shows a worked solution with this circuit's numbers. Each run picks new values, so you can practice as often as you like. A score of 80% or more is a pass.</p>`;
+const SIGN_FREE='For θ in this exercise, either sign is accepted.';
+const SIGN_GRADED='For θ in this exercise the sign is graded: positive if the circuit is inductive, negative if it is capacitive.';
+
+/* ---------- series RC / RL / RLC worksheets ---------- */
+function seriesWS(type){
+  const hasC=type!=='RL',hasL=type!=='RC',rlc=hasC&&hasL;
+  const span=rlc?[0.3,3]:[0.4,2.5];
+  let V,F,R,C=null,L=null,XC=0,XL=0,X,Z,I;
+  for(;;){
+    V=pickV();F=pickF();R=eVal(470,10000);
+    C=hasC?capFor(F,R*rnd(...span)):null;L=hasL?indFor(F,R*rnd(...span)):null;
+    XC=hasC?1/(TP*F*C):0;XL=hasL?TP*F*L:0;X=XL-XC;Z=Math.hypot(R,X);I=V/Z;
+    if(hasC&&!C_OK(C))continue;if(hasL&&!L_OK(L))continue;
+    if(I<0.2e-3||I>50e-3)continue;
+    if(rlc&&Math.abs(X)<0.15*R)continue;
+    break;
+  }
+  const th=CC.deg(Math.atan(X/R)),VR=I*R,VC=I*XC,VL=I*XL,PT=I*I*R,PA=V*I,mA=I*1e3;
+  const items=[];
+  const wXC=['X_C=\\frac{1}{2\\pi F C}',`X_C=\\frac{1}{2\\pi\\times${q(F,'Hz')}\\times${capF(C)}}`,`X_C=${q(XC,'Ω')}`];
+  const wXL=['X_L=2\\pi F L',`X_L=2\\pi\\times${q(F,'Hz')}\\times${indH(L)}`,`X_L=${q(XL,'Ω')}`];
+  if(hasC)items.push(it('X_C','Capacitive reactance','Ω',XC,H.XC,wXC));
+  if(hasL)items.push(it('X_L','Inductive reactance','Ω',XL,H.XL,wXL));
+  const zTex=rlc?'Z=\\sqrt{R^2+(X_L-X_C)^2}':hasC?'Z=\\sqrt{R^2+X_C^2}':'Z=\\sqrt{R^2+X_L^2}';
+  const zNum=rlc?`Z=\\sqrt{(${q(R,'Ω')})^2+(${q(XL,'Ω')}-${q(XC,'Ω')})^2}`:`Z=\\sqrt{(${q(R,'Ω')})^2+(${q(hasC?XC:XL,'Ω')})^2}`;
+  const zHelp=rlc?['Inductive and capacitive reactance point in opposite directions (180° apart), so subtract them first. Then combine the net reactance with R at 90°.','$Z=\\sqrt{R^2+(X_L-X_C)^2}','<b>Common mistake:</b> adding the two reactances, or adding R and X directly instead of using the square root.']
+    :[`Resistance and reactance are 90° apart, so they add like the sides of a right triangle.`,'$'+zTex,'<b>Common mistake:</b> simply adding R and X. Z is always larger than either one but smaller than their sum.'];
+  items.push(it('Z','Impedance','Ω',Z,zHelp,[zTex,zNum,`Z=${q(Z,'Ω')}`]));
+  const wI=['I_T=\\frac{V_S}{Z}',`I_T=\\frac{${q(V,'V')}}{${q(Z,'Ω')}}=${amp(I)}=${q(mA,'mA')}`];
+  const same=s=>['>A series circuit has one path, so the same current flows through every part.',`${s}=I_T=\\frac{V_S}{Z}=\\frac{${q(V,'V')}}{${q(Z,'Ω')}}=${q(mA,'mA')}`];
+  items.push(it('I_R','Resistor current','mA',mA,[...H.same('I_R'),H.ma],same('I_R')));
+  if(hasC)items.push(it('I_C','Capacitor current','mA',mA,[...H.same('I_C'),H.ma],same('I_C')));
+  if(hasL)items.push(it('I_L','Inductor current','mA',mA,[...H.same('I_L'),H.ma],same('I_L')));
+  items.push(it('I_T','Total current','mA',mA,['Use Ohm\'s law with the impedance, not the resistance.','$I_T=\\frac{V_S}{Z}',H.ma],wI));
+  let thHelp,thWork;
+  if(rlc){
+    thHelp=['$\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)',`Keep the sign of ${m('X_L-X_C')}. If ${m('X_L')} is larger the circuit is inductive and θ is positive; if ${m('X_C')} is larger it is capacitive and θ is negative.`,'Set your calculator to degrees. <b>The sign is graded in this exercise.</b>'];
+    thWork=['\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(XL,'Ω')}-${q(XC,'Ω')}}{${q(R,'Ω')}}\\right)`,`\\theta=${n(th)}°`,`>${X>0?`${m('X_L')} is larger, so the circuit is inductive and θ is positive (the current lags the source voltage).`:`${m('X_C')} is larger, so the circuit is capacitive and θ is negative (the current leads the source voltage).`}`];
+  } else if(hasC){
+    thHelp=['$\\theta=-\\arctan\\left(\\frac{X_C}{R}\\right)',`The arctangent of ${m('\\frac{X_C}{R}')} gives the size of the angle. A series RC circuit is capacitive, so its impedance angle lies between 0° and −90°.`,'Set your calculator to degrees. '+SIGN_FREE];
+    thWork=['\\theta=-\\arctan\\left(\\frac{X_C}{R}\\right)',`\\theta=-\\arctan\\left(\\frac{${q(XC,'Ω')}}{${q(R,'Ω')}}\\right)`,`\\theta=${n(th)}°`,'>Negative because the circuit is capacitive: the current leads the source voltage. Either sign was accepted.'];
+  } else {
+    thHelp=['$\\theta=\\arctan\\left(\\frac{X_L}{R}\\right)',`The arctangent of ${m('\\frac{X_L}{R}')} gives the angle. A series RL circuit is inductive, so its impedance angle lies between 0° and +90°.`,'Set your calculator to degrees. '+SIGN_FREE];
+    thWork=['\\theta=\\arctan\\left(\\frac{X_L}{R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(XL,'Ω')}}{${q(R,'Ω')}}\\right)`,`\\theta=${n(th)}°`,'>Positive because the circuit is inductive: the current lags the source voltage.'];
+  }
+  items.push(it('\\theta','Phase angle','°',th,thHelp,thWork,Object.assign({signFree:!rlc},PH_TOL)));
+  const vw=(s,x,xs)=>[`${s}=I_T ${xs}`,`${s}=${amp(I)}\\times${q(x,'Ω')}`,`${s}=${q(I*x,'V')}`];
+  items.push(it('V_R','Voltage across resistor','V',VR,['$V_R=I_T R',`Use the current in amperes and the resistance in ohms. (Milliamperes times kilohms also gives volts.)`],vw('V_R',R,'R')));
+  if(hasC){const w=vw('V_C',XC,'X_C');if(!hasL)w.push('>Check: the voltages add at 90°, not directly.',`\\sqrt{V_R^2+V_C^2}=\\sqrt{(${n(VR)})^2+(${n(VC)})^2}=${q(V,'V')}=V_S`);
+    items.push(it('V_C','Voltage across capacitor','V',VC,['$V_C=I_T X_C','Use the reactance, not the impedance.','<b>Common mistake:</b> expecting the part voltages to add up to the source. They add as vectors, not as plain numbers.'],w));}
+  if(hasL){const w=vw('V_L',XL,'X_L');if(!hasC)w.push('>Check: the voltages add at 90°, not directly.',`\\sqrt{V_R^2+V_L^2}=\\sqrt{(${n(VR)})^2+(${n(VL)})^2}=${q(V,'V')}=V_S`);
+    else w.push(`>${m('V_L')} and ${m('V_C')} are 180° apart, so either one can be larger than the source voltage. Check:`,`\\sqrt{V_R^2+(V_L-V_C)^2}=${q(V,'V')}=V_S`);
+    items.push(it('V_L','Voltage across inductor','V',VL,['$V_L=I_T X_L','Use the reactance, not the impedance.'+(hasC?' In a series RLC circuit this voltage can be larger than the source.':'')],w));}
+  items.push(it('P_T','True power','mW',PT*1e3,H.ptS,['P_T=I_T^2 R',`P_T=(${amp(I)})^2\\times${q(R,'Ω')}=${n(PT)}\\,\\text{W}=${q(PT*1e3,'mW')}`]));
+  items.push(it('P_A','Apparent power','mVA',PA*1e3,H.pa,['P_A=V_S I_T',`P_A=${q(V,'V')}\\times${q(mA,'mA')}=${q(PA*1e3,'mVA')}`,`>The power factor is ${m(`\\frac{P_T}{P_A}=\\cos\\theta=${n(Math.cos(CC.rad(th)),3)}`)}.`]));
+  const name={RC:'Series RC circuit',RL:'Series RL circuit',RLC:'Series RLC circuit'}[type];
+  const comps=[{t:'R',label:'R'}];if(hasC)comps.push({t:'C',label:'C'});if(hasL)comps.push({t:'L',label:'L'});
+  const givens=[{k:'Source voltage',v:V+' V'},{k:'Frequency',v:fF(F)},{k:'R',v:fR(R)}];if(hasC)givens.push({k:'C',v:fC(C)});if(hasL)givens.push({k:'L',v:fL(L)});
+  const vecs=[{x:R,y:0,label:'R',color:'var(--brand)',ldy:X>0?16:-8}];
+  if(hasL)vecs.push({x:0,y:XL,label:'XL',color:'var(--ink2)',ldx:-18});
+  if(hasC)vecs.push({x:0,y:-XC,label:'XC',color:'var(--ink2)',ldx:-18});
+  vecs.push({x:R,y:X,label:'Z',ldx:X>0?-12:12});
+  return {title:name,diagram:S.series(comps,{srcLabel:'VS'}),givens,
+    note:rlc?'θ is the impedance angle: positive if the circuit is inductive, negative if it is capacitive. The sign is graded.':'θ is the impedance angle (positive = inductive, negative = capacitive). Either sign is accepted here.',
+    items,after:x=>phasorCard(x,vecs,th,'Impedance vector diagram',`θ = ${fmt(th,3)}° (${th>0?'inductive':'capacitive'})`)};
+}
+
+/* ---------- parallel RC / RL / RLC worksheets ---------- */
+function parallelWS(type){
+  const hasC=type!=='RL',hasL=type!=='RC',rlc=hasC&&hasL;
+  const span=rlc?[0.3,3]:[0.4,2.5];
+  let V,F,R,C=null,L=null,XC=0,XL=0,IR,IC,IL,Bn,IT,Z;
+  for(;;){
+    V=pickV();F=pickF();R=eVal(470,10000);
+    C=hasC?capFor(F,R*rnd(...span)):null;L=hasL?indFor(F,R*rnd(...span)):null;
+    XC=hasC?1/(TP*F*C):0;XL=hasL?TP*F*L:0;
+    IR=V/R;IC=hasC?V/XC:0;IL=hasL?V/XL:0;Bn=IL-IC;IT=Math.hypot(IR,Bn);Z=V/IT;
+    if(hasC&&!C_OK(C))continue;if(hasL&&!L_OK(L))continue;
+    if(IT>100e-3)continue;
+    if(rlc&&Math.abs(Bn)<0.15*IR)continue;
+    break;
+  }
+  const th=CC.deg(Math.atan(Bn/IR)),PT=V*IR,PA=V*IT;
+  const items=[];
+  if(hasC)items.push(it('X_C','Capacitive reactance','Ω',XC,H.XC,['X_C=\\frac{1}{2\\pi F C}',`X_C=\\frac{1}{2\\pi\\times${q(F,'Hz')}\\times${capF(C)}}`,`X_C=${q(XC,'Ω')}`]));
+  if(hasL)items.push(it('X_L','Inductive reactance','Ω',XL,H.XL,['X_L=2\\pi F L',`X_L=2\\pi\\times${q(F,'Hz')}\\times${indH(L)}`,`X_L=${q(XL,'Ω')}`]));
+  items.push(it('Z','Impedance','Ω',Z,['In a parallel circuit it is easiest to find the branch currents and the total current first, then use Ohm\'s law.','$Z=\\frac{V_S}{I_T}',rlc?`Z can never be larger than ${m('R')}, because the total current is never smaller than ${m('I_R')}.`:`Z is always smaller than both ${m('R')} and ${m(hasC?'X_C':'X_L')}.`,`<b>Common mistake:</b> using the series formula ${m('\\sqrt{R^2+X^2}')}.`],
+    ['Z=\\frac{V_S}{I_T}',`Z=\\frac{${q(V,'V')}}{${amp(IT)}}`,`Z=${q(Z,'Ω')}`,'>Find the total current first (see its worked solution).']));
+  items.push(it('I_R','Resistor current','mA',IR*1e3,['Each branch sees the full source voltage, so use Ohm\'s law on each branch by itself.','$I_R=\\frac{V_S}{R}',H.ma],
+    ['I_R=\\frac{V_S}{R}',`I_R=\\frac{${q(V,'V')}}{${q(R,'Ω')}}=${amp(IR)}=${q(IR*1e3,'mA')}`]));
+  if(hasC)items.push(it('I_C','Capacitor current','mA',IC*1e3,['$I_C=\\frac{V_S}{X_C}',`Find ${m('X_C')} first.`,H.ma],['I_C=\\frac{V_S}{X_C}',`I_C=\\frac{${q(V,'V')}}{${q(XC,'Ω')}}=${amp(IC)}=${q(IC*1e3,'mA')}`]));
+  if(hasL)items.push(it('I_L','Inductor current','mA',IL*1e3,['$I_L=\\frac{V_S}{X_L}',`Find ${m('X_L')} first.`,H.ma],['I_L=\\frac{V_S}{X_L}',`I_L=\\frac{${q(V,'V')}}{${q(XL,'Ω')}}=${amp(IL)}=${q(IL*1e3,'mA')}`]));
+  const itTex=rlc?'I_T=\\sqrt{I_R^2+(I_L-I_C)^2}':hasC?'I_T=\\sqrt{I_R^2+I_C^2}':'I_T=\\sqrt{I_R^2+I_L^2}';
+  const itNum=rlc?`I_T=\\sqrt{(${q(IR*1e3,'mA')})^2+(${q(IL*1e3,'mA')}-${q(IC*1e3,'mA')})^2}`:`I_T=\\sqrt{(${q(IR*1e3,'mA')})^2+(${q((hasC?IC:IL)*1e3,'mA')})^2}`;
+  items.push(it('I_T','Total current','mA',IT*1e3,rlc?[`The inductor and capacitor currents are 180° apart, so subtract them first. Then combine the net reactive current with ${m('I_R')} at 90°.`,'$'+itTex,'<b>Common mistake:</b> adding the branch currents directly. That only works in DC circuits.']:['The resistor and reactive currents are 90° apart, so they add like the sides of a right triangle.','$'+itTex,'<b>Common mistake:</b> adding the branch currents directly. That only works in DC circuits.'],[itTex,itNum,`I_T=${q(IT*1e3,'mA')}`]));
+  let thHelp,thWork;const lead=Math.abs(th);
+  if(rlc){
+    thHelp=['$\\theta=\\arctan\\left(\\frac{I_L-I_C}{I_R}\\right)',`If ${m('I_L')} is larger the circuit is inductive: the total current lags and θ is positive. If ${m('I_C')} is larger it is capacitive: the total current leads and θ is negative.`,'<b>The sign is graded in this exercise.</b> Some textbooks give the angle of the current instead, which has the opposite sign. Here θ is always the impedance angle.'];
+    thWork=['\\theta=\\arctan\\left(\\frac{I_L-I_C}{I_R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(IL*1e3,'mA')}-${q(IC*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>${Bn>0?`${m('I_L')} is larger, so the circuit is inductive: the total current lags the source voltage by ${fmt(lead,3)}° and θ is positive.`:`${m('I_C')} is larger, so the circuit is capacitive: the total current leads the source voltage by ${fmt(lead,3)}° and θ is negative.`}`];
+  } else if(hasC){
+    thHelp=['$\\theta=-\\arctan\\left(\\frac{I_C}{I_R}\\right)',`The arctangent of ${m('\\frac{I_C}{I_R}')} gives the angle by which the total current leads the source voltage. A capacitive circuit has a negative impedance angle.`,SIGN_FREE];
+    thWork=['\\theta=-\\arctan\\left(\\frac{I_C}{I_R}\\right)',`\\theta=-\\arctan\\left(\\frac{${q(IC*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>The total current leads the source voltage by ${fmt(lead,3)}°, so the impedance angle is negative. Either sign was accepted.`];
+  } else {
+    thHelp=['$\\theta=\\arctan\\left(\\frac{I_L}{I_R}\\right)',`The arctangent of ${m('\\frac{I_L}{I_R}')} gives the angle by which the total current lags the source voltage. An inductive circuit has a positive impedance angle.`,SIGN_FREE];
+    thWork=['\\theta=\\arctan\\left(\\frac{I_L}{I_R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(IL*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>The total current lags the source voltage by ${fmt(lead,3)}°, so the impedance angle is positive. Either sign was accepted.`];
+  }
+  items.push(it('\\theta','Phase angle','°',th,thHelp,thWork,Object.assign({signFree:!rlc},PH_TOL)));
+  const vs=s=>['>Every branch is connected directly across the source.',`${s}=V_S=${q(V,'V')}`];
+  items.push(it('V_R','Voltage across resistor','V',V,H.vsame('V_R'),vs('V_R')));
+  if(hasC)items.push(it('V_C','Voltage across capacitor','V',V,H.vsame('V_C'),vs('V_C')));
+  if(hasL)items.push(it('V_L','Voltage across inductor','V',V,H.vsame('V_L'),vs('V_L')));
+  items.push(it('P_T','True power','mW',PT*1e3,H.ptP,['P_T=V_S I_R',`P_T=${q(V,'V')}\\times${q(IR*1e3,'mA')}=${q(PT*1e3,'mW')}`]));
+  items.push(it('P_A','Apparent power','mVA',PA*1e3,H.pa,['P_A=V_S I_T',`P_A=${q(V,'V')}\\times${q(IT*1e3,'mA')}=${q(PA*1e3,'mVA')}`,`>The power factor is ${m(`\\frac{P_T}{P_A}=\\cos\\theta=${n(Math.cos(CC.rad(th)),3)}`)}.`]));
+  const name={RC:'Parallel RC circuit',RL:'Parallel RL circuit',RLC:'Parallel RLC circuit'}[type];
+  const comps=[{t:'R',label:'R'}];if(hasL)comps.push({t:'L',label:'L'});if(hasC)comps.push({t:'C',label:'C'});
+  const givens=[{k:'Source voltage',v:V+' V'},{k:'Frequency',v:fF(F)},{k:'R',v:fR(R)}];if(hasC)givens.push({k:'C',v:fC(C)});if(hasL)givens.push({k:'L',v:fL(L)});
+  const k=1e3,net=(IC-IL)*k;
+  const vecs=[{x:IR*k,y:0,label:'IR',color:'var(--brand)',ldy:net<0?-8:16}];
+  if(hasC)vecs.push({x:0,y:IC*k,label:'IC',color:'var(--ink2)',ldx:-18});
+  if(hasL)vecs.push({x:0,y:-IL*k,label:'IL',color:'var(--ink2)',ldx:-18});
+  vecs.push({x:IR*k,y:net,label:'IT',ldx:net>0?-14:14});
+  return {title:name,diagram:S.parallel(comps,{srcLabel:'VS'}),givens,
+    note:rlc?'θ is the impedance angle: positive if the circuit is inductive (current lags), negative if it is capacitive (current leads). The sign is graded.':'θ is the impedance angle (positive = inductive, negative = capacitive). Either sign is accepted here.',
+    items,after:x=>phasorCard(x,vecs,-th,'Current vector diagram (mA)',`${m('I_T')} ${th<0?'leads':'lags'} ${m('V_S')} by ${fmt(lead,3)}°, so θ = ${fmt(th,3)}° (${th>0?'inductive':'capacitive'})`)};
+}
+
+/* ---------- resonance worksheets ---------- */
+function resValues(){
+  for(;;){const L=eVal(1e-3,100e-3),C=eVal(0.001e-6,1e-6);const Fr=1/(TP*Math.sqrt(L*C));
+    if(Fr>=200&&Fr<=100000)return {L,C,Fr,X:TP*Fr*L};}
+}
+const frWork=(L,C,Fr)=>['F_R=\\frac{1}{2\\pi\\sqrt{L C}}',`F_R=\\frac{1}{2\\pi\\sqrt{${indH(L)}\\times${capF(C)}}}`,`F_R=${q(Fr,'Hz')}`];
+const frHelp=['Find the resonant frequency first; every reactance in this sheet is calculated at that frequency.','$F_R=\\frac{1}{2\\pi\\sqrt{L C}}','Use henries and farads. The answer is in hertz, so do not convert it to kHz.','<b>Common mistake:</b> forgetting to take the square root before dividing.'];
+function seriesRes(){
+  let L,C,Fr,X,R,V,I;
+  for(;;){({L,C,Fr,X}=resValues());R=eNear(X*rnd(0.05,0.4));V=pick([1,2,3,5,6,10]);I=V/R;
+    if(R>=10&&I>=0.5e-3&&I<=50e-3&&I*X<=60)break;}
+  const mA=I*1e3,Q=X/R;
+  return {title:'Series resonant circuit',diagram:S.series([{t:'R',label:'R'},{t:'C',label:'C'},{t:'L',label:'L'}],{srcLabel:'VS'}),
+    givens:[{k:'Source voltage',v:V+' V'},{k:'R',v:fR(R)},{k:'C',v:fC(C)},{k:'L',v:fL(L)}],
+    note:'The source is set to the resonant frequency of the circuit. θ is the impedance angle.',
+    items:[it('F_R','Resonant frequency','Hz',Fr,frHelp,frWork(L,C,Fr)),
+      it('X_L','Inductive reactance','Ω',X,['$X_L=2\\pi F_R L','Use the resonant frequency you just found.'],['X_L=2\\pi F_R L',`X_L=2\\pi\\times${q(Fr,'Hz')}\\times${indH(L)}`,`X_L=${q(X,'Ω')}`]),
+      it('X_C','Capacitive reactance','Ω',X,['$X_C=\\frac{1}{2\\pi F_R C}',`At resonance ${m('X_C')} equals ${m('X_L')}, which makes a good check on your arithmetic.`],['X_C=\\frac{1}{2\\pi F_R C}',`X_C=\\frac{1}{2\\pi\\times${q(Fr,'Hz')}\\times${capF(C)}}`,`X_C=${q(X,'Ω')}=X_L`]),
+      it('Z','Impedance','Ω',R,['$Z=\\sqrt{R^2+(X_L-X_C)^2}','At resonance the reactances cancel, leaving only the resistance.'],['Z=\\sqrt{R^2+(X_L-X_C)^2}',`Z=\\sqrt{(${q(R,'Ω')})^2+0^2}=${q(R,'Ω')}`,'>A series resonant circuit has its lowest impedance, equal to R.']),
+      it('I_T','Total current','mA',mA,['$I_T=\\frac{V_S}{Z}','Because Z equals R at resonance, the current is as large as it can be.',H.ma],['I_T=\\frac{V_S}{Z}',`I_T=\\frac{${q(V,'V')}}{${q(R,'Ω')}}=${amp(I)}=${q(mA,'mA')}`]),
+      it('\\theta','Phase angle','°',0,['$\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)','With the reactances equal, the circuit acts like a pure resistance.'],['\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)=\\arctan(0)=0°','>Current and voltage are in phase.'],PH_TOL),
+      it('V_R','Voltage across resistor','V',V,['$V_R=I_T R','All of the source voltage appears across R.'],['V_R=I_T R',`V_R=${amp(I)}\\times${q(R,'Ω')}=${q(V,'V')}`]),
+      it('V_L','Voltage across inductor','V',I*X,['$V_L=I_T X_L',`This can be much larger than the source voltage: it is Q times ${m('V_S')}, where ${m('Q=\\frac{X_L}{R}')}.`],['V_L=I_T X_L',`V_L=${amp(I)}\\times${q(X,'Ω')}=${q(I*X,'V')}`,`>That is ${m(`Q=\\frac{X_L}{R}=${n(Q,3)}`)} times the source voltage.`]),
+      it('V_C','Voltage across capacitor','V',I*X,['$V_C=I_T X_C',`${m('V_C')} equals ${m('V_L')}; the two are 180° apart and cancel.`],['V_C=I_T X_C',`V_C=${amp(I)}\\times${q(X,'Ω')}=${q(I*X,'V')}`,'>It equals the inductor voltage, and the two cancel each other.']),
+      it('P_T','True power','mW',I*I*R*1e3,['$P_T=I_T^2 R=V_S I_T','At resonance true power equals apparent power. Volts times milliamperes gives mW.'],['P_T=I_T^2 R',`P_T=(${amp(I)})^2\\times${q(R,'Ω')}=${q(I*I*R*1e3,'mW')}`])],
+    after:x=>phasorCard(x,[{x:0,y:X,label:'XL',color:'var(--ink2)',ldx:-18},{x:0,y:-X,label:'XC',color:'var(--ink2)',ldx:-18},{x:R*3,y:0,label:'R = Z',color:'var(--brand)',ldy:-8}],0,'At resonance the reactances cancel','θ = 0°')};
+}
+function parallelRes(){
+  let L,C,Fr,X,R,V,IR,IX;
+  for(;;){({L,C,Fr,X}=resValues());R=eNear(X*rnd(2.5,20));V=pick([5,6,9,10,12,15,20]);IR=V/R;IX=V/X;
+    if(R<=1e6&&IR>=0.1e-3&&IX<=100e-3)break;}
+  return {title:'Parallel resonant circuit',diagram:S.parallel([{t:'R',label:'R'},{t:'L',label:'L'},{t:'C',label:'C'}],{srcLabel:'VS'}),
+    givens:[{k:'Source voltage',v:V+' V'},{k:'R',v:fR(R)},{k:'C',v:fC(C)},{k:'L',v:fL(L)}],
+    note:'The source is set to the resonant frequency of the circuit. Assume ideal components (no coil resistance). θ is the impedance angle.',
+    items:[it('F_R','Resonant frequency','Hz',Fr,frHelp,frWork(L,C,Fr)),
+      it('X_L','Inductive reactance','Ω',X,['$X_L=2\\pi F_R L','Use the resonant frequency you just found.'],['X_L=2\\pi F_R L',`X_L=2\\pi\\times${q(Fr,'Hz')}\\times${indH(L)}`,`X_L=${q(X,'Ω')}`]),
+      it('X_C','Capacitive reactance','Ω',X,['$X_C=\\frac{1}{2\\pi F_R C}',`At resonance ${m('X_C')} equals ${m('X_L')}.`],['X_C=\\frac{1}{2\\pi F_R C}',`X_C=\\frac{1}{2\\pi\\times${q(Fr,'Hz')}\\times${capF(C)}}`,`X_C=${q(X,'Ω')}=X_L`]),
+      it('I_R','Resistor current','mA',IR*1e3,['$I_R=\\frac{V_S}{R}',H.ma],['I_R=\\frac{V_S}{R}',`I_R=\\frac{${q(V,'V')}}{${q(R,'Ω')}}=${amp(IR)}=${q(IR*1e3,'mA')}`]),
+      it('I_L','Inductor current','mA',IX*1e3,['$I_L=\\frac{V_S}{X_L}',H.ma],['I_L=\\frac{V_S}{X_L}',`I_L=\\frac{${q(V,'V')}}{${q(X,'Ω')}}=${amp(IX)}=${q(IX*1e3,'mA')}`]),
+      it('I_C','Capacitor current','mA',IX*1e3,['$I_C=\\frac{V_S}{X_C}',`Equal to ${m('I_L')} because the reactances are equal.`],['I_C=\\frac{V_S}{X_C}',`I_C=\\frac{${q(V,'V')}}{${q(X,'Ω')}}=${q(IX*1e3,'mA')}=I_L`]),
+      it('I_T','Total current','mA',IR*1e3,['$I_T=\\sqrt{I_R^2+(I_L-I_C)^2}','The inductor and capacitor currents are equal and 180° apart, so they cancel. Only the resistor current is left.','<b>Common mistake:</b> adding all three branch currents.'],['I_T=\\sqrt{I_R^2+(I_L-I_C)^2}',`I_T=\\sqrt{(${q(IR*1e3,'mA')})^2+0^2}=${q(IR*1e3,'mA')}`,`>The current circulating between L and C (${fmt(IX*1e3,3)} mA) is ${fmt(IX/IR,3)} times the source current.`]),
+      it('Z','Impedance','Ω',R,['$Z=\\frac{V_S}{I_T}','A parallel resonant circuit has its highest impedance, equal to R here.'],['Z=\\frac{V_S}{I_T}',`Z=\\frac{${q(V,'V')}}{${amp(IR)}}=${q(R,'Ω')}`]),
+      it('\\theta','Phase angle','°',0,['$\\theta=\\arctan\\left(\\frac{I_L-I_C}{I_R}\\right)','The reactive currents cancel, so the circuit acts like a pure resistance.'],['\\theta=\\arctan\\left(\\frac{I_L-I_C}{I_R}\\right)=\\arctan(0)=0°'],PH_TOL),
+      it('P_T','True power','mW',IR*V*1e3,['$P_T=V_S I_R','Volts times milliamperes gives mW.'],['P_T=V_S I_R',`P_T=${q(V,'V')}\\times${q(IR*1e3,'mA')}=${q(IR*V*1e3,'mW')}`])],
+    after:x=>phasorCard(x,[{x:0,y:IX*1e3,label:'IC',color:'var(--ink2)',ldx:-18},{x:0,y:-IX*1e3,label:'IL',color:'var(--ink2)',ldx:-18},{x:IR*1e3*Math.max(1,IX/IR/3),y:0,label:'IR = IT',color:'var(--brand)',ldy:-8}],0,'At resonance the reactive currents cancel','θ = 0°')};
+}
+function phasorCard(x,vecs,thDraw,title,caption){x.appendChild(CC.el(`<div class="card"><h3 style="margin-top:0">${title}</h3><div class="diagram">${S.phasor(vecs,{theta:thDraw,w:300,h:230})}</div><p class="small muted center">${caption}</p></div>`));}
+
+/* intro phasor sketches */
+const sketch={
+  rcS:S.phasor([{x:4,y:0,label:'R',color:'var(--brand)',ldy:-8},{x:0,y:-3,label:'XC',color:'var(--ink2)',ldx:-18},{x:4,y:-3,label:'Z',ldx:12}],{theta:-36.9,w:240,h:190}),
+  rlS:S.phasor([{x:4,y:0,label:'R',color:'var(--brand)',ldy:16},{x:0,y:3,label:'XL',color:'var(--ink2)',ldx:-18},{x:4,y:3,label:'Z',ldx:-12}],{theta:36.9,w:240,h:190}),
+  rcP:S.phasor([{x:4,y:0,label:'IR',color:'var(--brand)',ldy:16},{x:0,y:3,label:'IC',color:'var(--ink2)',ldx:-18},{x:4,y:3,label:'IT',ldx:-12}],{theta:36.9,w:240,h:190}),
+  rlP:S.phasor([{x:4,y:0,label:'IR',color:'var(--brand)',ldy:-8},{x:0,y:-3,label:'IL',color:'var(--ink2)',ldx:-18},{x:4,y:-3,label:'IT',ldx:12}],{theta:-36.9,w:240,h:190}),
+  rlcS:S.phasor([{x:0,y:2,label:'XL',color:'var(--ink2)',ldx:-18},{x:0,y:-5,label:'XC',color:'var(--ink2)',ldx:-18},{x:4,y:0,label:'R',color:'var(--brand)',ldy:-8},{x:4,y:-3,label:'Z',ldx:12}],{theta:-36.9,w:240,h:210}),
+  rlcP:S.phasor([{x:0,y:2,label:'IC',color:'var(--ink2)',ldx:-18},{x:0,y:-5,label:'IL',color:'var(--ink2)',ldx:-18},{x:4,y:0,label:'IR',color:'var(--brand)',ldy:-8},{x:4,y:-3,label:'IT',ldx:12}],{theta:-36.9,w:240,h:210}),
+  sR:S.phasor([{x:0,y:3,label:'XL',color:'var(--ink2)',ldx:-18},{x:0,y:-3,label:'XC',color:'var(--ink2)',ldx:-18},{x:4,y:0,label:'R = Z',color:'var(--brand)',ldy:-8}],{w:240,h:190}),
+  pR:S.phasor([{x:0,y:3,label:'IC',color:'var(--ink2)',ldx:-18},{x:0,y:-3,label:'IL',color:'var(--ink2)',ldx:-18},{x:4,y:0,label:'IR = IT',color:'var(--brand)',ldy:-8}],{w:240,h:190}),
+};
+const two=(a,b)=>`<div class="cols2" style="align-items:center"><div>${a}</div><div class="diagram">${b}</div></div>`;
+function wsModule(id,title,icon,sub,gen,text,formulas,diag,vec,signNote){
+  return {id,title,icon,sub,
+    intro:CC.introPage({diagram:null,text:two(text,diag+vec),formulas,how:howWS(signNote)}),
+    run:(el,s)=>{const g=gen();CC.worksheet(el,s,g);}};
+}
+const F={
+  XC:{cap:'Capacitive reactance',tex:'X_C=\\frac{1}{2\\pi F C}'},XL:{cap:'Inductive reactance',tex:'X_L=2\\pi F L'},
+  ZRC:{cap:'Impedance',tex:'Z=\\sqrt{R^2+X_C^2}'},ZRL:{cap:'Impedance',tex:'Z=\\sqrt{R^2+X_L^2}'},ZRLC:{cap:'Impedance',tex:'Z=\\sqrt{R^2+(X_L-X_C)^2}'},
+  IT:{cap:'Total current',tex:'I_T=\\frac{V_S}{Z}'},ZP:{cap:'Impedance',tex:'Z=\\frac{V_S}{I_T}'},
+  thRC:{cap:'Phase angle',tex:'\\theta=-\\arctan\\left(\\frac{X_C}{R}\\right)'},thRL:{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{X_L}{R}\\right)'},
+  VR:{cap:'Resistor voltage',tex:'V_R=I_T R'},PTs:{cap:'True power',tex:'P_T=I_T^2 R'},PTp:{cap:'True power',tex:'P_T=V_S I_R'},PA:{cap:'Apparent power',tex:'P_A=V_S I_T'},
+  Fr:{cap:'Resonant frequency',tex:'F_R=\\frac{1}{2\\pi\\sqrt{L C}}'}
+};
+const T={
+  rcS:`<p>In a capacitor the current reaches its peak 90° before the voltage does. In a resistor current and voltage are in phase. So in a series RC circuit the resistance and the capacitive reactance add at right angles, like the two short sides of a right triangle. The long side is the impedance Z, the total opposition to current.</p><p>The same current flows through both parts. The resistor and capacitor voltages are also 90° apart, so they add as vectors to give the source voltage.</p>${PHASE}<p>A series RC circuit is capacitive, so θ lies between 0° and −90°.</p>`,
+  rlS:`<p>In an inductor the voltage reaches its peak 90° before the current does. In a resistor current and voltage are in phase. So in a series RL circuit the resistance and the inductive reactance add at right angles, like the two short sides of a right triangle. The long side is the impedance Z.</p><p>The same current flows through both parts, and the resistor and inductor voltages add as vectors to give the source voltage.</p>${PHASE}<p>A series RL circuit is inductive, so θ lies between 0° and +90°.</p>`,
+  rcP:`<p>In a parallel circuit every branch has the full source voltage across it, so start with each branch current. The capacitor current leads the voltage by 90° while the resistor current is in phase, so the two branch currents add at right angles to give the total current.</p><p>Once you know the total current, Ohm's law gives the impedance. In a parallel circuit Z is smaller than either branch opposition.</p>${PHASE}<p>In a parallel RC circuit the total current leads the source voltage, so θ lies between 0° and −90°. Many textbooks quote the same angle as a positive current angle; that is why either sign is accepted for the RC and RL sheets.</p>`,
+  rlP:`<p>In a parallel circuit every branch has the full source voltage across it, so start with each branch current. The inductor current lags the voltage by 90° while the resistor current is in phase, so the two branch currents add at right angles to give the total current.</p><p>Once you know the total current, Ohm's law gives the impedance. In a parallel circuit Z is smaller than either branch opposition.</p>${PHASE}<p>In a parallel RL circuit the total current lags the source voltage, so θ lies between 0° and +90°.</p>`,
+  rlcS:`<p>A capacitor's current leads its voltage by 90° and an inductor's current lags by 90°, so their reactances point in opposite directions and partly cancel. Subtract them to get the net reactance, then combine that with the resistance at 90° to get the impedance.</p><p>Because the reactive voltages cancel each other, the voltage across the inductor or the capacitor can be larger than the source voltage.</p>${PHASE}<p>In a series RLC circuit θ lies between −90° and +90°. It is positive when ${m('X_L')} is larger and negative when ${m('X_C')} is larger. <b>On this sheet the sign is graded.</b></p>`,
+  rlcP:`<p>Each branch has the full source voltage across it, so find the three branch currents first. The capacitor and inductor currents are 180° apart and partly cancel. Subtract them to get the net reactive current, then combine that with the resistor current at 90° to get the total current. Ohm's law then gives the impedance.</p><p>Because the reactive currents cancel, the total current can be smaller than a single branch current.</p>${PHASE}<p>In a parallel RLC circuit θ is positive (inductive) when ${m('I_L')} is larger and negative (capacitive) when ${m('I_C')} is larger. <b>On this sheet the sign is graded.</b> Watch out: when ${m('I_C')} is larger, the current leads and θ is negative, even though some books then quote a positive current angle.</p>`,
+  sR:`<p>Resonance happens at the one frequency where the inductive and capacitive reactances are equal. In a series circuit they cancel completely, so the impedance is just the resistance and the phase angle is 0°. That makes the current as large as it can be.</p><p>The vector diagram shows the reactances canceling, leaving the impedance on top of the resistance.</p><p>Each reactance still carries the full current, so the inductor and capacitor voltages can be many times the source voltage. The ratio is the circuit Q: ${m('Q=\\frac{X_L}{R}')}.</p>`,
+  pR:`<p>Resonance happens at the one frequency where the inductive and capacitive reactances are equal. In a parallel circuit the inductor and capacitor currents are then equal and opposite, so they cancel. Only the resistor current flows from the source, the phase angle is 0°, and the impedance is at its highest.</p><p>The vector diagram shows the reactive currents canceling, leaving the total current on top of the resistor current.</p><p>A large current still circulates back and forth between the inductor and the capacitor. It can be many times larger than the current drawn from the source.</p>`
+};
+
+/* ---------- AC voltage conversions (11 problems) ---------- */
+const VC_LAB=['Effective or rms voltage','Peak voltage','Peak to peak voltage','Average voltage during one half cycle'];
+const VC_SYM=['V_{rms}','V_P','V_{PP}','V_{avg}'];
+function conversions(el,s){
+  CC.problemSet(el,s,{count:11,gen:()=>{
+    let kind,given,vp;
+    do{kind=ri(0,3);given=+(pick([1,2,5,10,20,50,100])*rnd(1,9.9)).toPrecision(3);vp=[given*Math.SQRT2,given,given/2,given*Math.PI/2][kind];}while(vp<1||vp>400);
+    const vals=[vp/Math.SQRT2,vp,vp*2,vp*2/Math.PI];vals[kind]=given;
+    const g=VC_SYM[kind];
+    const work=[];
+    if(kind===0)work.push('>First convert the rms value to peak.',`V_P=V_{rms}\\times1.414=${n(given)}\\times1.414=${q(vp,'V')}`);
+    if(kind===2)work.push('>First convert the peak-to-peak value to peak.',`V_P=\\frac{V_{PP}}{2}=\\frac{${n(given)}}{2}=${q(vp,'V')}`);
+    if(kind===3)work.push('>First convert the average value to peak.',`V_P=V_{avg}\\times1.571=${n(given)}\\times1.571=${q(vp,'V')}`);
+    if(kind===1)work.push('>The peak value is given, so convert from it directly.');
+    if(kind!==0)work.push(`V_{rms}=V_P\\times0.707=${n(vp)}\\times0.707=${q(vals[0],'V')}`);
+    if(kind!==2)work.push(`V_{PP}=V_P\\times2=${n(vp)}\\times2=${q(vals[2],'V')}`);
+    if(kind!==3)work.push(`V_{avg}=V_P\\times0.637=${n(vp)}\\times0.637=${q(vals[3],'V')}`);
+    work.push('>Check: the order from largest to smallest is always peak-to-peak, peak, rms, average.');
+    return {title:'Voltage conversion',prompt:`<p>The meter shows <b>${fmt(given)} V ${['rms','peak','peak to peak','average'][kind]}</b>. Calculate the other three voltages.</p>`,
+      diagram:sineSVG(vp,kind),
+      fields:VC_LAB.map((l,i)=>({key:'v'+i,label:l,unit:'V',value:vals[i],given:i===kind})),
+      explain:convFormulas,work};
+  }});
+}
+const convFormulas=`<div class="formulas">${['V_{rms}=V_P\\times0.707','V_P=V_{rms}\\times1.414','V_{PP}=V_P\\times2','V_{avg}=V_P\\times0.637','V_P=V_{avg}\\times1.571','V_P=\\frac{V_{PP}}{2}'].map(t=>`<div>${M(t)}</div>`).join('')}</div>`;
+function sineSVG(vp,kind){
+  const W=300,H=150,mid=75,A=55;let d='';for(let i=0;i<=200;i++){const x=20+i*1.3,y=mid-A*Math.sin(i/200*2*Math.PI);d+=(i?'L':'M')+x.toFixed(1)+','+y.toFixed(1);}
+  const rmsY=mid-A*0.707,avgY=mid-A*0.637;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="sine wave"><line x1="16" y1="${mid}" x2="${W-10}" y2="${mid}" stroke="var(--ink2)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+  <line x1="20" y1="${mid-A}" x2="60" y2="${mid-A}" stroke="var(--brand)" stroke-dasharray="3 3"/><text x="64" y="${mid-A+4}" font-size="11" fill="var(--ink)">Vp</text>
+  <line x1="20" y1="${rmsY}" x2="100" y2="${rmsY}" stroke="var(--ok)" stroke-dasharray="3 3"/><text x="104" y="${rmsY+10}" font-size="11" fill="var(--ink)">Vrms</text>
+  <line x1="290" y1="${mid-A}" x2="290" y2="${mid+A}" stroke="var(--brand)"/><text x="286" y="${mid+4}" font-size="11" text-anchor="end" fill="var(--ink)">Vpp</text></svg>`;
+}
+
+/* ---------- Series & parallel capacitors / inductors (12 problems) ---------- */
+function spProblems(kind){ // kind 'C' or 'L'
+  const types=shuffle([0,0,0,1,1,1,2,2,2,3,3,3]);// 0:2 par,1:3 par,2:2 ser,3:3 ser
+  return types.map(t=>{
+    const nn=t%2?3:2,par=t<2;
+    const vals=Array.from({length:nn},()=>kind==='C'?eVal(0.01,100):eVal(1,1000));
+    const unit=kind==='C'?'µF':'mH';
+    const sum=(kind==='C')===par;
+    const total=sum?vals.reduce((a,b)=>a+b,0):1/vals.reduce((a,b)=>a+1/b,0);
+    const comps=vals.map((v,i)=>({t:kind,label:kind+(i+1)}));
+    const dia=par?S.parallel(comps,{gap:76,first:84}):S.series(comps);
+    const sym=kind+'_T';const parts=vals.map((_,i)=>kind+'_'+(i+1));
+    const form=sum?sym+'='+parts.join('+'):sym+'=\\frac{1}{'+parts.map(p=>'\\frac{1}{'+p+'}').join('+')+'}';
+    const u=unit==='µF'?'\\,\\text{µF}':'\\,\\text{mH}';
+    const work=[form];
+    if(sum)work.push(`${sym}=${vals.map(v=>n(v)).join('+')}=${n(total)}${u}`);
+    else{const rec=vals.reduce((a,b)=>a+1/b,0);
+      work.push(`${sym}=\\frac{1}{${vals.map(v=>'\\frac{1}{'+n(v)+'}').join('+')}}`,`${sym}=\\frac{1}{${n(rec)}}=${n(total)}${u}`,
+        `>Check: the total must be smaller than the smallest ${kind==='C'?'capacitor':'inductor'} (${fmt(Math.min(...vals))} ${unit}).`);}
+    const tip=sum?'':`<p class="small"><b>Common mistake:</b> forgetting the last step, ${m(sym+'=\\frac{1}{\\text{sum}}')}. Keep every value in ${unit} and the answer comes out in ${unit}.</p>`;
+    return {title:`${nn} ${kind==='C'?'capacitors':'inductors'} in ${par?'parallel':'series'}`,
+      prompt:`<div class="givens">${vals.map((v,i)=>`<div class="given"><div class="k">${kind}${i+1}</div><div class="v">${fmt(v)} ${unit}</div></div>`).join('')}</div>`,
+      diagram:dia,fields:[{key:'t',label:`Total ${kind==='C'?'capacitance':'inductance'}, ${m(sym)}`,unit,value:total}],
+      explain:`<p class="small">${sum?'Values in '+(par?'parallel':'series')+' simply add.':'Use the reciprocal formula.'}</p>${M(form)}${tip}`,work};
+  });
+}
+function spIntro(kind){
+  const C=kind==='C';
+  const txt=C?`<p>Capacitors are connected in parallel to get more capacitance, and in series to get a higher voltage rating (or a smaller value). Capacitors combine the <b>opposite</b> way to resistors:</p><ul><li><b>Parallel:</b> the capacitances simply add.</li><li><b>Series:</b> use the reciprocal formula. The total is always smaller than the smallest capacitor.</li></ul>`
+    :`<p>Inductors are connected in series to get more inductance, and in parallel to share current or to get a smaller value. As long as the coils do not share magnetic fields, inductors combine the <b>same</b> way as resistors:</p><ul><li><b>Series:</b> the inductances simply add.</li><li><b>Parallel:</b> use the reciprocal formula. The total is always smaller than the smallest inductor.</li></ul>`;
+  const k=kind;const sumT=nn=>k+'_T='+Array.from({length:nn},(_,i)=>k+'_'+(i+1)).join('+');const recT=nn=>k+'_T=\\frac{1}{'+Array.from({length:nn},(_,i)=>'\\frac{1}{'+k+'_'+(i+1)+'}').join('+')+'}';
+  const sumG=k+'_T='+k+'_1+'+k+'_2+'+k+'_3+\\cdots+'+k+'_n';const recG=k+'_T=\\frac{1}{\\frac{1}{'+k+'_1}+\\frac{1}{'+k+'_2}+\\cdots+\\frac{1}{'+k+'_n}}';
+  const par=C?[sumT(2),sumT(3),sumG]:[recT(2),recT(3),recG], ser=C?[recT(2),recT(3),recG]:[sumT(2),sumT(3),sumG];
+  return CC.introPage({text:txt,extra:`<div class="cols2 mt"><div class="formula"><b>Parallel ${C?'capacitors':'inductors'}</b>${par.map(t=>M(t)).join('')}</div><div class="formula"><b>Series ${C?'capacitors':'inductors'}</b>${ser.map(t=>M(t)).join('')}</div></div>`,
+    how:`<p>You get 12 problems in random order: two or three ${C?'capacitors':'inductors'}, in series or in parallel. Type the total in ${C?'µF':'mH'} and choose <b>Grade answers</b>, then <b>Next problem</b>. Keep every value in ${C?'µF':'mH'}; there is no need to convert to ${C?'farads':'henries'}.</p><p>Your score is the percentage of problems right. ${TOLNOTE.split('.')[0]}. Each graded problem shows a worked solution.</p>`});
+}
+
+/* ---------- Transformers (10 problems) ---------- */
+const XF_DIAG=(R)=>{const g=`<rect x="10" y="40" width="80" height="54" fill="none"/><text x="50" y="71" font-size="11" text-anchor="middle" stroke="none" fill="currentColor">AC SOURCE</text>
+  <polyline points="90,52 130,52 130,40 150,40 150,48"/><polyline points="90,82 130,82 130,94 150,94 150,86"/>
+  ${[0,1,2,3].map(i=>`<path d="M150,${48+i*9.5} a4.75,4.75 0 0 1 0,9.5"/>`).join('')}
+  <line x1="162" y1="44" x2="162" y2="90"/><line x1="166" y1="44" x2="166" y2="90"/>
+  ${[0,1,2,3].map(i=>`<path d="M178,${48+i*9.5} a4.75,4.75 0 0 0 0,9.5"/>`).join('')}
+  <polyline points="178,48 178,40 220,40 260,40 260,52"/><polyline points="178,86 178,94 260,94 260,82"/>
+  <path d="M260,52 l7,3 -14,4 14,4 -14,4 14,4 -14,4 7,3" fill="none"/>
+  <text x="140" y="38" font-size="10" stroke="none" fill="currentColor">P1</text><text x="140" y="108" font-size="10" stroke="none" fill="currentColor">P2</text>
+  <text x="180" y="38" font-size="10" stroke="none" fill="currentColor">S1</text><text x="180" y="108" font-size="10" stroke="none" fill="currentColor">S2</text>
+  <text x="272" y="64" font-size="11" stroke="none" fill="currentColor" font-weight="700">LOAD</text><text x="272" y="79" font-size="11" stroke="none" fill="currentColor">${R?esc(R):''}</text>
+  <text x="164" y="125" font-size="10" text-anchor="middle" stroke="none" fill="currentColor">TRANSFORMER</text>`;return S.wrap(330,135,g);};
+function transformerSet(el,s){
+  CC.problemSet(el,s,{count:10,gen:()=>{
+    let Tp,Ts,Vp,R,Vs,Is,Ip;
+    do{Tp=pick([100,200,250,400,500,600,800,1000,1200,1500,2000,2400]);Ts=pick([20,25,40,50,60,100,120,150,200,250,400,500,1000,2000,3000,4000]);Vp=pick([6,12,24,48,110,115,120,220,240]);
+      Vs=Vp*Ts/Tp;R=eVal(10,10000);Is=Vs/R;Ip=Is*Ts/Tp;}while(Ts===Tp||Vs<1||Vs>500||Is<0.01||Is>5||Ip<0.01||Ip>10||Vs*Is>500);
+    const combos=[[0,1,2],[0,1,3],[0,2,3],[1,2,3],[0,2,5],[1,2,5]];
+    const known=pick(combos);
+    // the student only sees the rounded givens, so solve from exactly those
+    const shown=v=>CC.parse(fmt(v),false);
+    const g={};known.forEach(i=>{g[i]=shown([Tp,Ts,Vp,Vs,Ip,Is][i]);});
+    const w=[];
+    let tp=g[0],ts=g[1],vp=g[2],vs=g[3],is=g[5];
+    if(is!==undefined){vs=is*R;w.push('>Start with Ohm\'s law on the load to get the secondary voltage.','V_s=I_s R',`V_s=${amp(is)}\\times${q(R,'Ω')}=${q(vs,'V')}`);}
+    if(vs===undefined){vs=vp*ts/tp;w.push('>The voltage ratio equals the turns ratio.','V_s=V_p\\times\\frac{N_s}{N_p}',`V_s=${q(vp,'V')}\\times\\frac{${n(ts)}}{${n(tp)}}=${q(vs,'V')}`);}
+    if(vp===undefined){vp=vs*tp/ts;w.push('>The voltage ratio equals the turns ratio.','V_p=V_s\\times\\frac{N_p}{N_s}',`V_p=${q(vs,'V')}\\times\\frac{${n(tp)}}{${n(ts)}}=${q(vp,'V')}`);}
+    if(ts===undefined){ts=tp*vs/vp;w.push('>The turns ratio equals the voltage ratio.','N_s=N_p\\times\\frac{V_s}{V_p}',`N_s=${n(tp)}\\times\\frac{${q(vs,'V')}}{${q(vp,'V')}}=${n(ts)}`);}
+    if(tp===undefined){tp=ts*vp/vs;w.push('>The turns ratio equals the voltage ratio.','N_p=N_s\\times\\frac{V_p}{V_s}',`N_p=${n(ts)}\\times\\frac{${q(vp,'V')}}{${q(vs,'V')}}=${n(tp)}`);}
+    if(is===undefined){is=vs/R;w.push('>Ohm\'s law on the load gives the secondary current.','I_s=\\frac{V_s}{R}',`I_s=\\frac{${q(vs,'V')}}{${q(R,'Ω')}}=${amp(is)}`);}
+    const ip=is*ts/tp;
+    w.push(`>Current changes the opposite way to voltage: a step-${ts>tp?'up':'down'} transformer steps current ${ts>tp?'down':'up'}.`,'I_p=I_s\\times\\frac{N_s}{N_p}',`I_p=${amp(is)}\\times\\frac{${n(ts)}}{${n(tp)}}=${amp(ip)}`,
+      `>Check: input power equals output power, ${m(`V_p I_p=V_s I_s=${q(vs*is,'W',3)}`)}.`);
+    const vals=[tp,ts,vp,vs,ip,is];
+    const L=[['Number of primary turns, Np',''],['Number of secondary turns, Ns',''],['Primary voltage, Vp','V'],['Secondary voltage, Vs','V'],['Primary current, Ip','A'],['Secondary current, Is','A']];
+    return {title:'Transformer problem',prompt:`<p>The blue boxes are known. Calculate the three empty yellow boxes. You will also need the load resistance shown on the schematic. Assume an ideal transformer.</p>`,
+      diagram:XF_DIAG('R = '+fR(R)),
+      fields:L.map((f,i)=>({key:'x'+i,label:f[0],unit:f[1],value:known.includes(i)?g[i]:vals[i],given:known.includes(i)})),
+      explain:`<div class="formulas"><div>${M('\\frac{V_s}{V_p}=\\frac{N_s}{N_p}')}</div><div>${M('\\frac{I_p}{I_s}=\\frac{N_s}{N_p}')}</div><div>${M('I_s=\\frac{V_s}{R}')}</div></div>`,work:w};
+  }});
+}
+
+/* ---------- Troubleshooting ---------- */
+function makeMeter(){return CC.meterErr();}
+const openMsg=(vs,a,b,f)=>[`>The supply current is 0 mA, so the circuit is open somewhere. With no current, every good part drops 0 V and the full supply voltage appears across the break.`,`>The meter reads about ${fmt(vs,3)} V only across <b>${a}</b> to <b>${b}</b>, so the fault is <b>${f}</b>.`];
+function seriesBoard(){
+  // series loop: J1-F1-T1-C1-T2-R1-T3-L1-T4-J2, driven at 1 kHz
+  const Vs=10,F=1000,w=TP*F;
+  let R,C,L;
+  do{R=eVal(330,3300);C=capFor(F,R*rnd(0.5,1.6));L=indFor(F,R*rnd(0.5,1.6));}while(!L_OK(L)||L<10e-3||!C_OK(C));
+  const tol=()=>1+rnd(-0.2,0.2);
+  const Ra=R*tol(),Ca=C*tol(),La=L*tol();
+  const faults=['Fuse Blown','C1 Open','C1 Shorted','R1 Open','R1 Shorted','L1 Open','L1 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','No Faults'];
+  const ans=ri(0,faults.length-1);const f=faults[ans];
+  const pads=['J1','F1a','F1b','C1a','C1b','R1a','R1b','L1a','L1b','J2'];
+  const names={J1:'J1 (supply +)',F1a:'F1 left',F1b:'F1 right',C1a:'C1 left',C1b:'C1 right',R1a:'R1 top',R1b:'R1 bottom',L1a:'L1 right',L1b:'L1 left',J2:'J2 (supply −)'};
+  const OPEN=null;
+  const Z=[Cx.c(0),Cx.c(0.1),Cx.c(0),Cx.c(0,-1/(w*Ca)),Cx.c(0),Cx.c(Ra),Cx.c(0),Cx.c(La*w*0.03,La*w),Cx.c(0)];
+  const map={'Fuse Blown':[1,OPEN],'C1 Open':[3,OPEN],'C1 Shorted':[3,Cx.c(0)],'R1 Open':[5,OPEN],'R1 Shorted':[5,Cx.c(0)],'L1 Open':[7,OPEN],'L1 Shorted':[7,Cx.c(0)],'Trace 1 Open':[2,OPEN],'Trace 2 Open':[4,OPEN],'Trace 3 Open':[6,OPEN],'Trace 4 Open':[8,OPEN]};
+  let openAt=-1;if(map[f]){if(map[f][1]===OPEN)openAt=map[f][0];else Z[map[f][0]]=map[f][1];}
+  const Vsup=Vs*rnd(0.99,1.01);
+  const Ztot=Z.reduce((a,b)=>Cx.add(a,b),Cx.c(0));
+  const I=openAt>=0?Cx.c(0):Cx.div(Cx.c(Vsup),Ztot);
+  const vm=makeMeter(),am=makeMeter();
+  const measure=(a,b)=>{let i=pads.indexOf(a),j=pads.indexOf(b);if(i>j)[i,j]=[j,i];let v;
+    if(i===j)v=0;else if(openAt>=0)v=(openAt>=i&&openAt<j)?Vsup:0;
+    else{let z=Cx.c(0);for(let k=i;k<j;k++)z=Cx.add(z,Z[k]);v=Cx.abs(Cx.mul(I,z));}
+    const r=vm(v);return {value:r,text:CC.lcd(r)+' V'};};
+  const P={J1:[60,150],F1a:[100,150],F1b:[190,150],C1a:[250,150],C1b:[340,150],R1a:[470,175],R1b:[470,285],L1a:[360,300],L1b:[250,300],J2:[60,300]};
+  const svg=()=>B.svg(540,340,
+    B.supply(20,8,200,70,'AC POWER SUPPLY',Vs+' VAC @ 1 kHz')+B.pcb(20,110,505,220)+
+    B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,100],[34,100],[34,300],[60,300]],'#222')+
+    B.trace([P.J1,P.F1a])+B.trace([P.F1b,P.C1a],'TRACE 1',[220,140])+B.trace([P.C1b,[470,150],P.R1a],'TRACE 2',[410,140])+B.trace([P.R1b,[470,300],P.L1a],'TRACE 3',[415,318])+B.trace([P.L1b,P.J2],'TRACE 4',[150,318])+
+    B.part('F',P.F1a,P.F1b,'F1')+B.part('C',P.C1a,P.C1b,'C1')+B.part('R',P.R1a,P.R1b,'R1')+B.part('L',P.L1b,P.L1a,'L1')+
+    B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11}));
+  const padsArr=pads.map(id=>({id,x:P[id][0],y:P[id][1],label:names[id]}));
+  // what the marked values predict (for the worked explanation)
+  const XCn=1/(w*C),XLn=w*L,Zn=Math.hypot(R,XLn-XCn),In=Vs/Zn;
+  const work=()=>{
+    const st=['>With the marked values, a good circuit should draw about '+fmt(In*1e3,3)+' mA:',
+      `X_C=\\frac{1}{2\\pi F C}=${q(XCn,'Ω',3)}`,`X_L=2\\pi F L=${q(XLn,'Ω',3)}`,
+      `Z=\\sqrt{R^2+(X_L-X_C)^2}=${q(Zn,'Ω',3)}`,`I=\\frac{V_S}{Z}=${q(In*1e3,'mA',3)}`,
+      `V_R\\approx${q(In*R,'V',3)}\\quad V_C\\approx${q(In*XCn,'V',3)}\\quad V_L\\approx${q(In*XLn,'V',3)}`];
+    if(openAt>=0)st.push(...openMsg(Vsup,names[pads[openAt]],names[pads[openAt+1]],f));
+    else if(f==='No Faults')st.push(`>The supply current (${fmt(Cx.abs(I)*1e3,3)} mA) and every part voltage are close to the expected values, allowing for the 20% part tolerance. There is no fault.`);
+    else{const part=f.slice(0,2),k=map[f][0];
+      st.push(`>Current flows (${fmt(Cx.abs(I)*1e3,3)} mA), so nothing is open. A shorted part drops 0 V. The reading across <b>${names[pads[k]]}</b> to <b>${names[pads[k+1]]}</b> is 0 V instead of the few volts expected, so <b>${part} is shorted</b>.`,
+        '>Shorting one reactance changes the net reactance, so the current can go up or down. The 0 V reading, not the current, is what identifies the part.');}
+    return st;};
+  return {svg,pads:padsArr,faults,answer:ans,measure,work,
+    meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Cx.abs(I)*1000),1)}],
+    info:()=>`Marked values: R1 = ${fR(R)}, C1 = ${fC(C)}, L1 = ${fL(L)}. The supply is ${Vs} V at 1 kHz. Parts can be 20% off their marked values and the meters up to 5% off.`};
+}
+function xfmrBoard(){
+  const w=TP*60;let Vsup0,ratio,Vsec,R,L,Inom;
+  // keep the reflected load current well above the magnetizing current so "load open" and "load working" are easy to tell apart
+  do{Vsup0=pick([24,48,120]);ratio=pick([2,4,5,6,10]);Vsec=Vsup0/ratio;R=eVal(10,470);L=indFor(60,R*rnd(0.4,1.2));Inom=Vsec/Math.hypot(R,w*L);}
+  while(!L_OK(L)||L<10e-3||Inom>0.5||Inom*Inom*R>10||Inom/ratio<0.015);
+  const tol=()=>1+rnd(-0.2,0.2);const Ra=R*tol(),La=L*tol();
+  const faults=['Fuse Blown','Primary Open','Secondary Open','R1 Open','R1 Shorted','L1 Open','L1 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','No Faults'];
+  const ans=ri(0,faults.length-1),f=faults[ans];
+  const Vsup=Vsup0*rnd(0.99,1.01);
+  // primary loop pads: J1,F1a,F1b,P1,P2,J2  elements: wire,F1,T1,PRI,wire
+  const priPads=['J1','F1a','F1b','P1','P2','J2'];
+  let priOpen=({'Fuse Blown':1,'Trace 1 Open':2,'Primary Open':3})[f];if(priOpen===undefined)priOpen=-1;
+  // secondary loop pads: S1,R1a,R1b,L1a,L1b,S2  elements: T2,R1,T3,L1,T4
+  const secPads=['S1','R1a','R1b','L1a','L1b','S2'];
+  const Zs=[Cx.c(0),Cx.c(Ra),Cx.c(0),Cx.c(La*w*0.04,La*w),Cx.c(0)];
+  let secOpen=({'Trace 2 Open':0,'R1 Open':1,'Trace 3 Open':2,'L1 Open':3,'Trace 4 Open':4})[f];if(secOpen===undefined)secOpen=-1;
+  if(f==='R1 Shorted')Zs[1]=Cx.c(0);if(f==='L1 Shorted')Zs[3]=Cx.c(0);
+  const E=(priOpen<0&&f!=='Secondary Open')?Vsup/ratio:0;
+  const Zt=Zs.reduce((a,b)=>Cx.add(a,b),Cx.c(0.4)); // 0.4 Ω winding resistance
+  const Is=(secOpen>=0||E===0)?Cx.c(0):Cx.div(Cx.c(E),Zt);
+  // magnetizing current: drawn whenever the primary is energized, lags the supply by 90°
+  const Imag=0.002+0.05*Inom/ratio;
+  const Ip=priOpen>=0?0:Cx.abs(Cx.c(Is.re/ratio,Is.im/ratio-Imag));
+  const vm=makeMeter(),am=makeMeter();
+  const measure=(a,b)=>{let v=0;
+    const ia=priPads.indexOf(a),ib=priPads.indexOf(b),sa=secPads.indexOf(a),sb=secPads.indexOf(b);
+    if(ia>=0&&ib>=0){let i=Math.min(ia,ib),j=Math.max(ia,ib);
+      if(priOpen>=0)v=(priOpen>=i&&priOpen<j)?Vsup:0;else v=(3>=i&&3<j)?Vsup:0;}
+    else if(sa>=0&&sb>=0){let i=Math.min(sa,sb),j=Math.max(sa,sb);
+      if(E===0)v=0;else if(secOpen>=0)v=(secOpen>=i&&secOpen<j)?E:0;
+      else{let z=Cx.c(0);for(let k=i;k<j;k++)z=Cx.add(z,Zs[k]);v=Cx.abs(Cx.mul(Is,z));}}
+    else v=0; // primary and secondary are isolated from each other
+    const r=vm(v);return {value:r,text:CC.lcd(r)+' V'};};
+  const P={J1:[60,150],F1a:[90,150],F1b:[170,150],P1:[205,175],P2:[205,280],J2:[60,300],S1:[285,175],S2:[285,280],R1a:[370,150],R1b:[480,150],L1a:[480,200],L1b:[480,300]};
+  const names={J1:'J1 (supply)',F1a:'F1 left',F1b:'F1 right',P1:'Primary P1',P2:'Primary P2',J2:'J2 (supply)',S1:'Secondary S1',S2:'Secondary S2',R1a:'R1 left',R1b:'R1 right',L1a:'L1 top',L1b:'L1 bottom'};
+  const svg=()=>B.svg(540,340,
+    B.supply(20,8,200,70,'AC POWER SUPPLY',Vsup0+' VAC @ 60 Hz')+B.pcb(20,110,505,220)+
+    B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,100],[34,100],[34,300],[60,300]],'#222')+
+    B.trace([P.J1,P.F1a])+B.trace([P.F1b,[205,150],P.P1],'TRACE 1',[188,140])+B.trace([P.P2,[205,300],P.J2])+
+    B.trace([P.S1,[285,150],P.R1a],'TRACE 2',[325,140])+B.trace([P.R1b,[505,150],[505,200],P.L1a],'TRACE 3',[517,180,90])+B.trace([P.L1b,[480,310],[285,310],P.S2],'TRACE 4',[385,324])+
+    B.xfmr(215,180,60,95,'T1')+B.part('F',P.F1a,P.F1b,'F1')+B.part('PR',P.R1a,P.R1b,'R1')+B.part('L',P.L1a,P.L1b,'L1')+
+    B.label(195,172,'P1',{size:10,anchor:'end'})+B.label(195,296,'P2',{size:10,anchor:'end'})+B.label(296,172,'S1',{size:10,anchor:'start'})+B.label(296,296,'S2',{size:10,anchor:'start'})+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11}));
+  const padsArr=Object.keys(P).map(id=>({id,x:P[id][0],y:P[id][1],label:names[id]}));
+  const XLn=w*L,Zn=Math.hypot(R,XLn);
+  const work=()=>{
+    const st=[`>Expected values from the markings: the secondary should give ${m(`V_s=\\frac{${n(Vsup0)}\\,\\text{V}}{${ratio}}=${q(Vsec,'V',3)}`)}, and the load should draw about ${fmt(Inom*1e3,3)} mA:`,
+      `X_L=2\\pi F L=${q(XLn,'Ω',3)}`,`Z=\\sqrt{R^2+X_L^2}=${q(Zn,'Ω',3)}`,`I_s=\\frac{V_s}{Z}=${q(Inom*1e3,'mA',3)}`,
+      `I_p\\approx\\frac{I_s}{${ratio}}=${q(Inom/ratio*1e3,'mA',3)}`,'>The supply current is this reflected load current plus a few milliamperes of magnetizing current.'];
+    if(priOpen>=0){st.push(`>The supply current is 0 mA: the primary circuit is open, so not even the transformer's small magnetizing current flows. With no current, the full supply voltage appears across the break.`,
+      `>The meter reads about ${fmt(Vsup,3)} V only across <b>${names[priPads[priOpen]]}</b> to <b>${names[priPads[priOpen+1]]}</b>, so the fault is <b>${f}</b>. The secondary reads 0 V everywhere.`);}
+    else if(f==='Secondary Open')st.push(`>The supply still draws a few milliamperes (${fmt(Ip*1e3,2)} mA). That is the magnetizing current of an energized transformer with no load, so the primary circuit is complete. The full supply voltage is across P1 to P2.`,
+      '>Yet S1 to S2 reads 0 V and no voltage appears anywhere in the secondary circuit. An open in the load would show the secondary voltage across the break; here there is no voltage at all, so the <b>secondary winding is open</b>.');
+    else if(secOpen>=0)st.push(`>The supply draws only the transformer's small magnetizing current (${fmt(Ip*1e3,2)} mA), so the secondary carries no load current. S1 to S2 reads the full secondary voltage, so the winding is fine and the break is in the load circuit.`,
+      `>The secondary voltage (about ${fmt(E,3)} V) appears only across <b>${names[secPads[secOpen]]}</b> to <b>${names[secPads[secOpen+1]]}</b>, so the fault is <b>${f}</b>.`);
+    else if(f==='No Faults')st.push(`>The supply current, the secondary voltage and the R1 and L1 voltages are all close to the expected values (allowing for the 20% tolerance). There is no fault.`);
+    else{const part=f.slice(0,2);st.push(`>Load current flows, so nothing is open. A shorted part drops 0 V: the reading across <b>${part}</b> is about 0 V while the other part has nearly the whole secondary voltage, so <b>${part} is shorted</b>.`);}
+    return st;};
+  return {svg,pads:padsArr,faults,answer:ans,measure,work,
+    meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Ip*1000),1)}],
+    info:()=>`T1 is a ${ratio}:1 step-down transformer (primary : secondary turns). Marked values: R1 = ${fR(R)}, L1 = ${fL(L)}. Parts can be 20% off their marked values and the meters up to 5% off.`};
+}
+const TS_HOW=`<p>Tap a solder pad to place the highlighted probe; the probes take turns (red, then black), or pick one with the probe buttons. The voltmeter shows the AC voltage between the two probes. The panel also shows the supply voltage and current, which are free to read.</p>
+<ul><li>There are 10 problems. Each starts with 10 points, and every new voltmeter reading costs 1 point.</li><li>Select the fault and choose <b>Grade item</b>. A right answer earns the points left; a wrong answer earns 0.</li><li>Your score is the percentage of the 100 possible points. After each item you can open a step-by-step explanation.</li></ul>
+<p>The parts can be up to 20% off their marked values and the meter up to 5% off, so look for clear differences, such as 0 V where you expect a reading or the full supply voltage across one spot, rather than small ones.</p>`;
+
+/* ---------- home hero: transformer demo ---------- */
+function hero(slot){
+  let np=2,ns=2;
+  const card=CC.el(`<div class="card"><div class="row" style="justify-content:space-between"><b>Transformer demo</b><span class="small muted">R ≈ 100 Ω lamp</span></div><div class="diagram mt" id="xd"></div>
+    <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small">Primary</span><button class="btn sm" data-p="2">2 T</button><button class="btn sm" data-p="4">4 T</button></div>
+    <div class="row"><span class="small">Secondary</span><button class="btn sm" data-s="1">1 T</button><button class="btn sm" data-s="2">2 T</button><button class="btn sm" data-s="4">4 T</button></div></div></div>`);
+  slot.appendChild(card);
+  const draw=()=>{
+    const Vp=8,Vs=Vp*ns/np,Is=Vs/100,Ip=Is*ns/np;const glow=Math.min(1,Vs/16);
+    const ys=k=>Array.from({length:k},(_,i)=>90+(k===1?35:i*70/(k-1)));
+    const coil=(x0,x1,k)=>ys(k).map(y=>`<path d="M${x0},${y} C${x0},${y+10} ${x1},${y+10} ${x1},${y}" stroke="var(--copper)" stroke-width="5" fill="none" stroke-linecap="round"/>`).join('');
+    const py=ys(np),sy=ys(ns);
+    $('#xd',card).innerHTML=`<svg viewBox="0 0 330 230" width="330" height="230" role="img" aria-label="transformer with lamp">
+      <rect x="80" y="45" width="160" height="160" rx="4" fill="#b7bcc2"/><rect x="110" y="75" width="100" height="100" fill="var(--surface2)"/>
+      ${coil(74,116,np)}${coil(204,246,ns)}
+      <polyline points="74,${py[0]} 40,${py[0]} 40,34" stroke="var(--copper)" stroke-width="4" fill="none"/><polyline points="116,${py[np-1]+4} 116,${py[np-1]+22} 26,${py[np-1]+22} 26,34" stroke="var(--copper)" stroke-width="4" fill="none"/>
+      <rect x="4" y="6" width="64" height="28" rx="4" fill="#333"/><text x="36" y="25" font-size="13" font-weight="700" fill="#7fffd4" text-anchor="middle" font-family="monospace">8.0 V</text>
+      <polyline points="246,${sy[0]} 300,${sy[0]} 300,112" stroke="var(--copper)" stroke-width="4" fill="none"/><polyline points="204,${sy[ns-1]+4} 204,${sy[ns-1]+22} 300,${sy[ns-1]+22} 300,150" stroke="var(--copper)" stroke-width="4" fill="none"/>
+      <circle cx="300" cy="128" r="${10+18*glow}" fill="#ffe94a" opacity="${0.15+0.6*glow}"/><circle cx="300" cy="128" r="12" fill="#fff8c4" stroke="#999"/><rect x="294" y="139" width="12" height="12" fill="#999"/>
+      <text x="160" y="224" font-size="12" text-anchor="middle" fill="var(--ink)">Primary ${np} T · Secondary ${ns} T</text></svg>
+      <div class="givens" style="width:100%"><div class="given"><div class="k">Primary</div><div class="v">8 VAC · ${fmt(Ip*1000,3)} mA</div></div><div class="given"><div class="k">Secondary</div><div class="v">${fmt(Vs)} VAC · ${fmt(Is*1000,3)} mA</div></div></div>`;
+    CC.$$('[data-p]',card).forEach(b=>b.classList.toggle('blue',+b.dataset.p===np));CC.$$('[data-s]',card).forEach(b=>b.classList.toggle('blue',+b.dataset.s===ns));
+    CC.$('#xd',card).style.flexDirection='column';
+  };
+  const $=CC.$;
+  CC.$$('[data-p]',card).forEach(b=>b.onclick=()=>{np=+b.dataset.p;draw();});
+  CC.$$('[data-s]',card).forEach(b=>b.onclick=()=>{ns=+b.dataset.s;draw();});
+  draw();
+}
+
+/* ---------- assemble ---------- */
+const sc=t=>S.series(t.map(x=>({t:x,label:x})),{srcLabel:'VS'}),pc=t=>S.parallel(t.map(x=>({t:x,label:x})),{srcLabel:'VS'});
+const PS_HOW=(nProb,what)=>`<p>You get ${nProb} problems, one at a time. ${what} Type each answer in the unit shown, choose <b>Grade answers</b>, then <b>Next problem</b>. Blank boxes count as wrong.</p><p>Your score is the percentage of answers right. Answers within 2% of the exact value are accepted, so normal rounding is fine. Each graded problem shows a worked solution.</p>`;
+CC.App.init({
+  id:'ac',title:'AC Circuits Challenge',tagline:'Interactive AC exercises · offline edition',
+  blurb:'Fourteen practice exercises on AC voltage, transformers, capacitors and inductors, RC, RL and RLC circuits, resonance, and two virtual troubleshooting boards. Every run uses new values.',
+  footer:'Based on AC Circuits Challenge © 1993, 2001 ETCAI Products. Offline HTML edition.',
+  pass:80,hero,
+  manual:`<h2>About this program</h2><p>AC Circuits Challenge is a set of practice exercises to use alongside a textbook or course. It gives you instant feedback on every answer, help and worked solutions when you need them, and a score for every exercise.</p>
+  <p>There are fourteen exercises:</p><ul><li><b>Fundamentals:</b> voltage conversions (rms, peak, peak-to-peak, average), transformers, and capacitors and inductors in series and parallel.</li><li><b>Series and parallel AC circuits:</b> RC, RL and RLC worksheets.</li><li><b>Resonance:</b> series and parallel resonant circuits.</li><li><b>Troubleshooting:</b> find the fault on a series RLC board and on a transformer board using a virtual voltmeter.</li></ul>
+  <p>Every run picks new values, so you can practice an exercise as often as you like. Each exercise starts with a short page of key ideas and formulas; choose <b>Begin</b> when you are ready. The program times each exercise. When you finish, you can print a certificate with your name, ID, score, time and a validity code that an instructor can confirm with <b>Check validity</b>.</p>
+  <h2>Conventions used</h2><p>Phase angle θ is always the impedance angle: the angle by which the source voltage leads the total current. It is positive for inductive circuits and negative for capacitive circuits. The RC and RL sheets accept either sign; the RLC sheets grade the sign.</p><p>Inductor and capacitor values are those you would find in a parts catalog (1 mH to 1 H, 1 nF to 10 µF), and the troubleshooting parts have a 20% tolerance.</p>`,
+  groups:[
+    {title:'Fundamentals',items:[
+      {id:'conv',title:'Voltage Conversions',icon:'wave',sub:'rms, peak, peak-to-peak, average',intro:CC.introPage({text:two(`<p>An AC voltage can be described four ways. <b>Rms</b> (effective) voltage is what most meters show, and it lets you use Ohm's law and power formulas just as with DC. <b>Peak</b> voltage is the highest point of the wave and matters for rectifiers and part ratings. <b>Peak-to-peak</b> is the full height from the lowest to the highest point, which is what you read on an oscilloscope. <b>Average</b> voltage is the mean over one half cycle.</p><p>For a sine wave the four are linked by fixed factors. The easiest method is to convert the given value to peak first, then from peak to each of the others.</p>`,sineSVG(55,0)),extra:convFormulas,how:PS_HOW('eleven','Each gives one rms, peak, peak-to-peak or average voltage; find the other three.')}),run:conversions},
+      {id:'xfmr',title:'Transformers',icon:'xfmr',sub:'turns, voltage and current ratios',intro:CC.introPage({text:two(`<p>A transformer steps AC voltage up or down. The source connects to the primary winding and the load to the secondary winding. If the secondary has more turns than the primary, the voltage is stepped up; if it has fewer, the voltage is stepped down.</p><p>An ideal transformer delivers the same power it takes in, so current changes the opposite way to voltage: stepping voltage up steps current down. Use Ohm's law on the load to find the secondary current.</p>`,XF_DIAG('')),formulas:[{cap:'Voltage ratio',tex:'\\frac{V_s}{V_p}=\\frac{N_s}{N_p}'},{cap:'Current ratio',tex:'\\frac{I_p}{I_s}=\\frac{N_s}{N_p}'},{cap:'Secondary current (Ohm\'s law)',tex:'I_s=\\frac{V_s}{R}'}],
+        how:PS_HOW('ten','Each shows three known values in blue boxes; find the three yellow boxes. You will also need the load resistance on the schematic. N is the number of turns, p means primary and s means secondary.')}),run:transformerSet},
+      {id:'spc',title:'Series and Parallel C',icon:'cap',sub:'total capacitance',intro:spIntro('C'),run:(el,s)=>CC.problemSet(el,s,{list:()=>spProblems('C')})},
+      {id:'spl',title:'Series and Parallel L',icon:'ind',sub:'total inductance',intro:spIntro('L'),run:(el,s)=>CC.problemSet(el,s,{list:()=>spProblems('L')})},
+    ]},
+    {title:'Series and parallel AC circuits',items:[
+      wsModule('rcs','RC Series Circuits','res','reactance, impedance, phase',()=>seriesWS('RC'),T.rcS,[F.XC,F.ZRC,F.IT,F.thRC,F.VR,{cap:'Capacitor voltage',tex:'V_C=I_T X_C'},F.PTs,F.PA],sc(['R','C']),sketch.rcS,SIGN_FREE),
+      wsModule('rls','RL Series Circuits','ind','reactance, impedance, phase',()=>seriesWS('RL'),T.rlS,[F.XL,F.ZRL,F.IT,F.thRL,F.VR,{cap:'Inductor voltage',tex:'V_L=I_T X_L'},F.PTs,F.PA],sc(['R','L']),sketch.rlS,SIGN_FREE),
+      wsModule('rlcs','RLC Series Circuits','wave','13 quantities',()=>seriesWS('RLC'),T.rlcS,[F.XC,F.XL,F.ZRLC,F.IT,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)'},{cap:'Part voltages',tex:'V_R=I_T R\\quad V_C=I_T X_C\\quad V_L=I_T X_L'},F.PTs,F.PA],sc(['R','C','L']),sketch.rlcS,SIGN_GRADED),
+      wsModule('rcp','RC Parallel Circuits','cap','branch currents, phase',()=>parallelWS('RC'),T.rcP,[F.XC,{cap:'Branch currents',tex:'I_R=\\frac{V_S}{R}\\quad I_C=\\frac{V_S}{X_C}'},{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+I_C^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=-\\arctan\\left(\\frac{I_C}{I_R}\\right)'},F.PTp,F.PA],pc(['R','C']),sketch.rcP,SIGN_FREE),
+      wsModule('rlp','RL Parallel Circuits','ind','branch currents, phase',()=>parallelWS('RL'),T.rlP,[F.XL,{cap:'Branch currents',tex:'I_R=\\frac{V_S}{R}\\quad I_L=\\frac{V_S}{X_L}'},{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+I_L^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{I_L}{I_R}\\right)'},F.PTp,F.PA],pc(['R','L']),sketch.rlP,SIGN_FREE),
+      wsModule('rlcp','RLC Parallel Circuits','wave','13 quantities',()=>parallelWS('RLC'),T.rlcP,[F.XC,F.XL,{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+(I_L-I_C)^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{I_L-I_C}{I_R}\\right)'},F.PTp,F.PA],pc(['R','L','C']),sketch.rlcP,SIGN_GRADED),
+    ]},
+    {title:'Resonance',items:[
+      wsModule('sres','Series Resonance','wave','resonant frequency, Q effects',seriesRes,T.sR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad Z=R\\quad \\theta=0°'},F.IT,{cap:'Reactive voltages',tex:'V_L=V_C=I_T X_L'}],sc(['R','C','L']),sketch.sR,'At resonance θ is 0°.'),
+      wsModule('pres','Parallel Resonance','wave','resonant frequency, tank current',parallelRes,T.pR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad I_T=I_R\\quad \\theta=0°'},{cap:'Branch currents',tex:'I_L=I_C=\\frac{V_S}{X_L}'},F.ZP],pc(['R','L','C']),sketch.pR,'At resonance θ is 0°.'),
+    ]},
+    {title:'Troubleshooting',items:[
+      {id:'ts1',title:'Troubleshooting Simple Circuits',icon:'wrench',sub:'series RLC on a PC board',intro:CC.introPage({text:`<p>A fuse, capacitor, resistor and inductor are wired in series on a PC board, driven by a 10 V, 1 kHz supply. Any one part can be open or shorted, any of the four copper traces can be open, or the board can be working. Use the voltmeter to find out which.</p>
+        <p><b>A good strategy:</b></p><ul><li>Look at the supply current first. <b>0 mA</b> means the loop is open. With no current, good parts drop 0 V and the full supply voltage appears across the break, so look for the one spot that reads the full voltage.</li><li>If current flows, nothing is open. A <b>shorted</b> part drops 0 V, so look for a part with no voltage across it.</li><li>If every part has a reasonable voltage, the board has no fault.</li></ul>
+        <p>Remember that in a series RLC circuit the capacitor or inductor voltage can be larger than the supply voltage. Review series RLC circuits before you start.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:10,build:seriesBoard})},
+      {id:'ts2',title:'Troubleshooting Transformer Circuits',icon:'xfmr',sub:'fuse, transformer, R and L',intro:CC.introPage({text:`<p>A fuse and a step-down transformer feed a load made of a power resistor and an inductor in series. Any of these can be faulty: the fuse blown, either transformer winding open, the resistor or inductor open or shorted, or one of the four copper traces open. The board can also be working.</p>
+        <p><b>A good strategy:</b></p><ul><li>Look at the supply current first. <b>0 mA</b> means the primary circuit is open (fuse, trace 1 or the primary winding). Find the spot that reads the full supply voltage.</li><li>An energized transformer always draws a small <b>magnetizing current</b>, even with nothing connected to its secondary. If the supply current is just a few milliamperes, no load current is flowing: either the secondary winding is open (no secondary voltage anywhere) or the load circuit is open (the secondary voltage appears across the break).</li><li>If normal current flows, look for a shorted part: it drops 0 V.</li></ul>
+        <p>The primary and secondary are isolated from each other, so always keep both probes on the same side of the transformer.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:10,build:xfmrBoard})},
+    ]}
+  ]
+});
+})();
+</script>
+<a href="index.html" style="position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;background:#1d2733;color:#f3f0ea;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:.92">&larr; Study home</a></body>
+</html>

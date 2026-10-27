@@ -1,0 +1,188 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><title>Circuits Challenges</title><style>:root{
+  --bg:#f4f1ea; --surface:#fffdf8; --surface2:#f0ece2; --ink:#1d2228; --ink2:#55606b; --line:#d9d2c3;
+  --brand:#b3261e; --brand-ink:#fff; --accent:#1f5fa8; --ok:#1e7d43; --ok-bg:#e3f3e8; --bad:#b3261e; --bad-bg:#fbe6e4;
+  --warn:#9a6400; --warn-bg:#fdf1d8; --board:#c9a66b; --board-dark:#9c7a42; --trace:#e8c48a; --copper:#b5652b;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06); --r:12px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+math{font-size:1.1em}
+math[display="block"]{margin:.4em 0;overflow-x:auto;overflow-y:hidden;max-width:100%}
+
+/* header */
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);}
+.topbar .in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.logo{width:34px;height:34px;flex:none}
+.brand{font-weight:800;color:var(--brand);letter-spacing:-.01em;line-height:1.1;font-size:1.05rem;text-decoration:none}
+.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;color:var(--ink2);font-weight:500;font-size:.72rem;letter-spacing:0}
+.topbar .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:.85rem;cursor:pointer;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{border:1px solid var(--line);background:var(--surface2);border-radius:10px;width:38px;height:38px;display:inline-grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn svg{width:20px;height:20px}
+
+main{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:1.6rem;line-height:1.2;margin:.2em 0 .4em;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:1.2em 0 .5em}
+h3{font-size:1rem;margin:1em 0 .4em}
+p{margin:.5em 0}
+.muted{color:var(--ink2)}
+.small{font-size:.875rem}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.card+.card{margin-top:14px}
+.grid{display:grid;gap:12px}
+.cols2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.cols2{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:42px;text-decoration:none;color:var(--ink)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible,input:focus-visible,.menu-item:focus-visible,.pad:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.blue{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:34px;padding:5px 10px;font-size:.875rem;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+
+/* home */
+.hero{display:grid;gap:16px;grid-template-columns:1fr;align-items:center;margin-bottom:8px}
+@media (min-width:860px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero h1{font-size:2rem;color:var(--brand);margin:0}
+.group-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:22px 0 8px;font-weight:700}
+.menu{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.menu-item{display:flex;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);min-height:64px;width:100%;color:var(--ink)}
+.menu-item:hover{border-color:var(--brand)}
+.menu-item .ic{width:42px;height:42px;flex:none;border-radius:10px;background:var(--surface2);display:grid;place-items:center;color:var(--brand)}
+.menu-item .ic svg{width:30px;height:30px}
+.menu-item b{display:block;line-height:1.25}
+.menu-item span{font-size:.8rem;color:var(--ink2)}
+.menu-item .best{margin-left:auto;font-size:.75rem;font-weight:700;color:var(--ok);white-space:nowrap}
+.utils{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+
+/* intro */
+.intro-text p{max-width:68ch}
+.formulas{display:grid;gap:8px 18px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));align-items:center}
+.formula{background:var(--surface2);border-radius:10px;padding:8px 12px;overflow-x:auto}
+.formula .cap{font-size:.78rem;color:var(--ink2);display:block}
+.diagram{display:flex;justify-content:center;align-items:center;background:var(--surface2);border-radius:10px;padding:10px;overflow:hidden}
+.diagram svg{max-width:100%;height:auto}
+.where{font-size:.85rem;color:var(--ink2);margin:.2em 0 0;padding-left:1em}
+
+/* status bar */
+.statusbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.pill{border-radius:999px;background:var(--surface2);border:1px solid var(--line);padding:3px 10px;font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.pill.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+/* givens */
+.givens{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.given{background:var(--warn-bg);border-radius:10px;padding:6px 10px}
+.given .k{font-size:.8rem;color:var(--ink2)}
+.given .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:1.05rem}
+
+/* worksheet rows */
+.ws{display:grid;gap:8px}
+.wrow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface)}
+.wrow .lab{font-weight:600;text-align:center}
+.wrow .inp{display:flex;align-items:center;gap:6px;min-width:0}
+.wrow input{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 10px;font-variant-numeric:tabular-nums;font-size:1rem}
+.wrow .unit{color:var(--ink2);min-width:2.2em;font-size:.95rem}
+.wrow .acts{display:flex;gap:6px}
+.wrow .fb{grid-column:1/-1;font-size:.875rem;display:none}
+.wrow.ok{border-color:var(--ok);background:var(--ok-bg)}
+.wrow.bad{border-color:var(--bad);background:var(--bad-bg)}
+.wrow.ok .fb,.wrow.bad .fb,.wrow.info .fb{display:block}
+.wrow.ok .fb{color:var(--ok)} .wrow.bad .fb{color:var(--bad)}
+input.ok{border-color:var(--ok)!important;background:var(--ok-bg)!important}
+input.bad{border-color:var(--bad)!important;background:var(--bad-bg)!important}
+input.known{background:#dbe8fb!important;border-color:#9dbbe6!important;font-weight:700}
+:root[data-theme="dark"] input.known{background:#1d2d47!important;border-color:#35507c!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) input.known{background:#1d2d47!important;border-color:#35507c!important}}
+input.ask{background:var(--warn-bg)!important}
+
+/* problems list */
+.prob{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.prob-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.field{display:grid;gap:4px;margin:8px 0}
+.field label{font-size:.875rem;color:var(--ink2)}
+.field input{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px;width:100%}
+.fields{display:grid;gap:4px 14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.verdict{font-weight:800;font-size:1.25rem}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+.progress{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--brand);transition:width .3s}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(10,12,15,.5);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:18px}
+.modal h3{margin-top:0}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:120;font-weight:600;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+
+/* tables */
+table.t{border-collapse:collapse;width:100%;font-size:.9rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.tablewrap{overflow-x:auto}
+
+/* board / troubleshooting */
+.board-wrap{background:var(--surface2);border-radius:12px;padding:8px;overflow:hidden}
+.board-wrap svg{width:100%;height:auto;display:block;touch-action:manipulation}
+.pad{cursor:pointer}
+.pad circle.hit{fill:transparent}
+.pad:hover circle.ring{stroke:var(--accent);stroke-width:3}
+.meter{display:flex;gap:10px;flex-wrap:wrap}
+.lcd{font-family:var(--mono);background:#9fb59a;color:#0f1a0e;border-radius:6px;padding:4px 10px;font-size:1.35rem;min-width:7.5ch;text-align:right;box-shadow:inset 0 2px 4px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.meterbox{background:#3b3f45;color:#eee;border-radius:10px;padding:8px 10px;display:grid;gap:4px;justify-items:start}
+.meterbox .ml{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:#c9cdd2}
+.faults{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.faults label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;background:var(--surface)}
+.faults input{accent-color:var(--brand);width:18px;height:18px}
+.faults label.correct{border-color:var(--ok);background:var(--ok-bg)}
+.faults label.wrong{border-color:var(--bad);background:var(--bad-bg)}
+
+/* certificate */
+.cert{background:#fffdf4;color:#222;border:10px double #8a6d1f;padding:28px;text-align:center;border-radius:6px;max-width:760px;margin:0 auto}
+.cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2em 0;color:#7a1610}
+.cert .big{font-family:Georgia,serif;font-size:1.6rem;margin:.3em 0}
+.cert dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;text-align:left;max-width:460px;margin:18px auto 0}
+.cert dt{color:#666}
+.cert dd{margin:0;font-weight:600}
+
+.kbd{font-family:var(--mono);background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.85em}
+.hide{display:none!important}
+.center{text-align:center}
+.mt{margin-top:14px}
+.anim-bulb{transition:opacity .3s}
+
+@media print{
+  .topbar,.noprint,.toast,.scrim{display:none!important}
+  body{background:#fff;color:#000}
+  main{padding:0;max-width:none}
+  .card{box-shadow:none;border:none}
+  .cert{border-color:#8a6d1f}
+}
+
+@media (max-width:520px){.brand small{display:none}.brand{font-size:1rem}h1{font-size:1.35rem}.hero h1{font-size:1.6rem}main{padding:12px 12px 60px}.card{padding:12px}.wrow{grid-template-columns:48px minmax(0,1fr) auto;padding:6px}}
+</style></head>
+<body><main><h1 style="color:var(--brand);font-size:2rem;margin-top:12px">Circuits Challenges</h1><p class="muted">Nine interactive electronics programs, rebuilt as offline web pages. Open any one below — no internet connection or installation needed. Each file also works on its own if you copy it to another device.</p>
+<div class="menu mt"><a class="menu-item" href="AC_Circuits_Challenge.html"><span><b>AC Circuits Challenge</b><span>RC, RL, RLC, resonance, transformers, troubleshooting</span></span></a><a class="menu-item" href="DC_Circuits_Challenge.html"><span><b>DC Circuits Challenge</b><span>series, parallel, series-parallel, networks, troubleshooting</span></span></a><a class="menu-item" href="Basic_Circuits_Challenge.html"><span><b>Basic Circuits Challenge</b><span>Ohm's law, power, color codes, basic circuits</span></span></a><a class="menu-item" href="Digital_Challenge.html"><span><b>Digital Challenge</b><span>gates, number systems, flip-flops, breadboarding</span></span></a><a class="menu-item" href="Ohmmeter_Challenge.html"><span><b>Ohmmeter Challenge</b><span>wire testing, circuit tracing, PC board troubleshooting</span></span></a><a class="menu-item" href="Voltmeter_Challenge.html"><span><b>Voltmeter Challenge</b><span>opens and shorts, module testing, troubleshooting</span></span></a><a class="menu-item" href="Op_Amp_Challenge.html"><span><b>Op Amp Challenge</b><span>inverting, noninverting, summing, calculators, troubleshooting</span></span></a><a class="menu-item" href="Power_Supply_Challenge.html"><span><b>Power Supply Challenge</b><span>half-wave, full-wave and bridge supplies with scope and meter</span></span></a><a class="menu-item" href="Solid_State_Challenge.html"><span><b>Solid-State Challenge</b><span>diode and transistor testing, amplifiers, troubleshooting</span></span></a></div><p class="small muted mt">Based on the ETCAI Products Challenge series. Scores and student names are stored in the browser on each device.</p></main><a href="index.html" style="position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;background:#1d2733;color:#f3f0ea;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:.92">&larr; Study home</a></body></html>

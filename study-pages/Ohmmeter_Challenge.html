@@ -1,0 +1,1483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Ohmmeter Challenge</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b3261e'/%3E%3Cpath d='M5 16q5.5-12 11 0t11 0' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<style>:root{
+  --bg:#f4f1ea; --surface:#fffdf8; --surface2:#f0ece2; --ink:#1d2228; --ink2:#55606b; --line:#d9d2c3;
+  --brand:#b3261e; --brand-ink:#fff; --accent:#1f5fa8; --ok:#1e7d43; --ok-bg:#e3f3e8; --bad:#b3261e; --bad-bg:#fbe6e4;
+  --warn:#9a6400; --warn-bg:#fdf1d8; --board:#c9a66b; --board-dark:#9c7a42; --trace:#e8c48a; --copper:#b5652b;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06); --r:12px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+math{font-size:1.1em}
+math[display="block"]{margin:.4em 0;overflow-x:auto;overflow-y:hidden;max-width:100%}
+
+/* header */
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);}
+.topbar .in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.logo{width:34px;height:34px;flex:none}
+.brand{font-weight:800;color:var(--brand);letter-spacing:-.01em;line-height:1.1;font-size:1.05rem;text-decoration:none}
+.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;color:var(--ink2);font-weight:500;font-size:.72rem;letter-spacing:0}
+.topbar .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:.85rem;cursor:pointer;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{border:1px solid var(--line);background:var(--surface2);border-radius:10px;width:38px;height:38px;display:inline-grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn svg{width:20px;height:20px}
+
+main{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:1.6rem;line-height:1.2;margin:.2em 0 .4em;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:1.2em 0 .5em}
+h3{font-size:1rem;margin:1em 0 .4em}
+p{margin:.5em 0}
+.muted{color:var(--ink2)}
+.small{font-size:.875rem}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.card+.card{margin-top:14px}
+.grid{display:grid;gap:12px}
+.cols2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.cols2{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:42px;text-decoration:none;color:var(--ink)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible,input:focus-visible,.menu-item:focus-visible,.pad:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.blue{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:34px;padding:5px 10px;font-size:.875rem;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+
+/* home */
+.hero{display:grid;gap:16px;grid-template-columns:1fr;align-items:center;margin-bottom:8px}
+@media (min-width:860px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero h1{font-size:2rem;color:var(--brand);margin:0}
+.group-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:22px 0 8px;font-weight:700}
+.menu{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.menu-item{display:flex;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);min-height:64px;width:100%;color:var(--ink)}
+.menu-item:hover{border-color:var(--brand)}
+.menu-item .ic{width:42px;height:42px;flex:none;border-radius:10px;background:var(--surface2);display:grid;place-items:center;color:var(--brand)}
+.menu-item .ic svg{width:30px;height:30px}
+.menu-item b{display:block;line-height:1.25}
+.menu-item span{font-size:.8rem;color:var(--ink2)}
+.menu-item .best{margin-left:auto;font-size:.75rem;font-weight:700;color:var(--ok);white-space:nowrap}
+.utils{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+
+/* intro */
+.intro-text p{max-width:68ch}
+.formulas{display:grid;gap:8px 18px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));align-items:center}
+.formula{background:var(--surface2);border-radius:10px;padding:8px 12px;overflow-x:auto}
+.formula .cap{font-size:.78rem;color:var(--ink2);display:block}
+.diagram{display:flex;justify-content:center;align-items:center;background:var(--surface2);border-radius:10px;padding:10px;overflow:hidden}
+.diagram svg{max-width:100%;height:auto}
+.where{font-size:.85rem;color:var(--ink2);margin:.2em 0 0;padding-left:1em}
+
+/* status bar */
+.statusbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.pill{border-radius:999px;background:var(--surface2);border:1px solid var(--line);padding:3px 10px;font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.pill.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+/* givens */
+.givens{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.given{background:var(--warn-bg);border-radius:10px;padding:6px 10px}
+.given .k{font-size:.8rem;color:var(--ink2)}
+.given .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:1.05rem}
+
+/* worksheet rows */
+.ws{display:grid;gap:8px}
+.wrow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface)}
+.wrow .lab{font-weight:600;text-align:center}
+.wrow .inp{display:flex;align-items:center;gap:6px;min-width:0}
+.wrow input{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 10px;font-variant-numeric:tabular-nums;font-size:1rem}
+.wrow .unit{color:var(--ink2);min-width:2.2em;font-size:.95rem}
+.wrow .acts{display:flex;gap:6px}
+.wrow .fb{grid-column:1/-1;font-size:.875rem;display:none}
+.wrow.ok{border-color:var(--ok);background:var(--ok-bg)}
+.wrow.bad{border-color:var(--bad);background:var(--bad-bg)}
+.wrow.ok .fb,.wrow.bad .fb,.wrow.info .fb{display:block}
+.wrow.ok .fb{color:var(--ok)} .wrow.bad .fb{color:var(--bad)}
+input.ok{border-color:var(--ok)!important;background:var(--ok-bg)!important}
+input.bad{border-color:var(--bad)!important;background:var(--bad-bg)!important}
+input.known{background:#dbe8fb!important;border-color:#9dbbe6!important;font-weight:700}
+:root[data-theme="dark"] input.known{background:#1d2d47!important;border-color:#35507c!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) input.known{background:#1d2d47!important;border-color:#35507c!important}}
+input.ask{background:var(--warn-bg)!important}
+
+/* problems list */
+.prob{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.prob-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.field{display:grid;gap:4px;margin:8px 0}
+.field label{font-size:.875rem;color:var(--ink2)}
+.field input{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px;width:100%}
+.fields{display:grid;gap:4px 14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.verdict{font-weight:800;font-size:1.25rem}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+.progress{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--brand);transition:width .3s}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(10,12,15,.5);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:18px}
+.modal h3{margin-top:0}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:120;font-weight:600;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+
+/* tables */
+table.t{border-collapse:collapse;width:100%;font-size:.9rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.tablewrap{overflow-x:auto}
+
+/* board / troubleshooting */
+.board-wrap{background:var(--surface2);border-radius:12px;padding:8px;overflow:hidden}
+.board-wrap svg{width:100%;height:auto;display:block;touch-action:manipulation}
+.pad{cursor:pointer}
+.pad circle.hit{fill:transparent}
+.pad:hover circle.ring{stroke:var(--accent);stroke-width:3}
+.meter{display:flex;gap:10px;flex-wrap:wrap}
+.lcd{font-family:var(--mono);background:#9fb59a;color:#0f1a0e;border-radius:6px;padding:4px 10px;font-size:1.35rem;min-width:7.5ch;text-align:right;box-shadow:inset 0 2px 4px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.meterbox{background:#3b3f45;color:#eee;border-radius:10px;padding:8px 10px;display:grid;gap:4px;justify-items:start}
+.meterbox .ml{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:#c9cdd2}
+.faults{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.faults label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;background:var(--surface)}
+.faults input{accent-color:var(--brand);width:18px;height:18px}
+.faults label.correct{border-color:var(--ok);background:var(--ok-bg)}
+.faults label.wrong{border-color:var(--bad);background:var(--bad-bg)}
+
+/* certificate */
+.cert{background:#fffdf4;color:#222;border:10px double #8a6d1f;padding:28px;text-align:center;border-radius:6px;max-width:760px;margin:0 auto}
+.cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2em 0;color:#7a1610}
+.cert .big{font-family:Georgia,serif;font-size:1.6rem;margin:.3em 0}
+.cert dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;text-align:left;max-width:460px;margin:18px auto 0}
+.cert dt{color:#666}
+.cert dd{margin:0;font-weight:600}
+
+.kbd{font-family:var(--mono);background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.85em}
+.hide{display:none!important}
+.center{text-align:center}
+.mt{margin-top:14px}
+.anim-bulb{transition:opacity .3s}
+
+@media print{
+  .topbar,.noprint,.toast,.scrim{display:none!important}
+  body{background:#fff;color:#000}
+  main{padding:0;max-width:none}
+  .card{box-shadow:none;border:none}
+  .cert{border-color:#8a6d1f}
+}
+
+@media (max-width:520px){.brand small{display:none}.brand{font-size:1rem}h1{font-size:1.35rem}.hero h1{font-size:1.6rem}main{padding:12px 12px 60px}.card{padding:12px}.wrow{grid-template-columns:48px minmax(0,1fr) auto;padding:6px}}
+
+.work{margin-top:6px;color:var(--ink)}.work summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:.875rem}.work[open]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}.work math{font-size:1em}
+</style>
+</head>
+<body>
+<noscript><p style="padding:16px">This page needs JavaScript turned on.</p></noscript>
+<script>/* Circuits Challenge offline engine. No network access, no external libraries. */
+(function(){
+'use strict';
+const CC = window.CC = {};
+
+/* ---------- small utils ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+CC.$ = $; CC.$$ = $$;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+CC.esc = esc;
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+CC.el = el;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+Object.assign(CC,{rnd,ri,pick,shuffle});
+CC.E12=[1,1.2,1.5,1.8,2.2,2.7,3.3,3.9,4.7,5.6,6.8,8.2];
+CC.E6=[1,1.5,2.2,3.3,4.7,6.8];
+/** random value from an E-series between lo and hi (inclusive) */
+CC.eVal=function(lo,hi,series=CC.E12){const out=[];for(let d=-15;d<=9;d++){for(const m of series){const v=+(m*Math.pow(10,d)).toPrecision(3);if(v>=lo*0.999&&v<=hi*1.001)out.push(v);}}return pick(out);};
+/** round to nearest E-series value */
+CC.eNear=function(x,series=CC.E12){const d=Math.floor(Math.log10(x));let best=null,bd=1e99;for(const dd of [d-1,d,d+1])for(const m of series){const v=+(m*Math.pow(10,dd)).toPrecision(3);const e=Math.abs(Math.log(v/x));if(e<bd){bd=e;best=v;}}return best;};
+CC.sig=(x,n=3)=>x===0?0:+x.toPrecision(n);
+/** format number for display: up to `n` significant figures, no exponent, trims zeros */
+CC.fmt=function(x,n=4){
+  if(x===null||x===undefined||isNaN(x))return '—';
+  if(!isFinite(x))return '∞';
+  if(Math.abs(x)<1e-12)return '0';
+  let v=+x.toPrecision(n);
+  let s;
+  const a=Math.abs(v);
+  if(a>=1e15||a<1e-9) s=v.toExponential(n-1);
+  else { const dec=Math.max(0,n-1-Math.floor(Math.log10(a))); s=v.toFixed(Math.min(dec,12)); if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,''); }
+  // thousands separators for readability on integers part
+  const parts=s.split('.'); if(Math.abs(v)>=10000) parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,','); return parts.join('.');
+};
+/** parse a typed number. Accepts "1,234.5", "1.2e3", "−5", and SI suffixes k, M, m, u/µ, n, p if allowSuffix */
+CC.parse=function(str,allowSuffix=true){
+  if(str===null||str===undefined)return NaN;
+  let s=String(str).trim().replace(/[−–]/g,'-').replace(/\s+/g,'');
+  if(!s)return NaN;
+  s=s.replace(/,(?=\d{3}(\D|$))/g,'');
+  s=s.replace(/,/g,'.');
+  let mult=1;
+  if(allowSuffix){const m=s.match(/^(.*?)([kKMmuµnp])$/);if(m&&m[1]!==''&&!isNaN(+m[1])){mult={k:1e3,K:1e3,M:1e6,m:1e-3,u:1e-6,'µ':1e-6,n:1e-9,p:1e-12}[m[2]];s=m[1];}}
+  if(!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(s))return NaN;
+  return parseFloat(s)*mult;
+};
+/** compare typed value with correct value */
+CC.prefixed=u=>/^(m|k|µ|μ|M|n|p|G)./.test(u||'');
+CC.close=function(user,correct,tol=0.02,absTol=null){
+  if(isNaN(user))return false;
+  if(absTol===null) absTol=Math.max(1e-9,Math.abs(correct)*1e-6);
+  if(Math.abs(user-correct)<=absTol)return true;
+  return Math.abs(user-correct)<=Math.abs(correct)*tol;
+};
+CC.fmtTime=function(ms){const s=Math.round(ms/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(ss).padStart(2,'0');};
+CC.deg=r=>r*180/Math.PI;
+CC.rad=d=>d*Math.PI/180;
+
+/* complex numbers */
+const Cx=CC.Cx={
+  c:(re,im=0)=>({re,im}),
+  add:(a,b)=>({re:a.re+b.re,im:a.im+b.im}),
+  sub:(a,b)=>({re:a.re-b.re,im:a.im-b.im}),
+  mul:(a,b)=>({re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re}),
+  div:(a,b)=>{const d=b.re*b.re+b.im*b.im;return {re:(a.re*b.re+a.im*b.im)/d,im:(a.im*b.re-a.re*b.im)/d};},
+  abs:a=>Math.hypot(a.re,a.im),
+  inv:a=>Cx.div({re:1,im:0},a),
+  par:(a,b)=>Cx.div(Cx.mul(a,b),Cx.add(a,b))
+};
+
+/* ---------- storage (best effort) ---------- */
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+CC.store=store;
+
+/* ---------- TeX-subset → MathML ---------- */
+const GREEK={alpha:'α',beta:'β',gamma:'γ',delta:'δ',theta:'θ',pi:'π',omega:'ω',phi:'φ',lambda:'λ',tau:'τ',mu:'μ',rho:'ρ',sigma:'σ',epsilon:'ε',eta:'η',
+  Omega:'Ω',Delta:'Δ',Sigma:'Σ',Phi:'Φ',Theta:'Θ',Lambda:'Λ'};
+const OPS={cdot:'·',times:'×',approx:'≈',pm:'±',to:'→',ne:'≠',le:'≤',ge:'≥',angle:'∠',infty:'∞',deg:'°',div:'÷',parallel:'∥',cdots:'⋯',ldots:'…',
+  overline:null,rightarrow:'→',leftarrow:'←',Rightarrow:'⇒',equiv:'≡',neg:'¬',oplus:'⊕',odot:'⊙',vee:'∨',wedge:'∧',bar:null};
+function texToMathML(src,block){
+  const p={s:src,i:0,up:0};
+  const body=seq(p,null);
+  return '<math'+(block?' display="block"':'')+'><mrow>'+body+'</mrow></math>';
+}
+CC.tex=texToMathML;
+CC.m=s=>texToMathML(s,false);
+CC.M=s=>texToMathML(s,true);
+function seq(p,end){
+  let out='';
+  while(p.i<p.s.length){
+    const c=p.s[p.i];
+    if(end&&c===end){p.i++;return out;}
+    if(c===' '){p.i++;continue;}
+    let base=atom(p); if(base===null)continue;
+    let sub=null,sup=null;
+    for(;;){
+      while(p.s[p.i]===' ')p.i++;
+      const d=p.s[p.i];
+      if(d==='_'){p.i++;p.up++;sub=arg(p);p.up--;}
+      else if(d==='^'){p.i++;sup=arg(p);}
+      else break;
+    }
+    if(sub!==null&&sup!==null)out+='<msubsup>'+base+sub+sup+'</msubsup>';
+    else if(sub!==null)out+='<msub>'+base+sub+'</msub>';
+    else if(sup!==null)out+='<msup>'+base+sup+'</msup>';
+    else out+=base;
+  }
+  return out;
+}
+function arg(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  return atom(p)||'<mrow></mrow>';
+}
+function rawBraced(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]!=='{'){const c=p.s[p.i];p.i++;return c;}
+  let depth=0,start=++p.i;
+  for(;p.i<p.s.length;p.i++){const c=p.s[p.i];if(c==='{')depth++;else if(c==='}'){if(depth===0)break;depth--;}}
+  const t=p.s.slice(start,p.i);p.i++;return t;
+}
+function mi(ch,p){return p.up?'<mi mathvariant="normal">'+esc(ch)+'</mi>':'<mi>'+esc(ch)+'</mi>';}
+function atom(p){
+  const s=p.s;let c=s[p.i];
+  if(c==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  if(c==='\\'){
+    p.i++;
+    let m=s.slice(p.i).match(/^[A-Za-z]+/);
+    if(!m){const ch=s[p.i];p.i++;
+      if(ch===',')return '<mspace width="0.17em"/>';
+      if(ch===';')return '<mspace width="0.28em"/>';
+      if(ch==='!')return '';
+      if(ch==='%')return '<mo>%</mo>';
+      return '<mo>'+esc(ch)+'</mo>';}
+    const name=m[0];p.i+=name.length;
+    switch(name){
+      case 'frac':{const a=arg(p),b=arg(p);return '<mfrac>'+a+b+'</mfrac>';}
+      case 'dfrac':{const a=arg(p),b=arg(p);return '<mstyle displaystyle="true"><mfrac>'+a+b+'</mfrac></mstyle>';}
+      case 'sqrt':{
+        if(s[p.i]==='['){const j=s.indexOf(']',p.i);const n=s.slice(p.i+1,j);p.i=j+1;const a=arg(p);return '<mroot>'+a+'<mrow>'+seq({s:n,i:0,up:0},null)+'</mrow></mroot>';}
+        return '<msqrt>'+arg(p)+'</msqrt>';}
+      case 'text':return '<mtext>'+esc(rawBraced(p))+'</mtext>';
+      case 'mathrm':case 'rm':case 'operatorname':case 'mathrm*':return '<mi mathvariant="normal">'+esc(rawBraced(p))+'</mi>';
+      case 'mathbf':return '<mi mathvariant="bold">'+esc(rawBraced(p))+'</mi>';
+      case 'quad':return '<mspace width="1em"/>';
+      case 'qquad':return '<mspace width="2em"/>';
+      case 'left':case 'right':{const ch=s[p.i];p.i++;if(ch==='.')return '';if(ch==='\\'){const mm=s.slice(p.i).match(/^[A-Za-z]+/);if(mm){p.i+=mm[0].length;return '<mo stretchy="true">'+(mm[0]==='lbrace'?'{':mm[0]==='rbrace'?'}':'|')+'</mo>';}const c2=s[p.i];p.i++;return '<mo stretchy="true">'+esc(c2)+'</mo>';}return '<mo stretchy="true">'+esc(ch)+'</mo>';}
+      case 'overline':case 'bar':{const a=arg(p);return '<mover>'+a+'<mo stretchy="true">¯</mo></mover>';}
+      case 'arctan':case 'tan':case 'sin':case 'cos':case 'log':case 'ln':case 'atan':return '<mi>'+name+'</mi><mo>&#x2061;</mo>';
+    }
+    if(GREEK[name]){const g=GREEK[name];return (name[0]===name[0].toUpperCase())?'<mi mathvariant="normal">'+g+'</mi>':mi(g,p);}
+    if(OPS[name])return '<mo>'+OPS[name]+'</mo>';
+    return '<mi>'+esc(name)+'</mi>';
+  }
+  if(/[0-9.]/.test(c)){const m=s.slice(p.i).match(/^[0-9]*\.?[0-9]+|^[0-9]+\.?/);p.i+=m[0].length;return '<mn>'+m[0]+'</mn>';}
+  if(/[A-Za-z]/.test(c)){p.i++;return mi(c,p);}
+  if(c==='°'||c==='Ω'||c==='µ'||c==='μ'){p.i++;return '<mi mathvariant="normal">'+c+'</mi>';}
+  if(c==='}'){p.i++;return null;}
+  p.i++;
+  const map={'*':'·','-':'−'};
+  const ch=map[c]||c;
+  if(c==='('||c===')'||c==='['||c===']'||c==='|')return '<mo stretchy="false">'+esc(ch)+'</mo>';
+  return '<mo>'+esc(ch)+'</mo>';
+}
+
+/* ---------- SVG schematic primitives ---------- */
+const S=CC.svg={};
+S.stroke='currentColor';
+function vSym(t,x,y,label,o={}){
+  // vertical symbol centred at (x,y), occupying y-30..y+30, leads included
+  let g='';
+  const L=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  switch(t){
+    case 'R':{g+=L(x,y-30,x,y-21);let d=`M${x},${y-21}`;for(let i=0;i<6;i++){d+=` L${x+(i%2?-7:7)},${y-17.5+i*7}`;}d+=` L${x},${y+21}`;g+=`<path d="${d}" fill="none"/>`+L(x,y+21,x,y+30);break;}
+    case 'C':g+=L(x,y-30,x,y-4)+L(x-13,y-4,x+13,y-4)+L(x-13,y+4,x+13,y+4)+L(x,y+4,x,y+30);break;
+    case 'L':{g+=L(x,y-30,x,y-20);let d=`M${x},${y-20}`;for(let i=0;i<4;i++){d+=` a5,5 0 0 1 0,10`;}g+=`<path d="${d}" fill="none"/>`+L(x,y+20,x,y+30);if(o.core)g+=L(x+10,y-20,x+10,y+20)+L(x+13,y-20,x+13,y+20);break;}
+    case 'F':g+=L(x,y-30,x,y-14)+`<rect x="${x-6}" y="${y-14}" width="12" height="28" rx="2" fill="none"/>`+L(x,y-14,x,y+14)+L(x,y+14,x,y+30);break;
+    case 'W':g+=L(x,y-30,x,y+30);break;
+    case 'lamp':g+=L(x,y-30,x,y-13)+`<circle cx="${x}" cy="${y}" r="13" fill="none"/>`+L(x-9,y-9,x+9,y+9)+L(x+9,y-9,x-9,y+9)+L(x,y+13,x,y+30);break;
+    case 'ac':g+=L(x,y-30,x,y-17)+`<circle cx="${x}" cy="${y}" r="17" fill="none"/><path d="M${x-10},${y} q5,-11 10,0 t10,0" fill="none"/>`+L(x,y+17,x,y+30);break;
+    case 'dc':g+=L(x,y-30,x,y-6)+L(x-15,y-6,x+15,y-6)+`<line x1="${x-8}" y1="${y+3}" x2="${x+8}" y2="${y+3}" stroke-width="4"/>`+L(x-15,y+12,x+15,y+12)+`<line x1="${x-8}" y1="${y+21}" x2="${x+8}" y2="${y+21}" stroke-width="4"/>`+L(x,y+21,x,y+30)+`<text x="${x+18}" y="${y-8}" font-size="12" stroke="none" fill="currentColor">+</text>`;break;
+    case 'D':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+L(x-10,y+8,x+10,y+8)+L(x,y+8,x,y+30);break;
+    case 'Dz':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+`<path d="M${x-13},${y+12} L${x-10},${y+8} L${x+10},${y+8} L${x+13},${y+4}" fill="none"/>`+L(x,y+8,x,y+30);break;
+    case 'SW':g+=L(x,y-30,x,y-12)+`<circle cx="${x}" cy="${y-12}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+12}" r="2.5" fill="currentColor"/>`+(o.closed?L(x,y-12,x,y+12):L(x,y+12,x-12,y-8))+L(x,y+12,x,y+30);break;
+    case 'open':g+=L(x,y-30,x,y-8)+L(x,y+8,x,y+30)+`<circle cx="${x}" cy="${y-8}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+8}" r="2.5" fill="currentColor"/>`;break;
+  }
+  let lab='';
+  if(label){const side=o.side||'right';const off=(t==='ac'||t==='dc')?24:16;const lx=side==='right'?x+off:x-off;const anchor=side==='right'?'start':'end';
+    const lines=String(label).split('\n');
+    lab=lines.map((ln,i)=>`<text x="${lx}" y="${y+5+(i-(lines.length-1)/2)*15}" text-anchor="${anchor}" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g>${g}</g>${lab}`;
+}
+S.vSym=vSym;
+function hSym(t,x,y,label,o={}){
+  // horizontal: rotate a vertical symbol
+  const inner=vSym(t,0,0,null,o);
+  let lab='';if(label){const lines=String(label).split('\n');lab=lines.map((ln,i)=>`<text x="${x}" y="${y-(o.below?-30-i*15:22+(lines.length-1-i)*15)}" text-anchor="middle" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g transform="translate(${x},${y}) rotate(-90)">${inner}</g>${lab}`;
+}
+S.hSym=hSym;
+S.wrap=(w,h,inner,cls='')=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="${cls}" role="img" aria-label="circuit schematic" style="color:var(--ink)"><g stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</g></svg>`;
+S.dot=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.5" fill="currentColor" stroke="none"/>`;
+S.line=(pts)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none"/>`;
+/** source on left; components stacked vertically on the right side (series loop) */
+S.series=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length;
+  const step=74, top=24, h=top*2+Math.max(n*step,120), xs=46, xr=o.wide?220:190, w=xr+(o.labelW||110);
+  let g=S.line([[xs,top],[xr,top]])+S.line([[xs,h-top],[xr,h-top]]);
+  const my=h/2;g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  const span=(h-2*top), seg=span/n;
+  comps.forEach((c,i)=>{const cy=top+seg*(i+.5);g+=S.line([[xr,top+seg*i],[xr,cy-30]])+vSym(c.t,xr,cy,c.label,c)+S.line([[xr,cy+30],[xr,top+seg*(i+1)]]);});
+  return S.wrap(w,h,g);
+};
+/** source on left, parallel branches to the right */
+S.parallel=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length, top=24, h=o.h||170, xs=46, gap=o.gap||92, x0=xs+(o.first||96);
+  const w=x0+gap*(n-1)+(o.labelW||70);
+  const my=h/2;
+  let g=S.line([[xs,top],[x0+gap*(n-1),top]])+S.line([[xs,h-top],[x0+gap*(n-1),h-top]]);
+  g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  comps.forEach((c,i)=>{const x=x0+gap*i;g+=S.line([[x,top],[x,my-30]])+vSym(c.t,x,my,c.label,Object.assign({side:'right'},c))+S.line([[x,my+30],[x,h-top]]);if(i<n-1){g+=S.dot(x,top)+S.dot(x,h-top);}});
+  return S.wrap(w,h,g);
+};
+/** phasor diagram. vecs:[{x,y,label,color,dash}] in arbitrary units; origin auto-placed */
+S.phasor=function(vecs,o={}){
+  const W=o.w||280,H=o.h||220,pad=34;
+  let maxX=0,minX=0,maxY=0,minY=0;
+  vecs.forEach(v=>{maxX=Math.max(maxX,v.x,v.x0||0);minX=Math.min(minX,v.x,v.x0||0);maxY=Math.max(maxY,v.y,v.y0||0);minY=Math.min(minY,v.y,v.y0||0);});
+  const sx=(W-2*pad)/Math.max(1e-9,maxX-minX||1), sy=(H-2*pad)/Math.max(1e-9,maxY-minY||1); const k=Math.min(sx,sy);
+  const ox=pad-minX*k+((W-2*pad)-(maxX-minX)*k)/2, oy=pad+maxY*k+((H-2*pad)-(maxY-minY)*k)/2;
+  let g=`<line x1="${pad/2}" y1="${oy}" x2="${W-pad/2}" y2="${oy}" stroke="var(--ink2)" stroke-width="1"/><line x1="${ox}" y1="${pad/2}" x2="${ox}" y2="${H-pad/2}" stroke="var(--ink2)" stroke-width="1"/>`;
+  vecs.forEach((v,i)=>{const x0=ox+(v.x0||0)*k,y0=oy-(v.y0||0)*k,x1=ox+v.x*k,y1=oy-v.y*k;const col=v.color||'var(--accent)';
+    const ang=Math.atan2(y1-y0,x1-x0),len=Math.hypot(x1-x0,y1-y0);
+    g+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="${v.w||2.5}" ${v.dash?'stroke-dasharray="4 4"':''}/>`;
+    if(len>8&&!v.noArrow)g+=`<path d="M${x1},${y1} L${x1-9*Math.cos(ang-0.4)},${y1-9*Math.sin(ang-0.4)} L${x1-9*Math.cos(ang+0.4)},${y1-9*Math.sin(ang+0.4)} Z" fill="${col}" stroke="none"/>`;
+    if(v.label){const lx=(v.lx!==undefined?ox+v.lx*k:(x0+x1)/2)+(v.ldx||0),ly=(v.ly!==undefined?oy-v.ly*k:(y0+y1)/2)+(v.ldy||0);g+=`<text x="${lx}" y="${ly}" font-size="13" font-weight="700" fill="${col}" stroke="none" text-anchor="middle">${esc(v.label)}</text>`;}
+  });
+  if(o.theta!==undefined&&Math.abs(o.theta)>0.5){const r=30,a=CC.rad(o.theta);const x1=ox+r,y1=oy,x2=ox+r*Math.cos(a),y2=oy-r*Math.sin(a);g+=`<path d="M${x1},${y1} A${r},${r} 0 0 ${o.theta>0?0:1} ${x2},${y2}" stroke="var(--brand)" fill="none" stroke-width="1.5"/><text x="${ox+r+12}" y="${oy-(o.theta>0?6:-16)}" font-size="13" fill="var(--brand)" stroke="none">θ</text>`;}
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="vector diagram">${g}</svg>`;
+};
+
+/* ---------- icons ---------- */
+const IC={
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>',
+  wave:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="16" cy="16" r="12"/><path d="M8 16q4-9 8 0t8 0"/></svg>',
+  res:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M2 16h6l2-6 4 12 4-12 4 12 2-6h6"/></svg>',
+  cap:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M2 16h11M19 16h11M13 7v18M19 7v18"/></svg>',
+  ind:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 18h4a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0h3"/></svg>',
+  xfmr:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6M23 5a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6M15 4v24M17 4v24"/></svg>',
+  meter:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="24" height="24" rx="3"/><path d="M9 20a8 8 0 0 1 14 0M16 20l4-7"/></svg>',
+  wrench:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M20 4a7 7 0 0 0-6 9L4 23l5 5 10-10a7 7 0 0 0 9-6l-4 2-4-1-1-4z"/></svg>',
+  res2:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 26C10 26 12 6 16 6s6 20 12 20"/><path d="M2 26h28"/></svg>',
+  chip:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="6" width="16" height="20" rx="2"/><path d="M4 10h4M4 16h4M4 22h4M24 10h4M24 16h4M24 22h4"/></svg>',
+  gate:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h8a9 9 0 0 1 0 18H8z M2 12h6M2 20h6M25 16h5"/></svg>',
+  num:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><text x="3" y="22" font-size="13" fill="currentColor" stroke="none" font-family="monospace">101</text></svg>',
+  amp:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M8 5v22l18-11z M2 11h6M2 21h6M26 16h4"/><text x="9.5" y="14" font-size="7" fill="currentColor" stroke="none">−</text><text x="9.5" y="23" font-size="7" fill="currentColor" stroke="none">+</text></svg>',
+  diode:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16h8M22 16h8M10 8v16l12-8z M22 8v16"/></svg>',
+  trans:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="17" cy="16" r="11"/><path d="M4 16h8M12 9v14M12 13l9-6M12 19l9 6M21 7v-4M21 25v4"/></svg>',
+  bulb:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20a8 8 0 1 1 10 0v4H11z M12 28h8"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z M20 4h-4a2 2 0 0 0-2 2"/></svg>',
+  plug:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 3v7M21 3v7M8 10h16v5a8 8 0 0 1-16 0zM16 23v6"/></svg>',
+  wire:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 24c6 0 6-16 13-16s7 16 13 16"/><circle cx="3" cy="24" r="2" fill="currentColor"/><circle cx="29" cy="24" r="2" fill="currentColor"/></svg>',
+  ohm:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">Ω</text></svg>',
+  volt:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">V</text></svg>',
+  power:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M18 3L7 18h8l-2 11 11-15h-8z"/></svg>',
+  clock:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="9" width="22" height="14" rx="2"/><path d="M9 19v-6h3v6h3v-6h3v6h3v-6"/></svg>',
+  ff:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="5" width="16" height="22" rx="1"/><text x="11" y="14" font-size="7" fill="currentColor" stroke="none">J</text><text x="11" y="25" font-size="7" fill="currentColor" stroke="none">K</text><text x="19" y="14" font-size="7" fill="currentColor" stroke="none">Q</text><path d="M8 17l3 2-3 2"/></svg>',
+  bread:'<svg viewBox="0 0 32 32" fill="currentColor"><rect x="3" y="6" width="26" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>'+[9,13,19,23].map(y=>[7,11,15,19,23].map(x=>`<circle cx="${x+1}" cy="${y}" r="1.3"/>`).join('')).join('')+'</svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg>',
+};
+CC.icons=IC;
+
+/* ---------- modal / toast ---------- */
+CC.modal=function(html,buttons=[{label:'Close',primary:true}],opts={}){
+  return new Promise(res=>{
+    const sc=el(`<div class="scrim" role="dialog" aria-modal="true"><div class="modal">${html}<div class="row end mt modal-btns"></div></div></div>`);
+    const bb=$('.modal-btns',sc);
+    const close=v=>{sc.remove();document.removeEventListener('keydown',onKey);res(v);};
+    buttons.forEach((b,i)=>{const x=el(`<button class="btn ${b.primary?'primary':''} ${b.cls||''}">${b.label}</button>`);x.onclick=()=>{if(b.onClick&&b.onClick(sc)===false)return;close(b.value!==undefined?b.value:i);};bb.appendChild(x);});
+    const onKey=e=>{if(e.key==='Escape'&&!opts.noEscape)close(-1);};
+    document.addEventListener('keydown',onKey);
+    sc.addEventListener('click',e=>{if(e.target===sc&&!opts.noEscape)close(-1);});
+    document.body.appendChild(sc);
+    const f=$('input',sc)||$('.btn.primary',sc);if(f)setTimeout(()=>f.focus(),30);
+    if(opts.onOpen)opts.onOpen(sc);
+  });
+};
+CC.confirm=(msg,yes='Yes',no='Cancel')=>CC.modal(`<p>${msg}</p>`,[{label:no,value:false},{label:yes,primary:true,value:true}]).then(v=>v===true);
+CC.toast=function(msg,ms=2200){const t=el(`<div class="toast" role="status">${msg}</div>`);document.body.appendChild(t);setTimeout(()=>t.remove(),ms);};
+
+/* ---------- validity code ---------- */
+function hashStr(s){let h1=0x811c9dc5,h2=0x1b873593;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822507);h2^=h2>>>13;}return [h1>>>0,h2>>>0];}
+CC.validity=function(prog,name,id,title,score,time,date){
+  const norm=[prog,name.trim().toUpperCase(),String(id).trim(),title.trim().toUpperCase(),String(score).trim(),String(time).trim(),String(date).trim()].join('|');
+  const [a,b]=hashStr(norm);const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let out='';let x=a,y=b;
+  for(let i=0;i<10;i++){const v=(i<5?x:y);out+=A[v%A.length];if(i<5)x=Math.floor(x/A.length);else y=Math.floor(y/A.length);}
+  return out.slice(0,5)+'-'+out.slice(5);
+};
+
+/* ---------- App shell ---------- */
+const App=CC.App={mods:{},order:[],cfg:null,last:null,running:null};
+App.key=k=>'cc:'+App.cfg.id+':'+k;
+App.student=()=>store.get('cc:student',null);
+App.opts=()=>Object.assign({certs:true,theme:'auto'},store.get('cc:opts',{}));
+App.applyTheme=function(){const t=App.opts().theme;if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);};
+App.init=function(cfg){
+  App.cfg=cfg;
+  cfg.groups.forEach(g=>g.items.forEach(m=>{App.mods[m.id]=m;m.group=g.title;App.order.push(m.id);}));
+  document.title=cfg.title;
+  App.applyTheme();
+  document.body.innerHTML=`<header class="topbar noprint"><div class="in">
+    <a class="brand" href="#/" aria-label="Home">${esc(cfg.title)}<small>${esc(cfg.tagline||'Interactive exercises')}</small></a>
+    <span class="sp"></span>
+    <button class="chip" id="who" title="Student name and ID">${IC.user.replace('<svg','<svg width="16" height="16"')}<span></span></button>
+    <a class="iconbtn" href="#/" title="Main menu" aria-label="Main menu">${IC.home}</a>
+  </div></header><main id="view"></main>`;
+  $('#who').onclick=()=>App.askStudent(true);
+  App.refreshWho();
+  window.addEventListener('hashchange',App.route);
+  App.route();
+};
+App.refreshWho=function(){const s=App.student();$('#who span').textContent=s?s.name:'Sign in';};
+App.askStudent=function(force){
+  return new Promise(res=>{
+    const cur=App.student();
+    if(cur&&!force)return res(cur);
+    CC.modal(`<h3>Student information</h3><p class="small muted">Your name and ID appear on certificates and in the grade file stored on this device.</p>
+      <div class="field"><label for="sn">Name</label><input id="sn" autocomplete="name" value="${cur?esc(cur.name):''}"></div>
+      <div class="field"><label for="sid">ID code (2–9 digits)</label><input id="sid" inputmode="numeric" value="${cur?esc(cur.id):''}"></div>
+      <p class="small" id="serr" style="color:var(--bad)"></p>`,
+      [{label:'Practice without signing in',value:'skip'},{label:'Save',primary:true,value:'ok',onClick:sc=>{
+        const n=$('#sn',sc).value.trim(),i=$('#sid',sc).value.trim();
+        if(n.length<2){$('#serr',sc).textContent='Name must be at least two characters.';return false;}
+        if(!/^\d{2,9}$/.test(i)){$('#serr',sc).textContent='ID code must have between 2 and 9 digits.';return false;}
+        store.set('cc:student',{name:n,id:i});App.refreshWho();}}]).then(v=>{
+          if(v==='skip'){App.guest=true;}
+          res(App.student());});
+  });
+};
+App.view=()=>$('#view');
+App.route=function(){
+  const h=location.hash.replace(/^#\/?/,'');const [r,a]=h.split('/');
+  if(App.running&&App.running.cleanup){App.running.cleanup();}
+  App.running=null;
+  window.scrollTo(0,0);
+  const v=App.view();v.innerHTML='';
+  if(!r)return App.home(v);
+  if(r==='m'&&App.mods[a])return App.intro(v,App.mods[a]);
+  if(r==='run'&&App.mods[a])return App.run(v,App.mods[a]);
+  if(r==='grades')return App.grades(v);
+  if(r==='validity')return App.validityView(v);
+  if(r==='manual')return App.manual(v);
+  if(r==='options')return App.options(v);
+  if(r==='cert')return App.certificate(v);
+  if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
+  App.home(v);
+};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.home=function(v){
+  const c=App.cfg;
+  v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
+    <div class="utils noprint"><a class="btn sm" href="#/manual">${IC.book.replace('<svg','<svg width="18" height="18"')} Manual</a><a class="btn sm" href="#/grades">Grade file</a><a class="btn sm" href="#/validity">Check validity</a><a class="btn sm" href="#/options">Options</a></div></div>
+    <div id="heroSlot"></div></section>`));
+  if(c.hero)c.hero($('#heroSlot',v));
+  c.groups.forEach(g=>{
+    v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
+    const m=el('<div class="menu"></div>');
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    v.appendChild(m);
+  });
+  v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
+};
+App.intro=function(v,m){
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px"><a class="btn sm ghost" href="#/">← Main menu</a></div><h1>${esc(m.title)}</h1><div class="card" id="introBody"></div>
+    <div class="row end mt"><a class="btn" href="#/">Quit</a><button class="btn primary" id="begin">Begin</button></div></div>`);
+  v.appendChild(wrap);
+  const body=$('#introBody',wrap);
+  if(typeof m.intro==='function')m.intro(body);else body.innerHTML=m.intro||'';
+  $('#begin',wrap).onclick=async()=>{
+    if(m.graded!==false&&!App.student()&&!App.guest)await App.askStudent(false);
+    location.hash='#/run/'+m.id;
+  };
+};
+App.run=function(v,m){
+  const s=new Session(m);
+  App.running=s;
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px;justify-content:space-between"><button class="btn sm ghost" id="quitx">← Quit</button><span class="small muted">${esc(m.title)}</span></div><div id="ex"></div></div>`);
+  v.appendChild(wrap);
+  $('#quitx',wrap).onclick=async()=>{if(s.done||await CC.confirm('Quit this exercise without grading?','Quit'))location.hash='#/';};
+  m.run($('#ex',wrap),s);
+};
+class Session{
+  constructor(m){this.m=m;this.t0=Date.now();this.done=false;this.timers=[];}
+  elapsed(){return Date.now()-this.t0;}
+  every(fn,ms){const t=setInterval(fn,ms);this.timers.push(t);return t;}
+  cleanup(){this.timers.forEach(clearInterval);}
+  restart(){location.hash='#/run/'+this.m.id;App.route();}
+  finish(score,summary){
+    if(this.done)return;this.done=true;this.cleanup();
+    score=Math.max(0,Math.min(100,Math.round(score)));
+    const st=App.student();
+    const time=CC.fmtTime(this.elapsed());
+    const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const rec={mid:this.m.id,title:this.m.title,score,time,date,name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
+    App.last=rec;
+    const pass=App.cfg.pass||80;
+    const certOk=App.opts().certs&&rec.id;
+    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${score>=pass?'ok':'bad'}">Score: ${score}%</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
+      [{label:'Main menu',value:'menu'},{label:'Review',value:'review'},...(certOk?[{label:'Certificate',value:'cert'}]:[]),{label:'Try again',primary:true,value:'again'}],{noEscape:false}).then(v=>{
+        if(v==='menu')location.hash='#/';
+        else if(v==='cert')location.hash='#/cert';
+        else if(v==='again')this.restart();
+      });
+  }
+}
+CC.Session=Session;
+
+App.certificate=function(v){
+  const r=App.last;
+  if(!r){v.appendChild(el('<div class="card"><p>No exercise has been completed in this session yet.</p><a class="btn" href="#/">Main menu</a></div>'));return;}
+  const code=CC.validity(App.cfg.id,r.name,r.id,r.title,r.score,r.time,r.date);
+  v.appendChild(el(`<div><div class="cert"><div style="font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:#7a5b10">Certificate of Completion</div>
+  <h2>${esc(App.cfg.title)}</h2><p>This certifies that</p><div class="big">${esc(r.name)}</div><p>has completed the exercise</p><div class="big" style="font-size:1.3rem">${esc(r.title)}</div>
+  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${r.score}%</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
+  <div class="row end mt noprint"><a class="btn" href="#/">Main menu</a><button class="btn primary" onclick="window.print()">Print certificate</button></div></div>`));
+};
+App.validityView=function(v){
+  const titles=App.order.map(id=>App.mods[id].title);
+  v.appendChild(el(`<div><h1>Check certificate validity</h1><div class="card"><p class="small muted">Type the information exactly as it appears on the certificate. A matching validity code means the certificate was very likely produced by this program and has not been altered.</p>
+  <div class="fields">
+   <div class="field"><label>Student name</label><input id="vn"></div>
+   <div class="field"><label>Student ID</label><input id="vi" inputmode="numeric"></div>
+   <div class="field"><label>Topic title</label><select id="vt" style="border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px">${titles.map(t=>`<option>${esc(t)}</option>`).join('')}</select></div>
+   <div class="field"><label>Exercise score (number only)</label><input id="vs" inputmode="numeric"></div>
+   <div class="field"><label>Time on task</label><input id="vtm" placeholder="e.g. 12:34"></div>
+   <div class="field"><label>Date / time</label><input id="vd"></div>
+   <div class="field"><label>Validity code</label><input id="vc" style="font-family:var(--mono)"></div>
+  </div><div class="row end"><button class="btn primary" id="vgo">Evaluate validity</button></div><p id="vres" class="verdict"></p></div></div>`));
+  $('#vgo',v).onclick=()=>{const code=CC.validity(App.cfg.id,$('#vn',v).value,$('#vi',v).value,$('#vt',v).value,$('#vs',v).value.replace('%',''),$('#vtm',v).value,$('#vd',v).value);
+    const ok=code.replace('-','')===$('#vc',v).value.trim().toUpperCase().replace(/[^A-Z]/g,'');const r=$('#vres',v);r.className='verdict '+(ok?'ok':'bad');r.textContent=ok?'Valid code — the data matches.':'Not valid — check each entry carefully, including capitalization of the date.';};
+};
+App.grades=function(v){
+  const g=store.get(App.key('grades'),[]);
+  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
+  v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored only in this browser on this device.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
+  <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
+  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
+  $('#gclr',v).onclick=async()=>{if(await CC.confirm('Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
+};
+App.manual=function(v){
+  v.appendChild(el(`<div><h1>Manual</h1><div class="card intro-text">${App.cfg.manual||''}
+  <h2>Using this offline edition</h2>
+  <p>This page is a self-contained web version of the original Windows program. It needs no internet connection and runs in any modern browser on phones, tablets, Chromebooks, Macs and PCs. Copy the file to any device and open it.</p>
+  ${App.cfg.numericAnswers===false?'':`<p>${App.cfg.tolNote||'Numeric answers are accepted within the tolerance stated on each exercise\'s intro page, so normal rounding is fine.'} Type plain numbers in the unit shown next to each answer box (for example <span class="kbd">4.7</span> in a box marked mA). In a box with a plain unit such as V, Ω or A you may also use an engineering suffix such as <span class="kbd">4.7k</span> or <span class="kbd">22m</span>.</p>`}
+  <p>Your name, ID and grade file are stored in this browser only. Use <b>Grade file</b> on the main menu to print or download them.</p></div></div>`));
+};
+App.options=function(v){
+  const o=App.opts();
+  v.appendChild(el(`<div><h1>Options</h1><div class="card">
+   <label class="row"><input type="checkbox" id="oc" ${o.certs?'checked':''}> Certificate printing enabled</label>
+   <div class="field mt"><label>Appearance</label><div class="row"><label class="row"><input type="radio" name="th" value="auto" ${o.theme==='auto'?'checked':''}> Match device</label><label class="row"><input type="radio" name="th" value="light" ${o.theme==='light'?'checked':''}> Light</label><label class="row"><input type="radio" name="th" value="dark" ${o.theme==='dark'?'checked':''}> Dark</label></div></div>
+   <div class="row mt"><button class="btn" id="ostu">Change student name / ID</button><button class="btn" id="oout">Sign out</button></div></div></div>`));
+  const save=()=>{const n={certs:$('#oc',v).checked,theme:($('input[name=th]:checked',v)||{}).value||'auto'};store.set('cc:opts',n);App.applyTheme();};
+  $$('input',v).forEach(i=>i.onchange=save);
+  $('#ostu',v).onclick=()=>App.askStudent(true);
+  $('#oout',v).onclick=()=>{store.del('cc:student');App.guest=false;App.refreshWho();CC.toast('Signed out');};
+};
+
+/* ---------- exercise kit: helpers for intro pages ---------- */
+CC.introPage=function({text,formulas,diagram,extra,how}){
+  let h='';
+  if(diagram)h+=`<div class="diagram" style="margin-bottom:12px">${diagram}</div>`;
+  if(text)h+=`<div class="intro-text">${text}</div>`;
+  if(formulas&&formulas.length){h+=`<h3>Key relationships</h3><div class="formulas">${formulas.map(f=>`<div class="formula">${f.cap?`<span class="cap">${f.cap}</span>`:''}${CC.M(f.tex||f)}${f.where?`<div class="where">${f.where}</div>`:''}</div>`).join('')}</div>`;}
+  if(extra)h+=extra;
+  if(how)h+=`<h3>How this exercise works</h3><div class="small intro-text">${how}</div>`;
+  return h;
+};
+
+/* worked solution renderer: steps are TeX strings (math) or strings starting with '>' (prose) */
+CC.workHTML=function(steps,label='Show worked solution'){
+  if(!steps||!steps.length)return '';
+  const body=steps.map(t=>typeof t==='string'&&t.startsWith('>')?`<p class="small">${t.slice(1)}</p>`:CC.M(t)).join('');
+  return `<details class="work"><summary>${label}</summary>${body}</details>`;
+};
+/* ---------- Worksheet: one circuit, many answers, Check (-2) Help (-3) Grade ---------- */
+CC.worksheet=function(root,s,spec){
+  CC._last=spec;
+  const checkCost=spec.checkCost??2, helpCost=spec.helpCost??3, N=spec.items.length;
+  let pen=0;const helped=new Set();
+  const w=el(`<div>
+    <div class="statusbar"><span class="pill" id="wpen">Deductions: 0</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
+    <div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title||'Circuit')}</h2><div class="diagram">${spec.diagram||''}</div><div class="givens">${spec.givens.map(g=>`<div class="given"><div class="k">${g.k}</div><div class="v">${g.v}</div></div>`).join('')}</div>${spec.note?`<p class="small muted">${spec.note}</p>`:''}</div><div id="wextra"></div></div>
+    <div><div class="card"><h2 style="margin-top:0">Find</h2><div class="ws" id="ws"></div>
+    <div class="row end mt"><button class="btn primary" id="wgrade">Grade</button></div></div></div></div></div>`);
+  root.appendChild(w);
+  const wsEl=$('#ws',w);
+  const upd=()=>{$('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  s.every(()=>{$('#wtime',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const ok=(it,val)=>{if(it.signFree)return CC.close(Math.abs(val),Math.abs(it.value),it.tol??spec.tol??0.02,it.absTol??null);return CC.close(val,it.value,it.tol??spec.tol??0.02,it.absTol??null);};
+  spec.items.forEach((it,i)=>{
+    const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
+      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points." aria-label="Help">?</button></div><div class="fb"></div></div>`);
+    it._row=r;const inp=$('input',r);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
+    $('[data-a=c]',r).onclick=()=>{
+      const val=CC.parse(inp.value,!CC.prefixed(it.unit));
+      if(isNaN(val)){CC.toast('Type a number first.');return;}
+      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';}
+      else{pen+=checkCost;r.className='wrow bad';$('.fb',r).textContent=`Not right — ${checkCost} points deducted.`;upd();}
+    };
+    $('[data-a=h]',r).onclick=async()=>{
+      const first=!helped.has(i);
+      if(first){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. It costs ${helpCost} points, charged once per item.</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
+        if(go!==true)return;helped.add(i);pen+=helpCost;upd();}
+      CC.modal(`<h3>${CC.m(it.sym)}${it.name?` — ${esc(it.name)}`:''}</h3>${(it.help||[]).map(h=>typeof h==='string'&&h.startsWith('$')?CC.M(h.slice(1)):`<p>${h}</p>`).join('')}`);
+    };
+    wsEl.appendChild(r);
+  });
+  $('#wgrade',w).onclick=async()=>{
+    const blanks=spec.items.filter(it=>!$('input',it._row).value.trim()).length;
+    if(blanks&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
+    let right=0;
+    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good)right++;inp.disabled=true;
+      it._row.className='wrow '+(good?'ok':'bad');$('.fb',it._row).innerHTML=(good?'Right! ':'')+`Correct answer: <b>${CC.fmt(it.value)} ${esc(it.unit||'')}</b>`+CC.workHTML(typeof it.work==='function'?it.work():it.work);$$('button',it._row).forEach(b=>b.disabled=true);});
+    $('#wgrade',w).disabled=true;
+    const raw=right/N*100;const score=raw-pen;
+    if(spec.after)spec.after($('#wextra',w));
+    s.finish(score,`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
+    const again=el('<div class="row end mt noprint"><button class="btn primary">New problem</button></div>');$('button',again).onclick=()=>s.restart();$('#wgrade',w).parentNode.after(again);
+  };
+};
+
+/* ---------- Problem set: N problems one at a time, each graded immediately ---------- */
+CC.problemSet=function(root,s,spec){
+  const N=spec.count;let i=0,right=0,total=0;const log=[];
+  const probs=spec.list?spec.list():Array.from({length:N},(_,k)=>spec.gen(k));
+  CC._last=probs;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="pn"></span><span class="pill" id="ps">Correct: 0</span><span class="pill" id="pt">0:00</span></div><div class="progress"><i id="pb" style="width:0"></i></div><div id="pbody" class="mt"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#pt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const show=()=>{
+    const p=probs[i];
+    $('#pn',w).textContent=`Problem ${i+1} of ${probs.length}`;$('#pb',w).style.width=(i/probs.length*100)+'%';
+    const body=$('#pbody',w);body.innerHTML='';
+    const card=el(`<div class="card"><div class="cols2"><div>${p.title?`<h2 style="margin-top:0">${p.title}</h2>`:''}${p.prompt?`<div>${p.prompt}</div>`:''}${p.diagram?`<div class="diagram mt">${p.diagram}</div>`:''}</div>
+      <div><div class="fields" id="pf"></div><div id="pfb"></div><div class="row end mt"><button class="btn primary" id="pg">${spec.gradeLabel||'Grade answers'}</button></div></div></div></div>`);
+    body.appendChild(card);
+    const pf=$('#pf',card);
+    p.fields.forEach(f=>{
+      let fe;
+      if(f.choices){
+        fe=el(`<div class="field"><label>${f.label}</label><div class="faults">${f.choices.map((c,ci)=>`<label><input type="radio" name="ch_${f.key}" value="${ci}"> <span>${c}</span></label>`).join('')}</div></div>`);
+      } else {
+        fe=el(`<div class="field"><label>${f.label}${f.unit?` <span class="muted">(${esc(f.unit)})</span>`:''}</label><input type="text" inputmode="${f.text?'text':'decimal'}" autocomplete="off" ${f.given?'readonly':''} class="${f.given?'known':'ask'}" value="${f.given?esc(f.show||CC.fmt(f.value)):''}"></div>`);
+        const inp=$('input',fe);inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const all=$$('input:not([readonly])',pf);const k=all.indexOf(inp);if(all[k+1])all[k+1].focus();else $('#pg',card).click();}});
+      }
+      f._el=fe;pf.appendChild(fe);
+    });
+    const firstAsk=$('input:not([readonly])',pf);if(firstAsk&&window.innerWidth>700)firstAsk.focus();
+    $('#pg',card).onclick=()=>{
+      const btn=$('#pg',card);
+      if(btn.dataset.done){i++;if(i>=probs.length)return end();return show();}
+      let pr=0,pt=0;const fbs=[];
+      p.fields.forEach(f=>{if(f.given)return;pt++;let good;
+        if(f.choices){const c=$('input:checked',f._el);good=c&&+c.value===f.answer;$$('.faults label',f._el).forEach((lb,ci)=>{if(ci===f.answer)lb.classList.add('correct');else if(c&&+c.value===ci)lb.classList.add('wrong');});$$('input',f._el).forEach(x=>x.disabled=true);}
+        else{const inp=$('input',f._el);
+          if(f.check)good=f.check(inp.value);
+          else if(f.text)good=inp.value.trim().toUpperCase().replace(/\s+/g,'')===String(f.value).toUpperCase().replace(/\s+/g,'');
+          else{const v=CC.parse(inp.value,f.suffix!==false&&!CC.prefixed(f.unit));good=f.signFree?CC.close(Math.abs(v),Math.abs(f.value),f.tol??spec.tol??0.02,f.absTol??null):CC.close(v,f.value,f.tol??spec.tol??0.02,f.absTol??null);}
+          inp.classList.add(good?'ok':'bad');inp.readOnly=true;
+          if(!good)fbs.push(`${f.label}: correct answer is <b>${f.show||CC.fmt(f.value)}${f.unit?' '+esc(f.unit):''}</b>`);}
+        if(good)pr++;});
+      right+=pr;total+=pt;log.push({i,pr,pt});
+      $('#ps',w).textContent=`Correct: ${right} of ${total}`;
+      const allGood=pr===pt;
+      $('#pfb',card).innerHTML=`<p class="verdict ${allGood?'ok':'bad'}">${allGood?'Correct!':(pr?`${pr} of ${pt} correct`:'Incorrect')}</p>${fbs.length?`<p class="small">${fbs.join('<br>')}</p>`:''}${p.explain?`<div class="formula mt">${p.explain}</div>`:''}${CC.workHTML(typeof p.work==='function'?p.work():p.work)}`;
+      btn.dataset.done='1';btn.textContent=i+1<probs.length?'Next problem':'Finish';btn.focus();
+    };
+  };
+  const end=()=>{$('#pb',w).style.width='100%';const score=total?right/total*100:0;s.finish(score,`${right} of ${total} answers correct.`);
+    const again=el('<div class="card mt center"><p>Exercise finished.</p><div class="row" style="justify-content:center"><a class="btn" href="#/">Main menu</a><button class="btn primary">New problem set</button></div></div>');$('button',again).onclick=()=>s.restart();$('#pbody',w).appendChild(again);};
+  show();
+};
+
+/* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}]}} */
+CC.trouble=function(root,s,spec){
+  const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const next=()=>{
+    const b=spec.build(k);let pts=P;CC._last=b;
+    if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
+    $('#tn',w).textContent=`Problem ${k+1} of ${N}`;
+    const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for this item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};
+    updP();
+    const body=$('#tbody',w);body.innerHTML='';
+    const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button></div></div>
+      <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
+      <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
+      <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
+    body.appendChild(card);
+    $('#info',card).innerHTML=b.info?b.info():'';
+    const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
+    const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
+    $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    const meterHTML=()=>{
+      const ms=(b.meters?b.meters():[]).map(m=>`<div class="meterbox"><span class="ml">${m.label}</span><span class="lcd">${m.text}</span></div>`).join('');
+      let main='----';
+      if(probe.red&&probe.black){main=b.measure(probe.red,probe.black).text;}
+      return `<div class="meterbox"><span class="ml">${spec.meterLabel||'Voltmeter'}</span><span class="lcd">${main}</span></div>`+ms;
+    };
+    const draw=()=>{
+      const pads=b.pads.map(p=>{const r=probe.red===p.id,bl=probe.black===p.id;
+        return `<g class="pad" data-id="${p.id}" tabindex="0" role="button" aria-label="Test point ${esc(p.label||p.id)}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="7" fill="#d8d8d8" stroke="#777" stroke-width="2"/><circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#555"/>${r?`<circle cx="${p.x}" cy="${p.y}" r="11" fill="none" stroke="#d32f2f" stroke-width="4"/><text x="${p.x+12}" y="${p.y-10}" fill="#d32f2f" font-weight="800" font-size="14">+</text>`:''}${bl?`<circle cx="${p.x}" cy="${p.y}" r="${r?15:11}" fill="none" stroke="#111" stroke-width="4"/><text x="${p.x-20}" y="${p.y-10}" fill="#111" font-weight="800" font-size="16">−</text>`:''}<circle class="hit" cx="${p.x}" cy="${p.y}" r="16"/></g>`;}).join('');
+      $('#bw',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
+      $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+      $('#mt',card).innerHTML=meterHTML();
+    };
+    const tap=id=>{
+      if(card.dataset.graded)return;
+      probe[probe.active]=id;
+      setActive(probe.active==='red'?'black':'red');
+      if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
+        const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
+        $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
+      draw();
+    };
+    draw();
+    $('#tg',card).onclick=()=>{
+      const btn=$('#tg',card);
+      if(card.dataset.graded){k++;if(k>=N)return end();return next();}
+      const c=$('input:checked',fl);
+      if(!c){CC.modal('<p>You did not select a fault. Select a fault, then choose Grade item.</p>');return;}
+      card.dataset.graded='1';
+      const good=+c.value===b.answer;const got=good?pts:0;earned+=got;
+      $$('label',fl).forEach((lb,i)=>{if(i===b.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
+      $$('input',fl).forEach(x=>x.disabled=true);
+      $('#ts',w).textContent=`Score: ${earned}`;
+      $('#tfb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Correct!':'Incorrect'}</p><p class="small">${good?`You earned ${got} point${got===1?'':'s'} on this item.`:`The correct answer is highlighted: <b>${esc(b.faults[b.answer])}</b>.`} Your total score so far is ${earned} point${earned===1?'':'s'}.</p>${b.explain?`<p class="small muted">${b.explain()}</p>`:''}${CC.workHTML(typeof b.work==='function'?b.work():b.work,'Show how to find this fault')}`;
+      btn.textContent=k+1<N?'Continue':'Finish';
+    };
+  };
+  const end=()=>{const score=earned/(N*P)*100;s.finish(score,`${earned} of ${N*P} possible points.`);};
+  next();
+};
+
+/* meter helpers */
+CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.008,0.008));};
+CC.lcd=(v,dec=2)=>{if(!isFinite(v))return 'OL';const a=Math.abs(v);if(a<0.005)return (0).toFixed(dec);return v.toFixed(a>=100?1:dec);};
+
+/* ---------- PC-board drawing kit ---------- */
+const B=CC.board={};
+B.svg=(w,h,inner)=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="printed circuit board" font-family="system-ui,sans-serif">${inner}</svg>`;
+B.pcb=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="var(--board)" stroke="var(--board-dark)" stroke-width="3"/>`+[[x+10,y+10],[x+w-10,y+10],[x+10,y+h-10],[x+w-10,y+h-10]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--board-dark)"/>`).join('');
+B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--trace)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>`+(label?`<text x="${lp[0]}" y="${lp[1]}" font-size="11" font-weight="700" fill="#5a3b12" ${lp[2]?`transform="rotate(${lp[2]} ${lp[0]} ${lp[1]})"`:''} text-anchor="middle">${label}</text>`:'');
+B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
+/** component between two pad points (horizontal or vertical) */
+B.part=(type,a,b,label)=>{
+  const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+  let body='';const bl=Math.min(L-26,64);
+  const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
+  if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
+  if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
+  if(type==='F')body=`<rect x="${-bl/2}" y="-7" width="${bl}" height="14" rx="3" fill="#e9f3f7" stroke="#8aa"/><rect x="${-bl/2}" y="-7" width="8" height="14" fill="#bbb"/><rect x="${bl/2-8}" y="-7" width="8" height="14" fill="#bbb"/><line x1="${-bl/2+8}" y1="0" x2="${bl/2-8}" y2="0" stroke="#777" stroke-width="1"/>`;
+  if(type==='D')body=`<rect x="${-bl/2}" y="-6" width="${bl}" height="12" rx="3" fill="#222"/><rect x="${bl/2-9}" y="-6" width="4" height="12" fill="#ddd"/>`;
+  const flip=Math.abs(ang)>90;
+  const lab=label?`<text x="${cx+(Math.abs(ang)===90?14:0)}" y="${cy+(Math.abs(ang)===90?4:22)}" font-size="12" font-weight="700" fill="#2b1a05" text-anchor="${Math.abs(ang)===90?'start':'middle'}">${esc(label)}</text>`:'';
+  return `<g transform="translate(${cx},${cy}) rotate(${flip?ang-180:ang})">${lead}${body}</g>${lab}`;
+};
+B.xfmr=(x,y,w,h,label)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#2a8c8c" stroke="#145"/><rect x="${x+w*.25}" y="${y-6}" width="${w*.5}" height="${h+12}" rx="3" fill="#cfd8dc" stroke="#78909c"/><text x="${x+w/2}" y="${y+h/2+4}" font-size="11" font-weight="800" text-anchor="middle" fill="#455a64" transform="rotate(-90 ${x+w/2} ${y+h/2})">ACME</text>${label?B.label(x+w/2,y+h+24,label):''}`;
+B.supply=(x,y,w,h,title,readout)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#4a3b33" stroke="#2a201b" stroke-width="2"/><rect x="${x+8}" y="${y+8}" width="${w-16}" height="${h-16}" rx="5" fill="#e9e4dc"/><text x="${x+w/2}" y="${y+26}" font-size="11" font-weight="800" text-anchor="middle" fill="#b3261e">${esc(title)}</text>${readout?`<text x="${x+w/2}" y="${y+46}" font-size="13" font-weight="700" text-anchor="middle" fill="#333">${esc(readout)}</text>`:''}`;
+
+})();
+</script>
+<script>/* Meter-lab kit shared by Ohmmeter Challenge and Voltmeter Challenge (identical copy in ohm/ and volt/). */
+(function(){
+'use strict';
+if(CC.kit)return;
+const K=CC.kit={};
+const {esc,el,$,$$,rnd}=CC;
+
+/* ---------- linear network solver (modified nodal analysis) ----------
+   elems: {t:'R',a,b,r}  r=Infinity → open, 0 → near-short
+          {t:'V',a,b,v}  V(a)-V(b)=v
+          {t:'D',a,b,rf} diode, anode a, cathode b (ohmmeter diode-test only)
+*/
+K.solve=function(elems,inj,gnd){
+  const idx=new Map();
+  const node=n=>{if(n===gnd)return -1;if(!idx.has(n))idx.set(n,idx.size);return idx.get(n);};
+  elems.forEach(e=>{node(e.a);node(e.b);});
+  Object.keys(inj||{}).forEach(node);
+  const N=idx.size, vs=elems.filter(e=>e.t==='V'), M=N+vs.length;
+  const A=Array.from({length:M},()=>new Float64Array(M)), z=new Float64Array(M);
+  const stampG=(a,b,g)=>{const i=node(a),j=node(b);if(i>=0)A[i][i]+=g;if(j>=0)A[j][j]+=g;if(i>=0&&j>=0){A[i][j]-=g;A[j][i]-=g;}};
+  elems.forEach(e=>{if(e.t==='R'||e.t==='D'){const r=e.t==='D'?(e.on?e.rf:Infinity):e.r;if(r===Infinity)return;stampG(e.a,e.b,1/Math.max(r,1e-4));}});
+  for(let i=0;i<N;i++)A[i][i]+=1e-11;
+  vs.forEach((e,k)=>{const i=node(e.a),j=node(e.b),r=N+k;if(i>=0){A[i][r]+=1;A[r][i]+=1;}if(j>=0){A[j][r]-=1;A[r][j]-=1;}z[r]=e.v;});
+  Object.entries(inj||{}).forEach(([n,I])=>{const i=node(n);if(i>=0)z[i]+=I;});
+  // gaussian elimination with partial pivoting
+  for(let c=0;c<M;c++){
+    let p=c,mx=Math.abs(A[c][c]);for(let r=c+1;r<M;r++)if(Math.abs(A[r][c])>mx){mx=Math.abs(A[r][c]);p=r;}
+    if(mx<1e-300)continue;
+    if(p!==c){[A[p],A[c]]=[A[c],A[p]];const t=z[p];z[p]=z[c];z[c]=t;}
+    for(let r=c+1;r<M;r++){const f=A[r][c]/A[c][c];if(!f)continue;for(let k=c;k<M;k++)A[r][k]-=f*A[c][k];z[r]-=f*z[c];}
+  }
+  const x=new Float64Array(M);
+  for(let r=M-1;r>=0;r--){let s=z[r];for(let k=r+1;k<M;k++)s-=A[r][k]*x[k];x[r]=Math.abs(A[r][r])<1e-300?0:s/A[r][r];}
+  return n=>{if(n===gnd)return 0;const i=idx.get(n);return i===undefined?0:x[i];};
+};
+/** DC/AC-magnitude voltmeter with 10 MΩ input resistance. Returns V(red)-V(black). */
+K.volts=function(elems,red,black){
+  const V=K.solve(elems.concat([{t:'R',a:red,b:black,r:1e7}]),{},black);
+  return V(red);
+};
+/** ohmmeter: resistance seen from plus lead to minus lead (unpowered network). diodeTest turns diodes on when forward biased. */
+K.ohms=function(elems,plus,minus,diodeTest){
+  if(plus===minus)return 0;
+  const E=elems.filter(e=>e.t!=='V').map(e=>Object.assign({},e,{on:false}));
+  for(let it=0;it<4;it++){
+    const V=K.solve(E,{[plus]:1},minus);
+    let changed=false;
+    if(diodeTest)E.forEach(e=>{if(e.t==='D'&&!e.on&&V(e.a)-V(e.b)>1e-6){e.on=true;changed=true;}});
+    if(!changed){const r=V(plus);return r>2e8?Infinity:r;}
+  }
+  return K.solve(E,{[plus]:1},minus)(plus);
+};
+K.fmtOhm=v=>{if(!isFinite(v)||v>5e7)return '∞';const a=Math.abs(v);if(a<10)return v.toFixed(2)+' Ω';if(a<1000)return v.toFixed(1)+' Ω';if(a<1e6)return (v/1e3).toFixed(a<1e4?3:2)+' kΩ';return (v/1e6).toFixed(2)+' MΩ';};
+K.fmtVolt=v=>{const a=Math.abs(v);return (a>=100?v.toFixed(1):a>=10?v.toFixed(2):v.toFixed(3))+' V';};
+/** meter error model: fixed bias ±2% plus drift */
+/** meter error model: a fixed calibration error of up to ±2% for the whole item, plus a little reading-to-reading jitter (last-digit flicker) */
+K.ohmDrift=()=>{const b=rnd(-0.02,0.02);return v=>!isFinite(v)?v:(v*(1+b+rnd(-0.0015,0.0015))+(v<5?rnd(0,0.02):0));};
+K.voltDrift=()=>{const b=rnd(-0.02,0.02);return v=>v*(1+b+rnd(-0.001,0.001))+rnd(-0.003,0.003);};
+/** student-facing scoring rules for a probe-lab activity */
+K.scoreHow=(o={})=>{const N=o.count||10,P=o.points||10,f=o.free;
+  if(f==null)return `<p><b>Scoring:</b> ${N} items, ${P} points each for a correct answer and 0 for a wrong one. Measurements are free, so take as many readings as you need. Your score is the percentage of the ${N*P} possible points.</p>`;
+  return `<p><b>Scoring:</b> ${N} items, ${P} points each. Every time you place or move a meter probe counts as one move. The first ${f} moves on each item are free; each move after that costs 1 point (an item can't drop below 0). A wrong answer earns 0 points for that item. Your score is the percentage of the ${N*P} possible points. ${f} moves is enough for a well-planned set of measurements, so plan each reading before you make it.</p>`;};
+
+/* ---------- SVG drawing helpers ---------- */
+const D=K.draw={};
+D.svg=(w,h,inner,bg)=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="test circuit" font-family="system-ui,sans-serif">${bg?`<rect x="0" y="0" width="${w}" height="${h}" rx="10" fill="${bg}"/>`:''}${inner}</svg>`;
+D.wire=(pts,color,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#222" stroke-width="8" stroke-linejoin="round" stroke-linecap="round" opacity=".55"/><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`+(label?`<text x="${lp[0]}" y="${lp[1]}" font-size="11" fill="${lp[2]||'#ddd'}" text-anchor="middle">${esc(label)}</text>`:'');
+D.text=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'currentColor'}" text-anchor="${o.anchor||'middle'}" ${o.rot?`transform="rotate(${o.rot} ${x} ${y})"`:''}>${esc(t)}</text>`;
+D.screw=(x,y)=>`<rect x="${x-9}" y="${y-8}" width="18" height="16" rx="3" fill="#f0a83a" stroke="#8a5a12"/><line x1="${x-4}" y1="${y-4}" x2="${x+4}" y2="${y+4}" stroke="#6b4510" stroke-width="1.6"/>`;
+D.battery=(x,y,w,h,label,plusRight=true)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#33373d" stroke="#111"/><rect x="${x+8}" y="${y+10}" width="${w-16}" height="${h*0.35}" rx="3" fill="#4a4f57"/><text x="${x+w/2}" y="${y+h-12}" font-size="11" font-weight="800" fill="#ddd" text-anchor="middle">${esc(label||'BATTERY')}</text><text x="${plusRight?x+w-14:x+14}" y="${y+h*0.32}" font-size="18" font-weight="900" fill="#ff5a4e" text-anchor="middle">+</text><text x="${plusRight?x+14:x+w-14}" y="${y+h*0.32}" font-size="20" font-weight="900" fill="#7bd36f" text-anchor="middle">−</text>`;
+/** part body between two points; type R (power resistor), H (heater), F (fuse), M (RC module), L (inductor), C, D (diode) */
+D.part=(type,a,b,label,o={})=>{
+  const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+  const bl=Math.min(L-28,o.bl||70);let body='';
+  const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#b8b8b8" stroke-width="2.5"/>`;
+  if(type==='R')body=`<rect x="${-bl/2}" y="-11" width="${bl}" height="22" rx="3" fill="#e9e2cf" stroke="#8a836f"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#6b6555">10W</text>`;
+  if(type==='H'){let d=`M${-bl/2},0`;const n=5,sw=bl/n;for(let i=0;i<n;i++){const x=-bl/2+i*sw;d+=` L${x},-12 L${x+sw/2},-12 L${x+sw/2},12 L${x+sw},12`;}d+=` L${bl/2},0`;body=`<path d="${d}" fill="none" stroke="#f1f1f1" stroke-width="3"/>`;}
+  if(type==='F')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="3" fill="#eef6f9" stroke="#8aa"/><rect x="${-bl/2}" y="-8" width="9" height="16" fill="#bbb"/><rect x="${bl/2-9}" y="-8" width="9" height="16" fill="#bbb"/><path d="M${-bl/2+9},0 q6,-4 12,0 t12,0 t12,0 t12,0" fill="none" stroke="#999"/>`;
+  if(type==='M')body=`<rect x="${-bl/2}" y="-11" width="${bl}" height="22" rx="4" fill="#c9a24a" stroke="#6d5418"/><rect x="${-bl/2+6}" y="-7" width="${bl-12}" height="14" rx="2" fill="#a57f2c"/><text x="0" y="3" font-size="7" font-weight="700" text-anchor="middle" fill="#f6e7b8">RC MODULE</text>`;
+  if(type==='L')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:8},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/7}" y1="-9" x2="${-bl/2+5+i*(bl-10)/7}" y2="9" stroke="#7a221c" stroke-width="1.5"/>`).join('');
+  if(type==='Rc')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#d9c27a" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${(o.bands||['#6d4c41','#111','#c62828','#c9a227'])[i]}"/>`).join('');
+  if(type==='D')body=`<rect x="${-bl/2}" y="-7" width="${bl}" height="14" rx="3" fill="#2b2b2b"/><rect x="${o.bandLeft?-bl/2+6:bl/2-12}" y="-7" width="6" height="14" fill="#e0e0e0"/>`;
+  const vert=Math.abs(Math.abs(ang)-90)<1;
+  const lab=label?`<text x="${cx+(vert?(o.labelLeft?-18:18):0)}" y="${cy+(vert?4:(o.labelAbove?-18:26))}" font-size="12" font-weight="800" fill="${o.labelFill||'#f2f2f2'}" text-anchor="${vert?(o.labelLeft?'end':'start'):'middle'}">${esc(label)}</text>`:'';
+  return `<g transform="translate(${cx},${cy}) rotate(${ang})">${lead}${body}</g>${lab}`;
+};
+
+/* ---------- probe lab: the interactive meter activity ----------
+ spec: {count, points, moveCost, meterLabel, selectLabel, build(k)->item}
+ item: {svg(state)->string, pads:[{id,x,y,label,side:'red'|'black'|undefined}], blackFixed, redFixed,
+        options:[string|{label,html}], answer, measure(red,black,state)->number, unit:'ohm'|'volt',
+        controls:[{id,label,options:[..],value}], params:html, explain:html, optionsCols}
+*/
+K.lab=function(root,s,spec){
+  const N=spec.count||10,P=spec.points||10,cost=spec.moveCost||0,free=cost?(spec.free||0):0;let k=0,earned=0;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="kn"></span><span class="pill" id="kp"></span><span class="pill" id="ks">Score: 0</span><span class="pill" id="kt">0:00</span></div><div id="kbody"></div></div>`);
+  root.appendChild(w);
+  let tick=null;
+  s.every(()=>{$('#kt',w).textContent=CC.fmtTime(s.elapsed());if(tick)tick();},700);
+  const next=()=>{
+    const it=spec.build(k);CC._last=it;
+    const st={};(it.controls||[]).forEach(c=>st[c.id]=c.value);
+    let pts=P,moves=0,graded=false;const pr={red:it.redFixed||null,black:it.blackFixed||null,active:it.redFixed?'black':'red'};
+    const drift=it.unit==='volt'?K.voltDrift():K.ohmDrift();
+    const fmt=it.unit==='volt'?K.fmtVolt:K.fmtOhm;
+    const log=[];
+    $('#kn',w).textContent=`${spec.itemWord||'Item'} ${k+1} of ${N}`;
+    const updP=()=>{$('#kp',w).textContent=cost?(moves<free?`${free-moves} free move${free-moves===1?'':'s'} left · ${pts} pts`:`${pts} point${pts===1?'':'s'} left for this item`):`${P} points for a correct answer`;$('#kp',w).className='pill'+(cost&&pts<P/2?' bad':'');};
+    updP();
+    const body=$('#kbody',w);body.innerHTML='';
+    const opts=it.options.map(o=>typeof o==='string'?{label:o}:o);
+    const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="ksc"></div>
+      <div class="row mt" id="kctl"></div>
+      <div class="row mt" style="justify-content:space-between;align-items:flex-end"><div class="meter" id="kmt"></div><div class="row" id="kpb"></div></div>
+      <p class="small muted mt" id="khint"></p></div>
+      ${it.params?`<div class="card"><h3 style="margin-top:0">${esc(spec.paramsTitle||'Circuit parameters')}</h3><div class="small">${it.params}</div></div>`:''}</div>
+      <div><div class="card"><h3 style="margin-top:0">${esc(spec.selectLabel||'Select the circuit condition')}</h3><div class="faults" id="kopt" ${it.optionsCols?`style="grid-template-columns:repeat(auto-fill,minmax(${it.optionsCols}px,1fr))"`:''}></div>
+      <div class="row end mt"><button class="btn primary" id="kg">Grade item</button></div><div id="kfb"></div></div>
+      <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="klog"><span class="muted">${cost?`No readings yet. ${free} probe moves are free on this item; each move after that costs 1 point.`:'No readings yet. Measurements are free in this activity.'}</span></div></div></div></div>`);
+    body.appendChild(card);
+    const ko=$('#kopt',card);
+    opts.forEach((o,i)=>ko.appendChild(el(o.html?`<label style="flex-direction:column;align-items:flex-start"><span class="row" style="gap:8px"><input type="radio" name="kopt" value="${i}"> <span>${o.label}</span></span><span style="width:100%">${o.html}</span></label>`:`<label><input type="radio" name="kopt" value="${i}"> <span>${o.label}</span></label>`)));
+    // controls
+    const ctl=$('#kctl',card);
+    (it.controls||[]).forEach(c=>{const g=el(`<div class="row" style="gap:6px"><span class="small"><b>${esc(c.label)}</b></span>${c.options.map(v=>`<button class="btn sm" data-c="${c.id}" data-v="${esc(v)}">${esc(v)}</button>`).join('')}</div>`);ctl.appendChild(g);});
+    const paintCtl=()=>$$('[data-c]',card).forEach(b=>b.classList.toggle('blue',st[b.dataset.c]===b.dataset.v));
+    $$('[data-c]',card).forEach(b=>b.onclick=()=>{st[b.dataset.c]=b.dataset.v;paintCtl();draw();});
+    paintCtl();
+    // probe buttons
+    const pb=$('#kpb',card);
+    const both=!it.redFixed&&!it.blackFixed&&!it.pads.every(p=>p.side);
+    if(both){pb.innerHTML=`<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="kpr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="kpk">● Black probe</button>`;
+      $('#kpr',card).onclick=()=>setA('red');$('#kpk',card).onclick=()=>setA('black');}
+    const setA=a=>{pr.active=a;if(both){$('#kpr',card).classList.toggle('blue',a==='red');$('#kpk',card).classList.toggle('blue',a==='black');}};
+    setA(pr.active);
+    $('#khint',card).textContent=it.hint||(it.blackFixed?'Tap a test point to move the red probe. The black probe can\'t be moved in this activity.':both?'Tap a test point to move the active probe; the other probe becomes active next. Use the buttons to choose a probe.':'Tap a test point to move a probe.');
+    let cur=null;
+    const reading=()=>{
+      if(!pr.red||!pr.black)return null;
+      return it.measure(pr.red,pr.black,st);
+    };
+    const meterText=()=>{
+      if(it.meterOverride){const t=it.meterOverride(st,pr);if(t)return t;}
+      if(cur===null)return '- - - -';
+      return fmt(drift(cur));
+    };
+    tick=()=>{const l=$('.lcd',card);if(l&&cur!==null)l.textContent=meterText();};
+    const draw=()=>{
+      cur=reading();
+      const pads=it.pads.map(p=>{const r=pr.red===p.id,b=pr.black===p.id;
+        return `<g class="pad" data-id="${p.id}" tabindex="0" role="button" aria-label="Test point ${esc(p.label||p.id)}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="7.5" fill="#e6e6e6" stroke="#555" stroke-width="2"/><circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#444"/>${r?`<circle cx="${p.x}" cy="${p.y}" r="12" fill="none" stroke="#e53935" stroke-width="4"/><text x="${p.x+11}" y="${p.y-11}" fill="#e53935" font-weight="900" font-size="15">+</text>`:''}${b?`<circle cx="${p.x}" cy="${p.y}" r="${r?16:12}" fill="none" stroke="#111" stroke-width="4"/><circle cx="${p.x}" cy="${p.y}" r="${r?18:14}" fill="none" stroke="#fff" stroke-width="1.2"/><text x="${p.x-20}" y="${p.y-11}" fill="#111" stroke="#fff" stroke-width=".6" font-weight="900" font-size="17">−</text>`:''}<circle class="hit" cx="${p.x}" cy="${p.y}" r="17"/></g>`;}).join('');
+      $('#ksc',card).innerHTML=it.svg(st).replace(/<\/svg>$/,pads+'</svg>');
+      $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+      $('#kmt',card).innerHTML=`<div class="meterbox"><span class="ml">${esc(it.meterLabel||spec.meterLabel||'Meter')}</span><span class="lcd" style="min-width:9ch">${meterText()}</span></div>`;
+    };
+    const tap=id=>{
+      const p=it.pads.find(q=>q.id===id);
+      let which=p.side||(it.blackFixed?'red':it.redFixed?'black':pr.active);
+      if(which==='red'&&it.redFixed)return;if(which==='black'&&it.blackFixed)return;
+      if(pr[which]===id)return;
+      pr[which]=id;
+      if(!graded&&cost){moves++;if(moves>free)pts=Math.max(0,pts-cost);updP();}
+      if(both)setA(which==='red'?'black':'red');
+      draw();
+      if(pr.red&&pr.black){const nm=q=>{const pp=it.pads.find(z=>z.id===q);return pp&&pp.label||q;};
+        log.unshift(`<span style="color:#d32f2f">+${esc(nm(pr.red))}</span> / −${esc(nm(pr.black))}${it.controls?` <span class="muted">(${it.controls.map(c=>st[c.id]).join(', ')})</span>`:''}: <b>${meterText()}</b>`);
+        $('#klog',card).innerHTML=log.slice(0,14).join('<br>');}
+    };
+    draw();
+    $('#kg',card).onclick=()=>{
+      const btn=$('#kg',card);
+      if(graded){k++;if(k>=N)return end();return next();}
+      const c=$('input:checked',ko);
+      if(!c){CC.modal('<p>You did not select a circuit condition. Select one, then choose Grade item.</p>');return;}
+      graded=true;
+      const good=+c.value===it.answer;const got=good?pts:0;earned+=got;
+      $$('label',ko).forEach((lb,i)=>{if(i===it.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
+      $$('input',ko).forEach(x=>x.disabled=true);
+      $('#ks',w).textContent=`Score: ${earned}`;
+      $('#kfb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Right!':'Incorrect'}</p><p class="small">${good?`You earned ${got} point${got===1?'':'s'} on this item.`:`The correct answer is highlighted: <b>${opts[it.answer].label}</b>.`} Your total score so far is ${earned} point${earned===1?'':'s'}.</p><p class="small muted">Measurements can still be made until you choose Continue.</p>${it.explain?`<p class="small muted">${it.explain}</p>`:''}${CC.workHTML(typeof it.work==='function'?it.work():it.work,'Show how to find this fault')}`;
+      btn.textContent=k+1<N?'Continue':'Finish';
+    };
+  };
+  const end=()=>{tick=null;const max=N*P;s.finish(earned/max*100,`${earned} of ${max} possible points${cost?` (${free} free probe moves per item, then −${cost} point per move)`:''}.`);};
+  next();
+};
+
+/* ---------- wiring-diagram thumbnails for module activities ---------- */
+/** generic 4-in/4-out (or 2/2) module schematic. term coords given; segs: [{a,b,kind:'w'|'bat',v,label}] */
+K.moduleThumb=function(terms,segs,o={}){
+  const W=o.w||150,H=o.h||96;let g=`<rect x="34" y="6" width="${W-68}" height="${H-12}" rx="6" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
+  Object.entries(terms).forEach(([k,t])=>{const left=t[0]<W/2;g+=`<line x1="${left?6:W-34}" y1="${t[1]}" x2="${left?34:W-6}" y2="${t[1]}" stroke="${t[2]}" stroke-width="3"/><circle cx="${left?34:W-34}" cy="${t[1]}" r="2.5" fill="var(--ink)"/>`;});
+  segs.forEach(sg=>{
+    const pa=sg.pa||[terms[sg.a][0]<W/2?34:W-34,terms[sg.a][1]],pb=sg.pb||[terms[sg.b][0]<W/2?34:W-34,terms[sg.b][1]];
+    if(sg.kind==='w'||!sg.kind){g+=`<polyline points="${(sg.via?[pa,...sg.via,pb]:[pa,pb]).map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--ink)" stroke-width="1.8"/>`;}
+    else if(sg.kind==='bat'||sg.kind==='res'){
+      const at=sg.at??0.5,mx=pa[0]+(pb[0]-pa[0])*at,my=pa[1]+(pb[1]-pa[1])*at,ang=Math.atan2(pb[1]-pa[1],pb[0]-pa[0]);const L=Math.hypot(pb[0]-pa[0],pb[1]-pa[1]);
+      const deg=ang*180/Math.PI;
+      let sym;
+      // battery: long plate (positive) toward a when sg.plusA
+      const flip=sg.kind==='bat'&&!sg.plusA?180:0;
+      // leads run exactly from each terminal to the symbol (the symbol may sit off-center when at≠0.5)
+      const a0=flip?1-at:at,l1=-a0*L,l2=(1-a0)*L;
+      if(sg.kind==='bat')sym=`<line x1="${l1}" y1="0" x2="-4" y2="0"/><line x1="4" y1="0" x2="${l2}" y2="0"/><line x1="-4" y1="-9" x2="-4" y2="9" stroke-width="2.4"/><line x1="4" y1="-5" x2="4" y2="5" stroke-width="4"/>`;
+      else sym=`<line x1="${l1}" y1="0" x2="-12" y2="0"/><path d="M-12,0 l2,-5 4,10 4,-10 4,10 4,-10 4,10 2,-5" fill="none"/><line x1="12" y1="0" x2="${l2}" y2="0"/>`;
+      g+=`<g transform="translate(${mx},${my}) rotate(${deg+flip})" stroke="var(--ink)" stroke-width="1.8" fill="none">${sym}</g>`;
+      if(sg.label){const nx=-Math.sin(ang)*12,ny=Math.cos(ang)*12;g+=`<text x="${mx+nx}" y="${my+ny+4}" font-size="9" font-weight="700" fill="var(--brand)" text-anchor="middle">${esc(sg.label)}</text>`;}
+    }
+    else if(sg.kind==='dot'){g+=`<circle cx="${pa[0]}" cy="${pa[1]}" r="2.6" fill="var(--ink)"/>`;}
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="wiring diagram" style="max-width:100%;height:auto">${g}</svg>`;
+};
+
+/* ---------- part bench (front-page PC board practice, ungraded) ----------
+ spec: {meterLabel, unit, title, newBoard()->{svg(state), parts:[{id,label,x,y,w,h}], measure(partId,state)->number|{text}, options, answer, params, powered?:bool}, powerControl:bool}
+*/
+K.bench=function(root,s,spec){
+  let boards=0,right=0,meters=1;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="bn">PC board 1</span><span class="pill" id="br">Defects found: 0 of 0</span>${spec.powerControl?'<span class="pill" id="bm">Meters purchased: 1</span>':''}</div><div id="bbody"></div></div>`);
+  root.appendChild(w);
+  let tick=null;s.every(()=>{if(tick)tick();},700);
+  const next=()=>{
+    const b=spec.newBoard();CC._last=b;const st={power:spec.powerControl?'ON':'OFF',part:null,broken:false,checked:false};
+    const drift=spec.unit==='volt'?K.voltDrift():K.ohmDrift();const fmt=spec.unit==='volt'?K.fmtVolt:K.fmtOhm;
+    $('#bn',w).textContent=`PC board ${boards+1}`;
+    const body=$('#bbody',w);body.innerHTML='';
+    const card=el(`<div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title)}</h2><div class="board-wrap" id="bsc"></div>
+      <div class="row mt" style="justify-content:space-between;align-items:flex-end"><div class="meter" id="bmt"></div><div class="row" id="bctl"></div></div>
+      <p class="small muted mt">${spec.hint}</p></div></div>
+      <div><div class="card"><h3 style="margin-top:0">Select the defect</h3><div class="faults" id="bopt"></div><div class="row end mt"><button class="btn primary" id="bchk">Check selection</button><button class="btn" id="bnext">Next PC board</button></div><div id="bfb"></div></div>
+      <div class="card"><h3 style="margin-top:0">${esc(spec.paramsTitle||'Parameters')}</h3><div class="small">${b.params}</div></div></div></div>`);
+    body.appendChild(card);
+    b.options.forEach((o,i)=>$('#bopt',card).appendChild(el(`<label><input type="radio" name="bopt" value="${i}"> <span>${esc(o)}</span></label>`)));
+    const ctl=$('#bctl',card);
+    if(spec.powerControl){ctl.innerHTML=`<span class="small"><b>Battery</b></span><button class="btn sm" id="bon">ON</button><button class="btn sm" id="boff">OFF</button><button class="btn sm" id="bbuy">Buy new meter</button>`;
+      $('#bon',card).onclick=()=>{st.power='ON';draw();};$('#boff',card).onclick=()=>{st.power='OFF';draw();};
+      $('#bbuy',card).onclick=()=>{if(!st.broken){CC.toast('Your ohmmeter still works.');return;}st.broken=false;meters++;$('#bm',w).textContent='Meters purchased: '+meters;draw();};}
+    let cur=null;
+    const txt=()=>{if(st.broken)return 'BROKEN';if(cur===null)return '- - - -';if(typeof cur==='object')return cur.text;return fmt(drift(cur));};
+    tick=()=>{const l=$('.lcd',card);if(l&&!st.broken&&typeof cur==='number')l.textContent=txt();};
+    const draw=()=>{
+      if(spec.powerControl){$('#bon',card).classList.toggle('blue',st.power==='ON');$('#boff',card).classList.toggle('blue',st.power==='OFF');}
+      cur=st.part?b.measure(st.part,st):null;
+      $('#bsc',card).innerHTML=b.svg(st).replace(/<\/svg>$/,b.parts.map(p=>`<g class="pad" data-p="${p.id}" tabindex="0" role="button" aria-label="Measure ${esc(p.label)}"><rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="6" fill="${st.part===p.id?'rgba(31,95,168,.18)':'transparent'}" stroke="${st.part===p.id?'#1f5fa8':'transparent'}" stroke-width="2"/></g>`).join('')+'</svg>');
+      $$('[data-p]',card).forEach(g=>{const f=()=>{st.part=g.dataset.p;if(spec.powerControl&&st.power==='ON'&&!st.broken){st.broken=true;CC.toast('The ohmmeter was destroyed by testing a powered circuit! Turn the battery OFF and buy a new meter.',3800);}draw();};g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+      $('#bmt',card).innerHTML=`<div class="meterbox" style="${st.broken?'background:#5a2a22':''}"><span class="ml">${esc(spec.meterLabel)}</span><span class="lcd" style="min-width:9ch;${st.broken?'background:#4b3b33;color:#ff9b8a':''}">${txt()}</span></div>`;
+    };
+    draw();
+    $('#bchk',card).onclick=()=>{if(st.checked)return;const c=$('input:checked',card);if(!c){CC.toast('Select a defect first.');return;}st.checked=true;boards++;const good=+c.value===b.answer;if(good)right++;
+      $$('#bopt label',card).forEach((lb,i)=>{if(i===b.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
+      $('#bfb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Correct!':'Incorrect'}</p>${good?'':`<p class="small">The answer is <b>${esc(b.options[b.answer])}</b>.</p>`}`;
+      $('#br',w).textContent=`Defects found: ${right} of ${boards}`;};
+    $('#bnext',card).onclick=()=>next();
+  };
+  next();
+};
+})();
+
+</script>
+<script>(function(){
+'use strict';
+const {fmt,pick,rnd,ri,shuffle,eVal,m,M,esc}=CC;
+const K=CC.kit,D=K.draw;
+const fo=v=>K.fmtOhm(v).replace('∞','∞ (open)');
+
+/* ---------------- lesson text ---------------- */
+const TXT={
+ohmmeters:`<p>An <b>ohmmeter</b> measures resistance, in ohms (Ω). Resistance tells you how hard it is for current to flow: at the same voltage, an 8 Ω part passes half the current of a 4 Ω part.</p>
+<p>Two kinds of reading do most of the work when you troubleshoot:</p>
+<ul><li><b>About 0 Ω</b>: a good wire, a closed switch, a good fuse, or a <b>short circuit</b> (two conductors touching that should be kept apart).</li>
+<li><b>Infinite resistance</b>: an <b>open circuit</b>, such as a broken wire, a blown fuse, an open switch or a burned-out part. Meters show this as <span class="kbd">OL</span>, <span class="kbd">∞</span> or a lone <span class="kbd">1</span>. The meter in this program shows <span class="kbd">∞</span>.</li></ul>
+<p>The meter's own battery pushes a small test current through whatever is between the probes. The meter measures that current and works out the resistance. <b>So the circuit must be unpowered.</b> Any outside voltage, even a small battery or a charged capacitor, makes the reading meaningless and can damage the meter. Switch the power off, disconnect the battery and discharge capacitors before you measure.</p>
+<p>The meter reads everything connected between its probes, not just the part you're looking at. If a part is still wired into a circuit, other parts in parallel or in series show up in the reading. In these activities you'll often measure a path through several parts and work out which one is bad.</p>
+<p>Most of the time an ohmmeter is one function of a digital multimeter (DMM), picked with the range switch.</p>
+<h3>Ohm's law</h3><p>One ohm is the resistance that lets 1 ampere flow when 1 volt is applied:</p>${M('R=\\frac{V}{I}')}
+<p>where ${m('R')} is resistance in ohms, ${m('V')} is voltage in volts and ${m('I')} is current in amperes. For example, ${m('R=\\frac{0.5\\,\\text{V}}{0.05\\,\\text{A}}=10\\,\\Omega')}. The symbol Ω (capital omega) means ohms, so 4.5 Ω is 4.5 ohms.</p>`,
+purpose:`<p>A digital ohmmeter's numbers are easy to read, but what do they tell you about the circuit? These activities let you practice reading resistance in context. Each one is a simulated lab bench: you move the probes, read the meter and decide what's wrong. Every activity picks new values and faults each time you run it, so you can practice as often as you like without memorizing answers. You get immediate feedback, and the correct answer is shown when you miss one.</p>
+<p>These skills apply to electronics, electrical, automotive and HVAC work, and to any job that uses an ohmmeter.</p>
+<h3>The activities</h3>
+<p><b>Open Circuits One and Two</b>: find open (broken) wires in a conduit or wiring harness. Any combination of the three wires may be open.</p>
+<p><b>Short Circuits One and Two</b>: find wires that are shorted together inside a conduit.</p>
+<p><b>Wire Testing One and Two</b>: shorts and opens can both be present. Find the exact fault.</p>
+<p><b>Circuit Tracing One and Two</b>: use resistance readings to work out the internal wiring of an unmarked module. Several wiring patterns look alike, so measure carefully.</p>
+<p><b>Troubleshooting One and Two</b>: test a PC board with a switch, a lamp, a resistor and a fuse. Faults can also be open copper traces.</p>
+<p><b>Troubleshooting Three and Four</b>: test a PC board with a switch, a relay, a diode, a resistor and an inductor. The parts can only be reached in series pairs, so you'll need to reason about which part is bad.</p>
+<p>In each pair, the "Two" (or "Four") version is the same activity with stricter scoring: only a set number of probe moves are free, and each extra move costs a point.</p>`,
+using:`<h3>How the program works</h3><p>Pick an activity from the main menu. Each one starts with a short introduction to the ideas you need. Choose <b>Begin</b> when you're ready.</p>
+<p>In an activity, tap a test point to move a meter probe there (red = +, black = −). Like a real digital meter, the simulated meter has a small calibration error (up to about ±2%) and its last digit flickers a little. The program times each activity.</p>
+<p>When you finish, you'll see your score. If you're signed in with a name and ID you can print a certificate with your name, ID, date, time on task, score and a validity code that lets an instructor check the certificate hasn't been altered.</p>`,
+bench:`<p>Practice testing parts on a small PC board. It isn't graded, so it also works well as a classroom demonstration.</p>
+<p>Tap a part to connect the ohmmeter probes across it. Compare each reading with the parameter list. Exactly one part on each board is defective: a resistor can be open or out of tolerance, the fuse can be blown, or the inductor can be open. Select the defect, then choose <b>Check selection</b>. Choose <b>Next PC board</b> for a new board.</p>
+<p><b>Watch out:</b> each new board starts with its two D cells connected (power ON). Connecting an ohmmeter to a powered circuit destroys the meter. Choose <b>OFF</b> to disconnect the battery before you measure. If you forget, you'll have to buy a new meter. The program counts how many you buy.</p>
+<p>With the battery disconnected, the series loop is broken, so each part reads its own resistance.</p>`,
+open1:`<p>A circuit is a complete path for current. An <b>open circuit</b> has a break somewhere in that path. A switch makes an open on purpose: close it and the lamp lights; open it and current stops (figure 1). A broken wire makes an open by accident. A conductor can break inside its insulation and still look perfect from the outside, so you need a meter to find it.</p>
+<h3>Finding an open with an ohmmeter</h3><p>Measure each wire from one end to the other. A good wire reads a fraction of an ohm, even a long one. The longest wires in a car measure well under 1 Ω. An open wire reads infinite resistance, shown as <span class="kbd">∞</span> on this meter (other meters show <span class="kbd">OL</span> or a lone <span class="kbd">1</span>).</p>`,
+short1:`<p>A <b>short circuit</b> is a near-zero-resistance path between two conductors that should be separate. A short lets current bypass the load: the load gets no current while a very large current flows from the source. Shorts are dangerous because they cause overheating and fires, which is why circuits have fuses and circuit breakers.</p>
+<h3>Finding a short with an ohmmeter</h3><p>Measure between two wires at the same end of the conduit. Wires that are properly insulated from each other read infinite resistance (<span class="kbd">∞</span>). Wires that are shorted together read near 0 Ω: the resistance of the two wire sections plus the short.</p>
+<p><b>Tip:</b> three wires make three pairs (red–purple, red–green, purple–green). Check every pair. "All three wires shorted together" shows near 0 Ω on all three pairs.</p>`,
+wire1:`<p><b>Opens:</b> measure each wire end to end. A good wire reads a fraction of an ohm; an open wire reads <span class="kbd">∞</span>.</p>
+<p><b>Shorts:</b> measure between pairs of wires. Separate wires read <span class="kbd">∞</span>; shorted wires read near 0 Ω.</p>
+<p>You need both kinds of test for every situation. Plan the order so each probe move gives you new information. For example, after measuring a wire end to end, leave one probe where it is and move the other to the next wire.</p>`,
+trace:`<p>A batch of wiring modules was built without type labels. Each module has four wires entering on the left and four leaving on the right (figure 1). Your job is to use the ohmmeter to identify each module's type.</p>
+<p>There are ten types, A through J, and each is wired a little differently. Some route a wire straight across, some swap wires, some leave a wire unconnected, and some add a jumper that ties two wires together inside the module. A connected route reads a fraction of an ohm. Wires with no connection read <span class="kbd">∞</span>.</p>
+<p><b>Watch for jumpers.</b> When two left-side wires are jumpered, each of them connects to both of their right-side wires, and the two left wires read near 0 Ω to each other. Always check left-to-left as well as left-to-right.</p>
+<p>Sketch the module and write down each reading as you go so you don't repeat measurements.</p>`,
+ts1:`<p>The red probe goes on pad A, B or C; the black probe on pad D, E or F. That gives nine probe positions. Here's what each one tests.</p>
+<table class="t small"><thead><tr><th>Probes</th><th>Path measured</th><th>Normal reading</th></tr></thead><tbody>
+<tr><td>A–F</td><td>SW1, fuse</td><td>fuse resistance (fraction of an ohm) with SW1 ON; ∞ with SW1 OFF</td></tr>
+<tr><td>A–E</td><td>SW1, trace 2</td><td>near 0 Ω with SW1 ON; ∞ with SW1 OFF</td></tr>
+<tr><td>A–D</td><td>SW1, trace 2, lamp</td><td>lamp resistance (about 10 Ω) with SW1 ON; ∞ with SW1 OFF</td></tr>
+<tr><td>B–F</td><td>trace 3, fuse</td><td>fuse resistance</td></tr>
+<tr><td>B–E</td><td>trace 3, trace 2</td><td>near 0 Ω</td></tr>
+<tr><td>B–D</td><td>trace 3, trace 2, lamp</td><td>lamp resistance</td></tr>
+<tr><td>C–F</td><td>R1, fuse</td><td>R1 + fuse</td></tr>
+<tr><td>C–E</td><td>R1, trace 2</td><td>R1 (traces are near 0 Ω)</td></tr>
+<tr><td>C–D</td><td>R1, trace 2, lamp</td><td>R1 + lamp</td></tr></tbody></table>
+<p><b>Reading the results.</b> Any open part in a series path makes the whole path read ∞, so one ∞ reading only tells you that <i>some</i> part of that path is open. Find a second path that shares just one of those parts. For example, if A–D reads ∞ but A–E is normal, the switch and trace 2 are fine, so the lamp is open.</p>
+<p><b>The switch:</b> test it in both positions. A switch that reads ∞ when ON is stuck open. A switch that reads near 0 Ω when OFF is stuck closed.</p>
+<p><b>The resistor:</b> use C–E, which adds only a near-zero trace to R1. R1 is good if it reads within ±10% of its marked value. Below 90% is "below tolerance"; above 110% is "above tolerance". Through C–D you'd have to subtract the lamp resistance first.</p>
+<p><b>Common mistakes:</b> deciding too quickly from one ∞ reading, forgetting to try SW1 in both positions, and missing an out-of-tolerance resistor because the reading "looks about right". Work out the actual ±10% limits.</p>`,
+ts3:`<p>This PC board has a switch, a relay, a diode, a resistor and an inductor. The ohmmeter has a <b>Diode Test</b> setting and a <b>polarity switch</b> that swaps which probe is positive.</p>
+<h3>Testing each part</h3>
+<p><b>Switch</b>: near 0 Ω when ON, ∞ when OFF.</p>
+<p><b>Relay</b>: the coil and the contacts are tested separately. The coil should read close to its rated resistance. With the relay not energized (it can't be energized during an ohmmeter test), <b>normally open</b> contacts read ∞ and <b>normally closed</b> contacts read near 0 Ω. Contacts that read the opposite way are defective.</p>
+<p><b>Diode</b>: a diode conducts in one direction only, from anode to cathode. The banded end is the cathode. A silicon diode conducts only when its anode is about 0.6 to 0.7 V more positive than its cathode. On the ordinary Ohms setting the meter's test voltage is too low to turn the diode on, so a good diode reads ∞ both ways. The <b>Diode Test</b> setting uses a higher test voltage. A good diode then conducts when the meter's <b>+</b> lead is on the anode and <b>−</b> is on the cathode, and reads ∞ the other way. A shorted diode reads near 0 Ω both ways. An open diode reads ∞ both ways.</p>
+<p>The resistance of a conducting diode isn't a fixed value. It depends on the current: a few hundred ohms at a few milliamps, falling to a fraction of an ohm at several amps. This simulated meter shows that forward resistance in Diode Test mode. Many real meters show the forward voltage instead (about 0.5 to 0.7 V for a good silicon diode).</p>
+<p><b>Resistor</b>: within ±10% of its marked value.</p>
+<p><b>Inductor</b>: an inductor is a coil of insulated wire, and an ohmmeter reads the resistance of that wire. That can be a fraction of an ohm or thousands of ohms, depending on the number of turns and the wire size. Here it should be close to the listed value. ∞ means the winding is open.</p>
+<h3>The nine probe positions</h3>
+<p>Pads A, B and C each reach the center junction through one part (switch, diode, resistor). Pads D, E and F each reach it through one part (relay coil, relay contacts, inductor). So every reading is two parts in series.</p>
+<table class="t small"><thead><tr><th>Probes</th><th>Path measured</th><th>Normal reading</th></tr></thead><tbody>
+<tr><td>A–D</td><td>switch, relay coil</td><td>coil resistance with switch ON; ∞ with switch OFF</td></tr>
+<tr><td>A–E</td><td>switch, contacts</td><td>NC: near 0 Ω with switch ON. NO: ∞. Always ∞ with switch OFF</td></tr>
+<tr><td>A–F</td><td>switch, inductor</td><td>inductor resistance with switch ON; ∞ with switch OFF</td></tr>
+<tr><td>B–D, B–E, B–F</td><td>diode + coil / contacts / inductor</td><td>∞ on Ohms. On Diode Test with <b>+</b> on black (the probe on the anode side): diode forward resistance plus the other part. ∞ with <b>+</b> on red</td></tr>
+<tr><td>C–D</td><td>resistor, coil</td><td>resistor + coil</td></tr>
+<tr><td>C–E</td><td>resistor, contacts</td><td>NC: resistor alone. NO: ∞</td></tr>
+<tr><td>C–F</td><td>resistor, inductor</td><td>resistor + inductor</td></tr></tbody></table>
+<p><b>Strategy:</b> the diode can only be tested in series with a good part, so check the coil or inductor first (through A or C). A diode-test reading that is "low" should still be clearly higher than the other part alone. If it equals the coil or inductor resistance, the diode is shorted. To check the resistor, subtract the coil or inductor resistance from C–D or C–F, or read C–E directly when the contacts are normally closed.</p>
+<p><b>Common mistakes:</b> calling the diode open after testing it only on the Ohms setting, forgetting to try both polarities, and forgetting the switch in both positions.</p>`
+};
+const HOW={
+  wire:(cost,free)=>`<p>The three wires run through a metal conduit, drawn shortened here. The real conduit could be several meters long. Tap a wire end to move the active probe there. Use the <b>Red probe</b> and <b>Black probe</b> buttons to choose which probe moves. Then select the condition that matches your readings and choose <b>Grade item</b>. You can change your selection until you grade. You can keep measuring after grading until you choose <b>Continue</b>.</p>`+K.scoreHow({points:10,free:cost?free:null}),
+  board:(cost,free)=>`<p>The red probe goes on pads A, B or C and the black probe on pads D, E or F. Tap a pad to move the probe for that side. Use the buttons under the board to operate the switch${cost===3?', choose the meter setting and set the polarity':''}. These don't count as probe moves. New part values are chosen for every item.</p>`+K.scoreHow({points:10,free:cost?free:null})
+};
+
+/* ---------------- conduit wire activities ---------------- */
+const WCOL=['#e53935','#9c27b0','#2e9e3e'],WNAME=['Red','Purple','Green'];
+const OPEN_OPTS=[['All wires good',[],[]],['Red wire open',[0],[]],['Purple wire open',[1],[]],['Green wire open',[2],[]],['Red and purple wires open',[0,1],[]],['Red and green wires open',[0,2],[]],['Purple and green wires open',[1,2],[]],['All three wires open',[0,1,2],[]]];
+const SHORT_OPTS=[['No shorted wires',[],[]],['Red shorted to purple',[],[[0,1]]],['Red shorted to green',[],[[0,2]]],['Purple shorted to green',[],[[1,2]]],['All three wires shorted together',[],[[0,1],[1,2]]]];
+const WIRE_OPTS=[['All wires good',[],[]],['Red wire open',[0],[]],['Purple wire open',[1],[]],['Green wire open',[2],[]],['Red shorted to purple',[],[[0,1]]],['Red shorted to green',[],[[0,2]]],['Purple shorted to green',[],[[1,2]]],['All three wires shorted together',[],[[0,1],[1,2]]],['Red open, purple shorted to green',[0],[[1,2]]],['Purple open, red shorted to green',[1],[[0,2]]],['Green open, red shorted to purple',[2],[[0,1]]]];
+const YW=[60,110,160];
+function conduitSvg(){
+  let g=`<defs><linearGradient id="cdg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f4f4"/><stop offset=".45" stop-color="#9a9a9a"/><stop offset="1" stop-color="#4a4a4a"/></linearGradient></defs>`;
+  WCOL.forEach((c,i)=>{const y=YW[i];g+=D.wire([[40,y],[120,y],[175,110+(y-110)*0.45],[345,110+(y-110)*0.45],[400,y],[480,y]],c);
+    g+=D.text(62,y-11,WNAME[i],{anchor:'start',size:11,fill:'var(--ink2)'})+D.text(458,y-11,WNAME[i],{anchor:'end',size:11,fill:'var(--ink2)'});});
+  g+=`<rect x="170" y="70" width="180" height="80" rx="12" fill="url(#cdg)" stroke="#444"/><text x="260" y="182" font-size="11" text-anchor="middle" fill="var(--ink2)">metal conduit (shortened for display)</text>`;
+  return D.svg(540,200,g);
+}
+function wireItem(optList,force){
+  const ans=force??ri(0,optList.length-1);const [label,opens,shorts]=optList[ans];
+  const E=[];
+  [0,1,2].forEach(i=>{const r=rnd(0.15,0.9);const breakLeft=Math.random()<0.5;const open=opens.includes(i);
+    E.push({t:'R',a:'L'+i,b:'M'+i,r:open&&breakLeft?Infinity:r/2},{t:'R',a:'M'+i,b:'R'+i,r:open&&!breakLeft?Infinity:r/2});});
+  shorts.forEach(([a,b])=>E.push({t:'R',a:'M'+a,b:'M'+b,r:rnd(0.03,0.2)}));
+  const pads=[];[0,1,2].forEach(i=>{pads.push({id:'L'+i,x:42,y:YW[i],label:WNAME[i]+' left'},{id:'R'+i,x:478,y:YW[i],label:WNAME[i]+' right'});});
+  const meas=(r,b)=>K.ohms(E,r,b);
+  const work=()=>{
+    const rows=[];
+    [0,1,2].forEach(i=>{const v=meas('L'+i,'R'+i);rows.push(`<tr><td>${WNAME[i]} left → ${WNAME[i]} right</td><td>${fo(v)}</td><td>${isFinite(v)?'continuous':'<b>open</b>'}</td></tr>`);});
+    // pair tests: use whichever end shows the short (an open wire can hide a short at one end)
+    [[0,1],[0,2],[1,2]].forEach(([a,b])=>{const vl=meas('L'+a,'L'+b),vr=meas('R'+a,'R'+b);const v=Math.min(vl,vr);const end=vl<=vr?'left':'right';
+      rows.push(`<tr><td>${WNAME[a]} ${end} → ${WNAME[b]} ${end}</td><td>${fo(v)}</td><td>${isFinite(v)?'<b>shorted</b>':'separate'}</td></tr>`);});
+    return [`>Key readings for this item (no meter error shown):`,`><table class="t small"><thead><tr><th>Probes</th><th>Reading</th><th>Meaning</th></tr></thead><tbody>${rows.join('')}</tbody></table>`,
+      `>A good wire reads a fraction of an ohm end to end, and two separate wires read ∞ between them. These readings match <b>${esc(label)}</b>.`];};
+  return {svg:conduitSvg,pads,options:optList.map(o=>o[0]),answer:ans,unit:'ohm',measure:meas,work,
+    explain:'Each good wire measures a fraction of an ohm end to end; an open wire measures ∞. Two separate wires measure ∞ between them; shorted wires measure near 0 Ω.'};
+}
+const FREE={open2:6,short2:4,wire2:8,trace2:10,ts2:8,ts4:10};
+const wireAct=(opts,id)=>(el,s)=>K.lab(el,s,{count:10,points:10,moveCost:id?1:0,free:id?FREE[id]:0,meterLabel:'Ohmmeter',itemWord:'Situation',build:()=>wireItem(opts)});
+
+/* ---------------- circuit tracing modules ---------------- */
+const MCOL=['#d63fd6','#2f7de1','#e53935','#2eae3e'];
+const TYPES={A:{w:[[0,0],[1,1],[2,2],[3,3]],j:[]},B:{w:[[0,1],[1,0],[2,2],[3,3]],j:[]},C:{w:[[0,0],[1,1],[2,3],[3,2]],j:[]},D:{w:[[0,3],[1,2],[2,1],[3,0]],j:[]},
+  E:{w:[[0,0],[1,1],[2,2],[3,3]],j:[[0,1]]},F:{w:[[0,0],[1,1],[2,2],[3,3]],j:[[2,3]]},G:{w:[[0,1],[1,0],[2,3],[3,2]],j:[]},H:{w:[[0,0],[1,2],[2,1],[3,3]],j:[]},
+  I:{w:[[0,0],[1,1],[3,3]],j:[]},J:{w:[[0,0],[1,1],[2,2],[3,3]],j:[[1,2]]}};
+K.traceTypes=TYPES;
+const MY=[50,90,130,170];
+function traceThumb(t){
+  const T=TYPES[t],ys=[16,36,56,76];let g=`<rect x="30" y="4" width="90" height="84" rx="6" fill="none" stroke="var(--ink2)" stroke-dasharray="3 3"/>`;
+  ys.forEach((y,i)=>{g+=`<line x1="4" y1="${y}" x2="30" y2="${y}" stroke="${MCOL[i]}" stroke-width="3"/><line x1="120" y1="${y}" x2="146" y2="${y}" stroke="${MCOL[i]}" stroke-width="3"/>`;});
+  T.w.forEach(([a,b])=>{g+=`<polyline points="30,${ys[a]} 46,${ys[a]} 104,${ys[b]} 120,${ys[b]}" fill="none" stroke="var(--ink)" stroke-width="1.8"/>`;});
+  T.j.forEach(([a,b])=>{g+=`<line x1="40" y1="${ys[a]}" x2="40" y2="${ys[b]}" stroke="var(--ink)" stroke-width="1.8"/><circle cx="40" cy="${ys[a]}" r="2.6" fill="var(--ink)"/><circle cx="40" cy="${ys[b]}" r="2.6" fill="var(--ink)"/>`;});
+  return `<svg viewBox="0 0 150 92" width="150" height="92" role="img" aria-label="Type ${t} wiring" style="max-width:100%;height:auto">${g}</svg>`;
+}
+function moduleSvg(){
+  let g='';MCOL.forEach((c,i)=>{g+=D.wire([[40,MY[i]],[200,MY[i]]],c)+D.wire([[320,MY[i]],[480,MY[i]]],c);});
+  g+=`<defs><linearGradient id="mdg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f3c99a"/><stop offset=".5" stop-color="#c9864a"/><stop offset="1" stop-color="#7a4a22"/></linearGradient></defs><rect x="196" y="22" width="128" height="176" rx="10" fill="url(#mdg)" stroke="#5a3515" stroke-width="2"/><text x="260" y="115" font-size="12" font-weight="800" fill="#4a2a10" text-anchor="middle">MODULE</text><text x="260" y="131" font-size="10" fill="#4a2a10" text-anchor="middle">type ?</text>`;
+  ['1','2','3','4'].forEach((n,i)=>{g+=D.text(22,MY[i]+4,n,{size:11,fill:'var(--ink2)'})+D.text(498,MY[i]+4,n,{size:11,fill:'var(--ink2)'});});
+  return D.svg(520,220,g);
+}
+function traceItem(force){
+  const keys=Object.keys(TYPES);const ans=force??ri(0,9);const T=TYPES[keys[ans]];
+  const E=[];T.w.forEach(([a,b])=>E.push({t:'R',a:'L'+a,b:'R'+b,r:rnd(0.1,0.5)}));T.j.forEach(([a,b])=>E.push({t:'R',a:'L'+a,b:'L'+b,r:rnd(0.05,0.15)}));
+  const pads=[];[0,1,2,3].forEach(i=>pads.push({id:'L'+i,x:40,y:MY[i],label:'Left '+(i+1)},{id:'R'+i,x:480,y:MY[i],label:'Right '+(i+1)}));
+  const meas=(r,b)=>K.ohms(E,r,b);
+  const work=()=>{const rows=[0,1,2,3].map(i=>{const to=[0,1,2,3].filter(j=>isFinite(meas('L'+i,'R'+j))).map(j=>`Right ${j+1} (${K.fmtOhm(meas('L'+i,'R'+j))})`);
+      const jl=[0,1,2,3].filter(j=>j!==i&&isFinite(meas('L'+i,'L'+j))).map(j=>`Left ${j+1}`);
+      return `<tr><td>Left ${i+1}</td><td>${to.length?to.join(', '):'nothing (∞ to every right wire)'}</td><td>${jl.length?jl.join(', '):'none'}</td></tr>`;}).join('');
+    return [`>Connections found by measuring each left wire to every right wire and to the other left wires:`,`><table class="t small"><thead><tr><th>From</th><th>Reads low to</th><th>Also low to</th></tr></thead><tbody>${rows}</tbody></table>`,
+      `>Only <b>Type ${keys[ans]}</b> has exactly this pattern.${T.j.length?' A left wire that reads low to two right wires (and to another left wire) gives away the jumper.':''}${keys[ans]==='I'?' Left 3 and Right 3 read ∞ to everything: that route is not connected.':''}`];};
+  return {svg:moduleSvg,pads,unit:'ohm',measure:meas,answer:ans,optionsCols:150,work,
+    options:keys.map(k=>({label:'Type '+k,html:traceThumb(k)})),explain:'Connected routes measure a fraction of an ohm; unconnected wires measure ∞.'};
+}
+const traceAct=id=>(el,s)=>K.lab(el,s,{count:10,points:10,moveCost:id?1:0,free:id?FREE[id]:0,meterLabel:'Ohmmeter',itemWord:'Module',selectLabel:'Select a wiring diagram',build:()=>traceItem()});
+
+/* ---------------- troubleshooting boards ---------------- */
+const PCB=(w,h,inner)=>D.svg(w,h,`<rect x="6" y="6" width="${w-12}" height="${h-12}" rx="10" fill="#1d7a3a" stroke="#0e4a22" stroke-width="3"/>`+[[22,22],[w-22,22],[22,h-22],[w-22,h-22]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="#f5f5f5"/>`).join('')+inner);
+const tr=(pts)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="#f3c7a0" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>`;
+const pad=(x,y)=>`<circle cx="${x}" cy="${y}" r="6" fill="#f7e9d8" stroke="#c9a27a"/>`;
+const swBody=(x,y,on)=>`<rect x="${x}" y="${y}" width="96" height="44" rx="4" fill="#b5402b" stroke="#6a2216"/><rect x="${x+38}" y="${y-18}" width="20" height="20" rx="3" fill="#555"/><rect x="${on?x+8:x+50}" y="${y+6}" width="38" height="18" rx="3" fill="#7a2416"/><text x="${x+24}" y="${y+19}" font-size="11" font-weight="800" fill="${on?'#fff':'#f0b0a0'}" text-anchor="middle">ON</text><text x="${x+72}" y="${y+19}" font-size="11" font-weight="800" fill="${on?'#f0b0a0':'#fff'}" text-anchor="middle">OFF</text>`;
+const PL=(x,y,t)=>D.text(x,y,t,{size:15,fill:'#fff',w:800});
+const TS1_OPTS=['F1, Fuse Blown','L1, Lamp Defective','R1, Resistor Below Tolerance','R1, Resistor Above Tolerance','R1, Resistor Open','SW1, Switch Always Open','SW1, Switch Always Closed','Trace 2 Open','Trace 3 Open','No Defect'];
+const TS1_WHY=['Every path through the fuse (A–F with SW1 ON, B–F, C–F) reads ∞, but B–E and C–E are normal. The fuse is the only part those paths share.',
+  'Every path to pad D reads ∞, but the same paths to pad E are normal. Only the lamp lies between E and D.',
+  'C–E (R1 plus a near-zero trace) is below 90% of the marked value.',
+  'C–E (R1 plus a near-zero trace) is above 110% of the marked value.',
+  'Every path from pad C reads ∞, while paths from A and B are normal.',
+  'Every path from pad A reads ∞ even with SW1 ON, while paths from B and C are normal.',
+  'Paths from pad A read low even with SW1 OFF.',
+  'Every path to pads E and D reads ∞, but A–F, B–F and C–F are normal. Trace 2 is common to every E and D path.',
+  'Every path from pad B reads ∞, while A–F (SW1 ON) and C–F are normal.',
+  'Every reading is normal: the switch works in both positions, the lamp is about 10 Ω, the fuse reads a fraction of an ohm and R1 is within ±10%.'];
+const P1={A:[40,150],B:[40,210],C:[40,270],D:[500,85],E:[500,150],F:[500,210]};
+function board1Svg(st){
+  const on=st.sw==='ON';
+  let g=tr([P1.A,[200,150]])+tr([[296,150],[500,150]])+tr([[296,150],[296,270]])+tr([P1.B,[296,210]])+tr([[296,210],[340,210]])+tr([[440,210],P1.F])+tr([P1.C,[90,270]])+tr([[200,270],[296,270]])+tr([[440,85],P1.D])+tr([[400,150],[400,110]]);
+  g+=pad(200,150)+pad(296,150)+pad(90,270)+pad(200,270)+pad(340,210)+pad(440,210)+pad(400,150)+pad(440,85)+pad(296,210)+pad(296,270);
+  g+=`<line x1="200" y1="150" x2="200" y2="114" stroke="#bbb" stroke-width="3"/><line x1="296" y1="150" x2="296" y2="114" stroke="#bbb" stroke-width="3"/>`+swBody(200,70,on)+D.text(250,58,'SW1',{fill:'#fff',size:12});
+  g+=`<line x1="400" y1="110" x2="410" y2="70" stroke="#bbb" stroke-width="2"/><line x1="440" y1="85" x2="425" y2="70" stroke="#bbb" stroke-width="2"/><path d="M405,72 a16,20 0 1 1 26,0 l-4,10 h-18z" fill="#fffbe3" stroke="#bbb"/>`+D.text(370,64,'Lamp L1',{fill:'#fff',size:12});
+  g+=D.part('F',[340,210],[440,210],'F1',{labelFill:'#fff'})+D.part('Rc',[90,270],[200,270],'R1',{labelFill:'#fff',labelAbove:true});
+  g+=D.text(120,140,'Trace 1',{fill:'#fff',size:12})+D.text(350,140,'Trace 2',{fill:'#fff',size:12})+D.text(150,200,'Trace 3',{fill:'#fff',size:12});
+  ['A','B','C'].forEach(k=>g+=PL(P1[k][0]-2,P1[k][1]-14,k));['D','E','F'].forEach(k=>g+=PL(P1[k][0]+2,P1[k][1]-14,k));
+  return PCB(540,300,g);
+}
+const tolLine=(Rm,v)=>{const lo=0.9*Rm,hi=1.1*Rm;return `>C–E reads ${fo(v)}. R1 is marked ${fmt(Rm)} Ω ± 10%, so a good R1 reads between ${fmt(lo)} Ω and ${fmt(hi)} Ω${isFinite(v)?` (this one is ${fmt(v/Rm*100,3)}% of the marked value)`:''}.`;};
+function board1Item(force){
+  const ans=force??ri(0,9),f=TS1_OPTS[ans];
+  const Rm=eVal(22,4700),lamp=+rnd(9,11).toFixed(2),fuseR=rnd(0.05,0.3);
+  // a good resistor is kept well inside ±10% so that meter error can't push it across a limit
+  let Ra=Rm*rnd(0.95,1.05);if(f.includes('Below'))Ra=Rm*rnd(0.6,0.84);if(f.includes('Above'))Ra=Rm*rnd(1.16,1.5);if(f.includes('Resistor Open'))Ra=Infinity;
+  const net=st=>{const on=st.sw==='ON';let sw=(on&&!f.includes('Always Open'))||f.includes('Always Closed')?0.02:Infinity;
+    return [{t:'R',a:'A',b:'N',r:sw},{t:'R',a:'N',b:'M',r:0.01},{t:'R',a:'N',b:'E',r:f==='Trace 2 Open'?Infinity:0.02},{t:'R',a:'E',b:'D',r:f.startsWith('L1')?Infinity:lamp},
+      {t:'R',a:'B',b:'M',r:f==='Trace 3 Open'?Infinity:0.02},{t:'R',a:'M',b:'F',r:f.startsWith('F1')?Infinity:fuseR},{t:'R',a:'C',b:'M',r:Ra}];};
+  const pads=['A','B','C'].map(k=>({id:k,x:P1[k][0],y:P1[k][1],label:k,side:'red'})).concat(['D','E','F'].map(k=>({id:k,x:P1[k][0],y:P1[k][1],label:k,side:'black'})));
+  const meas=(r,b,st)=>K.ohms(net(st),r,b);
+  const work=()=>{const on={sw:'ON'},off={sw:'OFF'};
+    const rows=[['A','F'],['A','E'],['A','D']].map(([a,b])=>`<tr><td>${a}–${b}</td><td>${fo(meas(a,b,on))}</td><td>${fo(meas(a,b,off))}</td></tr>`).join('')+
+      [['B','F'],['B','E'],['B','D'],['C','F'],['C','E'],['C','D']].map(([a,b])=>`<tr><td>${a}–${b}</td><td colspan="2">${fo(meas(a,b,on))}</td></tr>`).join('');
+    return ['>Readings for this board (no meter error shown):',`><table class="t small"><thead><tr><th>Probes</th><th>SW1 ON</th><th>SW1 OFF</th></tr></thead><tbody>${rows}</tbody></table>`,tolLine(Rm,meas('C','E',on)),`><b>${esc(f)}</b>: ${TS1_WHY[ans]}`];};
+  return {svg:board1Svg,pads,unit:'ohm',options:TS1_OPTS,answer:ans,controls:[{id:'sw',label:'SW1',options:['ON','OFF'],value:pick(['ON','OFF'])}],work,
+    measure:meas,hint:'The red probe goes on pad A, B or C and the black probe on pad D, E or F. Tap a pad to move that probe. Use the ON and OFF buttons to operate the switch.',
+    params:`<table class="t"><tr><td>R1 resistor</td><td><b>${CC.fmt(Rm)} Ω ± 10%</b></td></tr><tr><td>L1 lamp (cold)</td><td><b>10 Ω</b></td></tr><tr><td>F1 fuse</td><td>a fraction of an ohm</td></tr><tr><td>Traces</td><td>near 0 Ω</td></tr></table>`};
+}
+const TS3_OPTS=['SW1, Switch Always Open','SW1, Switch Always Closed','Relay Coil Open','Relay Contacts Defective','D1, Diode Open','D1, Diode Shorted','R1, Resistor Open','R1, Resistor Out of Tolerance','L1, Inductor Open','No Defect'];
+const TS3_WHY=['Every path from pad A reads ∞ even with the switch ON, while the coil, inductor and resistor read normally through pad C.',
+  'Paths from pad A read low even with the switch OFF.',
+  'Every path to pad D reads ∞ (A–D with the switch ON, C–D), while the paths to F are normal. The relay coil is the only part on pad D.',
+  'The contacts read the opposite of their rating. Normally closed contacts read ∞, or normally open contacts read near 0 Ω (A–E with the switch ON, or C–E).',
+  'On Diode Test the diode reads ∞ in both polarities, even in series with a part you have already shown is good (for example B–F with a good inductor).',
+  'The B paths read low even on the Ohms setting. B–F equals the inductor resistance alone, with no diode forward resistance added.',
+  'Every path from pad C reads ∞, while the same parts read normally through pad A.',
+  'After subtracting the coil or inductor resistance (or reading C–E directly with normally closed contacts), the resistor is outside ±10% of its marked value.',
+  'Every path to pad F reads ∞ (A–F with the switch ON, C–F), while the paths to D are normal.',
+  'Every part tests good: the switch works both ways, the coil, inductor and resistor have the right values, the contacts match their rating and the diode conducts in one direction only on Diode Test.'];
+const P3={A:[40,150],B:[40,210],C:[40,270],D:[500,90],E:[500,150],F:[500,240]};
+function board3Svg(st){
+  const on=st.sw==='ON';
+  let g=tr([P3.A,[170,150]])+tr([[266,150],[300,150],[300,60],[360,60],[360,90]])+tr([[300,60],[300,270]])+tr([P3.B,[90,210]])+tr([[200,210],[300,210]])+tr([P3.C,[90,270]])+tr([[200,270],[340,270]])+tr([[440,270],[470,270],[470,240],P3.F])+
+    tr([[440,90],[470,90],P3.D])+tr([[440,150],[470,150],P3.E])+tr([[360,150],[340,150],[340,210],[300,210]]);
+  g+=[[170,150],[266,150],[90,210],[200,210],[90,270],[200,270],[340,270],[440,270],[360,90],[440,90],[360,150],[440,150],[300,210],[300,270]].map(p=>pad(p[0],p[1])).join('');
+  g+=`<line x1="170" y1="150" x2="170" y2="114" stroke="#bbb" stroke-width="3"/><line x1="266" y1="150" x2="266" y2="114" stroke="#bbb" stroke-width="3"/>`+swBody(170,70,on)+D.text(218,58,'Switch',{fill:'#fff',size:12});
+  g+=`<rect x="352" y="78" width="96" height="84" rx="6" fill="#1e1e1e" stroke="#000"/><path d="M372,98 h10 a4,4 0 0 1 8,0 a4,4 0 0 1 8,0 a4,4 0 0 1 8,0 a4,4 0 0 1 8,0 h10" fill="none" stroke="#ddd" stroke-width="1.5"/>`+D.text(400,124,'RELAY',{fill:'#eee',size:11})+`<path d="M372,145 h22 M406,145 h22 M394,139 v12 M406,139 v12 ${st.nc?'M390,153 L410,137':''}" fill="none" stroke="#ddd" stroke-width="1.5"/>`;
+  g+=D.part('D',[90,210],[200,210],'DIODE',{labelFill:'#fff',labelAbove:true,bandLeft:true})+D.part('Rc',[90,270],[200,270],'RESISTOR',{labelFill:'#fff'})+D.part('L',[340,270],[440,270],'INDUCTOR',{labelFill:'#fff'});
+  ['A','B','C'].forEach(k=>g+=PL(P3[k][0]-2,P3[k][1]-14,k));['D','E','F'].forEach(k=>g+=PL(P3[k][0]+2,P3[k][1]-14,k));
+  return PCB(540,310,g);
+}
+function board3Item(force){
+  const ans=force??ri(0,9),f=TS3_OPTS[ans];
+  const coil=eVal(47,470),Rm=eVal(100,4700),ind=+rnd(3,40).toFixed(1),nc=Math.random()<0.5,rf=rnd(450,700);
+  // a good resistor is kept well inside ±10% so that meter error and subtracting the coil/inductor can't push it across a limit
+  let Ra=Rm*rnd(0.95,1.05);if(f.includes('Out of'))Ra=Rm*(Math.random()<0.5?rnd(0.6,0.84):rnd(1.16,1.5));if(f.includes('Resistor Open'))Ra=Infinity;
+  let contacts=nc?0.03:Infinity;if(f.includes('Contacts'))contacts=nc?Infinity:0.03;
+  const net=st=>{const on=st.sw==='ON';const sw=(on&&!f.includes('Always Open'))||f.includes('Always Closed')?0.02:Infinity;
+    const E=[{t:'R',a:'A',b:'X',r:sw},{t:'R',a:'C',b:'X',r:Ra},{t:'R',a:'X',b:'D',r:f.includes('Coil')?Infinity:coil},{t:'R',a:'X',b:'E',r:contacts},{t:'R',a:'X',b:'F',r:f.includes('Inductor')?Infinity:ind}];
+    if(f.includes('Diode Shorted'))E.push({t:'R',a:'X',b:'B',r:0.05});else if(!f.includes('Diode Open'))E.push({t:'D',a:'X',b:'B',rf});
+    return E;};
+  const pads=['A','B','C'].map(k=>({id:k,x:P3[k][0],y:P3[k][1],label:k,side:'red'})).concat(['D','E','F'].map(k=>({id:k,x:P3[k][0],y:P3[k][1],label:k,side:'black'})));
+  const measure=(r,b,st)=>{const plus=st.pol==='+ on red'?r:b,minus=plus===r?b:r;return K.ohms(net(st),plus,minus,st.mode==='Diode Test');};
+  const work=()=>{const S=(sw,mode,pol)=>({sw,mode:mode||'Ohms',pol:pol||'+ on red'});
+    const rows=[['A','D'],['A','E'],['A','F']].map(([a,b])=>`<tr><td>${a}–${b}</td><td>Ohms</td><td>${fo(measure(a,b,S('ON')))} (switch ON) · ${fo(measure(a,b,S('OFF')))} (OFF)</td></tr>`).join('')+
+      [['C','D'],['C','E'],['C','F']].map(([a,b])=>`<tr><td>${a}–${b}</td><td>Ohms</td><td>${fo(measure(a,b,S('ON')))}</td></tr>`).join('')+
+      `<tr><td>B–F</td><td>Ohms</td><td>${fo(measure('B','F',S('ON')))}</td></tr><tr><td>B–F</td><td>Diode Test</td><td>${fo(measure('B','F',S('ON','Diode Test','+ on black')))} (+ on black) · ${fo(measure('B','F',S('ON','Diode Test','+ on red')))} (+ on red)</td></tr>`+
+      `<tr><td>B–D</td><td>Diode Test</td><td>${fo(measure('B','D',S('ON','Diode Test','+ on black')))} (+ on black) · ${fo(measure('B','D',S('ON','Diode Test','+ on red')))} (+ on red)</td></tr>`;
+    const cf=measure('C','F',S('ON')),cd=measure('C','D',S('ON'));
+    const steps=['>Readings for this board (no meter error shown):',`><table class="t small"><thead><tr><th>Probes</th><th>Setting</th><th>Reading</th></tr></thead><tbody>${rows}</tbody></table>`];
+    if(isFinite(cf)&&!f.includes('Inductor'))steps.push(`R_1=R_{C\\text{-}F}-R_{L1}=${fmt(cf)}\\,\\Omega-${fmt(ind)}\\,\\Omega=${fmt(cf-ind)}\\,\\Omega`,`>A good R1 is between ${fmt(0.9*Rm)} Ω and ${fmt(1.1*Rm)} Ω (${fmt(Rm)} Ω ± 10%).`);
+    else if(isFinite(cd)&&!f.includes('Coil'))steps.push(`R_1=R_{C\\text{-}D}-R_{coil}=${fmt(cd)}\\,\\Omega-${fmt(coil)}\\,\\Omega=${fmt(cd-coil)}\\,\\Omega`,`>A good R1 is between ${fmt(0.9*Rm)} Ω and ${fmt(1.1*Rm)} Ω (${fmt(Rm)} Ω ± 10%).`);
+    steps.push(`><b>${esc(f)}</b>: ${TS3_WHY[ans]}`);return steps;};
+  return {svg:st=>board3Svg(Object.assign({nc},st)),pads,unit:'ohm',options:TS3_OPTS,answer:ans,work,
+    controls:[{id:'sw',label:'Switch',options:['ON','OFF'],value:pick(['ON','OFF'])},{id:'mode',label:'Meter',options:['Ohms','Diode Test'],value:'Ohms'},{id:'pol',label:'Switch polarity',options:['+ on red','+ on black'],value:'+ on red'}],
+    measure,
+    hint:'The red probe goes on pad A, B or C and the black probe on pad D, E or F. Use the Diode Test setting and the polarity switch to test the diode. The banded end of the diode is the cathode.',
+    params:`<table class="t"><tr><td>Relay coil</td><td><b>${CC.fmt(coil)} Ω</b></td></tr><tr><td>Relay contacts</td><td><b>Normally ${nc?'closed':'open'}</b></td></tr><tr><td>R1 resistor</td><td><b>${CC.fmt(Rm)} Ω ± 10%</b></td></tr><tr><td>L1 inductor</td><td><b>about ${CC.fmt(ind)} Ω</b></td></tr><tr><td>D1</td><td>silicon diode</td></tr></table>`};
+}
+const tsAct=(build,id)=>(el,s)=>K.lab(el,s,{count:10,points:10,moveCost:id?1:0,free:id?FREE[id]:0,meterLabel:'Ohmmeter',itemWord:'Board',selectLabel:'Select the circuit condition',build:()=>build()});
+
+/* ---------------- front page: PC board testing ---------------- */
+function benchBoard(){
+  const parts=[{id:'F1',t:'F',label:'F1'},{id:'R1',t:'Rc',label:'R1'},{id:'R2',t:'Rc',label:'R2'},{id:'L1',t:'L',label:'L1'}];
+  const R1=eVal(100,10000),R2=eVal(100,10000),L1=+rnd(4,60).toFixed(1),F1=rnd(0.05,0.3);
+  const ans=ri(0,3);const val={F1,R1:R1*rnd(0.95,1.05),R2:R2*rnd(0.95,1.05),L1:L1*rnd(0.97,1.03)};
+  if(ans===0)val.F1=Infinity;
+  if(ans===1)val.R1=pick([Infinity,R1*rnd(0.55,0.8),R1*rnd(1.2,1.6)]);
+  if(ans===2)val.R2=pick([Infinity,R2*rnd(0.55,0.8),R2*rnd(1.2,1.6)]);
+  if(ans===3)val.L1=Infinity;
+  const ys=[70,130,190,250];
+  const svg=st=>{let g=`<rect x="20" y="40" width="120" height="70" rx="8" fill="#2b2b2b"/><rect x="20" y="130" width="120" height="70" rx="8" fill="#2b2b2b"/>${[0,1].map(i=>`<rect x="28" y="${50+i*90}" width="104" height="50" rx="5" fill="#b87333"/><text x="80" y="${80+i*90}" font-size="12" font-weight="900" fill="#222" text-anchor="middle">D CELL</text>`).join('')}`;
+    g+=`<rect x="220" y="50" width="300" height="230" rx="8" fill="#1d7a3a" stroke="#0e4a22" stroke-width="3"/>`;
+    g+=D.wire([[140,75],[200,75],[200,70],[240,70]],st.power==='ON'?'#e53935':'#777')+D.wire([[140,165],[180,165],[180,250],[240,250]],st.power==='ON'?'#222':'#777');
+    g+=tr([[240,70],[300,70]])+tr([[440,70],[490,70],[490,130],[440,130]])+tr([[300,130],[255,130],[255,190],[300,190]])+tr([[440,190],[490,190],[490,250],[440,250]])+tr([[300,250],[240,250]])+pad(240,70)+pad(240,250);
+    parts.forEach((p,i)=>{g+=pad(300,ys[i])+pad(440,ys[i])+D.part(p.t,[300,ys[i]],[440,ys[i]],p.label,{labelFill:'#fff'});});
+    g+=D.text(80,230,st.power==='ON'?'Power ON':'Power OFF',{fill:st.power==='ON'?'#e53935':'var(--ink2)',size:13});
+    return D.svg(540,300,g);};
+  return {svg,parts:parts.map((p,i)=>({id:p.id,label:p.label,x:285,y:ys[i]-22,w:170,h:44})),options:['F1','R1','R2','L1'],answer:ans,
+    measure:id=>val[id],
+    params:`<table class="t"><tr><td>F1 fuse</td><td>near 0 Ω</td></tr><tr><td>R1 resistor</td><td><b>${CC.fmt(R1)} Ω ± 10%</b></td></tr><tr><td>R2 resistor</td><td><b>${CC.fmt(R2)} Ω ± 10%</b></td></tr><tr><td>L1 inductor</td><td><b>about ${CC.fmt(L1)} Ω</b></td></tr></table>`};
+}
+
+/* ---------------- figures for intro pages ---------------- */
+const lcd=t=>`<span class="lcd" style="display:inline-block;min-width:6ch">${t}</span>`;
+const figOpen=CC.svg.series([{t:'SW',label:'switch'},{t:'lamp',label:'lamp'}],{src:'dc'});
+const intro=(text,how,figs)=>CC.introPage({text:(figs?`<div class="diagram" style="margin-bottom:12px;flex-wrap:wrap;gap:16px">${figs}</div>`:'')+text,how});
+const condList=opts=>`<h3>Possible circuit conditions</h3><ol class="small">${opts.map(o=>`<li>${esc(o)}</li>`).join('')}</ol>`;
+const twoNote=(base,id)=>`<p>This is <b>${base}</b> with stricter scoring. On each item the first ${FREE[id]} probe moves are free, and every move after that costs a point. Plan each measurement so it tells you something new.</p>`;
+
+CC._prog={wire:f=>wireItem(WIRE_OPTS,f),open:f=>wireItem(OPEN_OPTS,f),short:f=>wireItem(SHORT_OPTS,f),trace:traceItem,ts1:board1Item,ts3:board3Item};
+/* ---------------- assemble ---------------- */
+function hero(slot){
+  slot.appendChild(CC.el(`<div class="card"><div class="row" style="justify-content:space-between"><b>PC board testing</b><span class="small muted">practice · not graded</span></div>
+   <div class="diagram mt">${benchBoard().svg({power:'ON'})}</div>
+   <p class="small muted">Test the parts on a PC board with an ohmmeter. Remember to disconnect the battery first.</p><div class="row end"><a class="btn primary" href="#/m/intro">Try it</a></div></div>`));
+}
+const benchRun=(el,s)=>K.bench(el,s,{title:'PC Board Testing',meterLabel:'Ohmmeter',unit:'ohm',powerControl:true,newBoard:benchBoard,
+  hint:'Tap a part to connect the ohmmeter probes across it, then use the readings to find the defective part. Choose OFF to disconnect the battery before you measure!'});
+
+CC.App.init({
+  id:'ohm',numericAnswers:false,title:'Ohmmeter Challenge',tagline:'Troubleshooting with a digital ohmmeter · offline edition',
+  blurb:'Interactive activities for learning to troubleshoot with a digital ohmmeter: open and shorted wires, module wiring tracing and PC board troubleshooting. New values and faults are chosen every time you run an activity.',
+  footer:'Based on Ohmmeter Challenge © 2006 ETCAI Products. Offline HTML edition.',pass:80,hero,
+  manual:`<h2>About this program</h2><p>Ohmmeter Challenge is a set of simulated lab activities for learning to troubleshoot with a digital ohmmeter. Students move the meter probes, interpret the readings and diagnose the fault. Every answer is graded right away, and the correct answer is shown after a miss. The activities also work for whole-class demonstrations on a projector or large screen.</p><p>New values and faults are chosen each time an activity runs, so students can repeat an activity without memorizing answers. Each activity opens with an introduction to the ideas it uses. Choose <b>Begin</b> to start. The program records the time on task. Signed-in students can print a certificate showing the activity, name, ID, date and time, score, time on task and a validity code. Use <b>Check validity</b> to confirm a certificate hasn't been altered.</p><p>To report progress, students can hand in certificates, or download or print the grade file. Instructors can also watch students work through an activity.</p>
+  <h3>Scoring</h3><p>Every activity has 10 items worth 10 points each, and the score is the percentage of the 100 possible points. In the "One" and "Three" activities, measurements are free. In the stricter "Two" and "Four" activities, each item allows a set number of free probe moves (placing or moving either probe counts as a move). Each extra move costs one point, and a wrong answer earns 0 for that item. The free allowance is enough for a well-planned set of measurements, so an efficient technician can still score 100%. (The original program scored these activities as 14 or 20 points per item minus one point per move, reported as 0 to 140 or 0 to 200.)</p>`+TXT.purpose,
+  groups:[
+    {title:'Getting started',items:[
+      {id:'intro',title:'Introduction',icon:'meter',sub:'ohmmeters · PC board testing practice',graded:false,
+        intro:CC.introPage({text:`<h2 style="margin-top:0">Ohmmeters</h2>${TXT.ohmmeters}<h2>What this program does</h2>${TXT.purpose}<h2>Using Ohmmeter Challenge</h2>${TXT.using}`,how:TXT.bench}),run:benchRun},
+    ]},
+    {title:'Wires and conduits',items:[
+      {id:'open1',title:'Open Circuits One',icon:'wire',sub:'find open wires in a conduit',intro:intro(TXT.open1+condList(OPEN_OPTS.map(o=>o[0])),HOW.wire(false),figOpen+`<span>${lcd('∞')}<br><span class="small muted">open circuit</span></span>`),run:wireAct(OPEN_OPTS,null)},
+      {id:'open2',title:'Open Circuits Two',icon:'wire',sub:`${FREE.open2} free moves, then −1 per move`,intro:intro(twoNote('Open Circuits One','open2')+TXT.open1+condList(OPEN_OPTS.map(o=>o[0])),HOW.wire(true,FREE.open2),figOpen),run:wireAct(OPEN_OPTS,'open2')},
+      {id:'short1',title:'Short Circuits One',icon:'wire',sub:'find shorted wires in a conduit',intro:intro(TXT.short1+condList(SHORT_OPTS.map(o=>o[0])),HOW.wire(false),`<span>${lcd('0.04 Ω')}<br><span class="small muted">shorted wires</span></span><span>${lcd('∞')}<br><span class="small muted">separate wires</span></span>`),run:wireAct(SHORT_OPTS,null)},
+      {id:'short2',title:'Short Circuits Two',icon:'wire',sub:`${FREE.short2} free moves, then −1 per move`,intro:intro(twoNote('Short Circuits One','short2')+TXT.short1+condList(SHORT_OPTS.map(o=>o[0])),HOW.wire(true,FREE.short2)),run:wireAct(SHORT_OPTS,'short2')},
+      {id:'wire1',title:'Wire Testing One',icon:'wire',sub:'shorts and opens',intro:intro(`<p>This time you need to find both shorts and opens. Each situation has one of 11 conditions, and some have no fault at all.</p>`+TXT.wire1+condList(WIRE_OPTS.map(o=>o[0])),HOW.wire(false)),run:wireAct(WIRE_OPTS,null)},
+      {id:'wire2',title:'Wire Testing Two',icon:'wire',sub:`${FREE.wire2} free moves, then −1 per move`,intro:intro(twoNote('Wire Testing One','wire2')+TXT.wire1+condList(WIRE_OPTS.map(o=>o[0])),HOW.wire(true,FREE.wire2)),run:wireAct(WIRE_OPTS,'wire2')},
+    ]},
+    {title:'Circuit tracing',items:[
+      {id:'trace1',title:'Circuit Tracing One',icon:'chip',sub:'identify module types A–J',intro:intro(TXT.trace,`<p>All ten module types look the same from outside. The possible wiring diagrams are shown with the answer choices. Tap the wire ends to move the probes, measure any route you like, then select the matching diagram and choose <b>Grade item</b>.</p>`+K.scoreHow({points:10}),moduleSvg()),run:traceAct(null)},
+      {id:'trace2',title:'Circuit Tracing Two',icon:'chip',sub:`${FREE.trace2} free moves, then −1 per move`,intro:intro(twoNote('Circuit Tracing One','trace2')+TXT.trace,`<p>All ten module types look the same from outside. The possible wiring diagrams are shown with the answer choices.</p>`+K.scoreHow({points:10,free:FREE.trace2}),moduleSvg()),run:traceAct('trace2')},
+    ]},
+    {title:'PC board troubleshooting',items:[
+      {id:'ts1',title:'Troubleshooting One',icon:'wrench',sub:'switch, lamp, resistor, fuse',intro:intro(`<p>An ohmmeter can find faults in many kinds of parts. In this activity you'll troubleshoot PC boards like the one shown. Each board is in one of the ten conditions listed below.</p>`+condList(TS1_OPTS)+TXT.ts1,HOW.board(1,null),board1Svg({sw:'ON'})),run:tsAct(board1Item,null)},
+      {id:'ts2',title:'Troubleshooting Two',icon:'wrench',sub:`${FREE.ts2} free moves, then −1 per move`,intro:intro(twoNote('Troubleshooting One','ts2')+condList(TS1_OPTS)+TXT.ts1,HOW.board(1,FREE.ts2),board1Svg({sw:'ON'})),run:tsAct(board1Item,'ts2')},
+      {id:'ts3',title:'Troubleshooting Three',icon:'diode',sub:'relay, diode, resistor, inductor',intro:intro(TXT.ts3+condList(TS3_OPTS),HOW.board(3,null),board3Svg({sw:'ON',nc:true})),run:tsAct(board3Item,null)},
+      {id:'ts4',title:'Troubleshooting Four',icon:'diode',sub:`${FREE.ts4} free moves, then −1 per move`,intro:intro(twoNote('Troubleshooting Three','ts4')+TXT.ts3+condList(TS3_OPTS),HOW.board(3,FREE.ts4),board3Svg({sw:'ON',nc:true})),run:tsAct(board3Item,'ts4')},
+    ]}
+  ]
+});
+})();
+</script>
+<a href="index.html" style="position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;background:#1d2733;color:#f3f0ea;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:.92">&larr; Study home</a></body>
+</html>

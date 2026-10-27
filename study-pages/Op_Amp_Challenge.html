@@ -1,0 +1,1578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Op Amp Challenge</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23b3261e'/%3E%3Cpath d='M5 16q5.5-12 11 0t11 0' fill='none' stroke='white' stroke-width='3'/%3E%3C/svg%3E">
+<style>:root{
+  --bg:#f4f1ea; --surface:#fffdf8; --surface2:#f0ece2; --ink:#1d2228; --ink2:#55606b; --line:#d9d2c3;
+  --brand:#b3261e; --brand-ink:#fff; --accent:#1f5fa8; --ok:#1e7d43; --ok-bg:#e3f3e8; --bad:#b3261e; --bad-bg:#fbe6e4;
+  --warn:#9a6400; --warn-bg:#fdf1d8; --board:#c9a66b; --board-dark:#9c7a42; --trace:#e8c48a; --copper:#b5652b;
+  --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.06); --r:12px;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#15181c; --surface:#1e2228; --surface2:#262b33; --ink:#e9e6df; --ink2:#a3abb5; --line:#363c46;
+  --brand:#ff6b5e; --brand-ink:#1a0d0b; --accent:#7fb2ff; --ok:#5fd08a; --ok-bg:#16301f; --bad:#ff7a6e; --bad-bg:#3a1c1a;
+  --warn:#f0b54a; --warn-bg:#3a2e12; --board:#6b5530; --board-dark:#4e3d22; --trace:#a8854d; --copper:#d58a4d;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+math{font-size:1.1em}
+math[display="block"]{margin:.4em 0;overflow-x:auto;overflow-y:hidden;max-width:100%}
+
+/* header */
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);}
+.topbar .in{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.logo{width:34px;height:34px;flex:none}
+.brand{font-weight:800;color:var(--brand);letter-spacing:-.01em;line-height:1.1;font-size:1.05rem;text-decoration:none}
+.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw;color:var(--ink2);font-weight:500;font-size:.72rem;letter-spacing:0}
+.topbar .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:4px 10px;font-size:.85rem;cursor:pointer;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{border:1px solid var(--line);background:var(--surface2);border-radius:10px;width:38px;height:38px;display:inline-grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn svg{width:20px;height:20px}
+
+main{max-width:1100px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:1.6rem;line-height:1.2;margin:.2em 0 .4em;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:1.2em 0 .5em}
+h3{font-size:1rem;margin:1em 0 .4em}
+p{margin:.5em 0}
+.muted{color:var(--ink2)}
+.small{font-size:.875rem}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.card+.card{margin-top:14px}
+.grid{display:grid;gap:12px}
+.cols2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.cols2{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface2);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:42px;text-decoration:none;color:var(--ink)}
+.btn:hover{filter:brightness(.97)}
+.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible,input:focus-visible,.menu-item:focus-visible,.pad:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.blue{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:34px;padding:5px 10px;font-size:.875rem;border-radius:8px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+
+/* home */
+.hero{display:grid;gap:16px;grid-template-columns:1fr;align-items:center;margin-bottom:8px}
+@media (min-width:860px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero h1{font-size:2rem;color:var(--brand);margin:0}
+.group-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:22px 0 8px;font-weight:700}
+.menu{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.menu-item{display:flex;gap:12px;align-items:center;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer;box-shadow:var(--shadow);min-height:64px;width:100%;color:var(--ink)}
+.menu-item:hover{border-color:var(--brand)}
+.menu-item .ic{width:42px;height:42px;flex:none;border-radius:10px;background:var(--surface2);display:grid;place-items:center;color:var(--brand)}
+.menu-item .ic svg{width:30px;height:30px}
+.menu-item b{display:block;line-height:1.25}
+.menu-item span{font-size:.8rem;color:var(--ink2)}
+.menu-item .best{margin-left:auto;font-size:.75rem;font-weight:700;color:var(--ok);white-space:nowrap}
+.utils{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+
+/* intro */
+.intro-text p{max-width:68ch}
+.formulas{display:grid;gap:8px 18px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));align-items:center}
+.formula{background:var(--surface2);border-radius:10px;padding:8px 12px;overflow-x:auto}
+.formula .cap{font-size:.78rem;color:var(--ink2);display:block}
+.diagram{display:flex;justify-content:center;align-items:center;background:var(--surface2);border-radius:10px;padding:10px;overflow:hidden}
+.diagram svg{max-width:100%;height:auto}
+.where{font-size:.85rem;color:var(--ink2);margin:.2em 0 0;padding-left:1em}
+
+/* status bar */
+.statusbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.pill{border-radius:999px;background:var(--surface2);border:1px solid var(--line);padding:3px 10px;font-size:.85rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.pill.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+
+/* givens */
+.givens{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:10px}
+.given{background:var(--warn-bg);border-radius:10px;padding:6px 10px}
+.given .k{font-size:.8rem;color:var(--ink2)}
+.given .v{font-weight:700;font-variant-numeric:tabular-nums;font-size:1.05rem}
+
+/* worksheet rows */
+.ws{display:grid;gap:8px}
+.wrow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface)}
+.wrow .lab{font-weight:600;text-align:center}
+.wrow .inp{display:flex;align-items:center;gap:6px;min-width:0}
+.wrow input{width:100%;min-width:0;border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:8px 10px;font-variant-numeric:tabular-nums;font-size:1rem}
+.wrow .unit{color:var(--ink2);min-width:2.2em;font-size:.95rem}
+.wrow .acts{display:flex;gap:6px}
+.wrow .fb{grid-column:1/-1;font-size:.875rem;display:none}
+.wrow.ok{border-color:var(--ok);background:var(--ok-bg)}
+.wrow.bad{border-color:var(--bad);background:var(--bad-bg)}
+.wrow.ok .fb,.wrow.bad .fb,.wrow.info .fb{display:block}
+.wrow.ok .fb{color:var(--ok)} .wrow.bad .fb{color:var(--bad)}
+input.ok{border-color:var(--ok)!important;background:var(--ok-bg)!important}
+input.bad{border-color:var(--bad)!important;background:var(--bad-bg)!important}
+input.known{background:#dbe8fb!important;border-color:#9dbbe6!important;font-weight:700}
+:root[data-theme="dark"] input.known{background:#1d2d47!important;border-color:#35507c!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) input.known{background:#1d2d47!important;border-color:#35507c!important}}
+input.ask{background:var(--warn-bg)!important}
+
+/* problems list */
+.prob{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.prob-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.field{display:grid;gap:4px;margin:8px 0}
+.field label{font-size:.875rem;color:var(--ink2)}
+.field input{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px;width:100%}
+.fields{display:grid;gap:4px 14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.verdict{font-weight:800;font-size:1.25rem}
+.verdict.ok{color:var(--ok)} .verdict.bad{color:var(--bad)}
+.progress{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.progress>i{display:block;height:100%;background:var(--brand);transition:width .3s}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(10,12,15,.5);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:18px}
+.modal h3{margin-top:0}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;z-index:120;font-weight:600;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+
+/* tables */
+table.t{border-collapse:collapse;width:100%;font-size:.9rem}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+table.t th{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.tablewrap{overflow-x:auto}
+
+/* board / troubleshooting */
+.board-wrap{background:var(--surface2);border-radius:12px;padding:8px;overflow:hidden}
+.board-wrap svg{width:100%;height:auto;display:block;touch-action:manipulation}
+.pad{cursor:pointer}
+.pad circle.hit{fill:transparent}
+.pad:hover circle.ring{stroke:var(--accent);stroke-width:3}
+.meter{display:flex;gap:10px;flex-wrap:wrap}
+.lcd{font-family:var(--mono);background:#9fb59a;color:#0f1a0e;border-radius:6px;padding:4px 10px;font-size:1.35rem;min-width:7.5ch;text-align:right;box-shadow:inset 0 2px 4px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.meterbox{background:#3b3f45;color:#eee;border-radius:10px;padding:8px 10px;display:grid;gap:4px;justify-items:start}
+.meterbox .ml{font-size:.75rem;letter-spacing:.05em;text-transform:uppercase;color:#c9cdd2}
+.faults{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.faults label{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;background:var(--surface)}
+.faults input{accent-color:var(--brand);width:18px;height:18px}
+.faults label.correct{border-color:var(--ok);background:var(--ok-bg)}
+.faults label.wrong{border-color:var(--bad);background:var(--bad-bg)}
+
+/* certificate */
+.cert{background:#fffdf4;color:#222;border:10px double #8a6d1f;padding:28px;text-align:center;border-radius:6px;max-width:760px;margin:0 auto}
+.cert h2{font-family:Georgia,serif;font-size:2rem;margin:.2em 0;color:#7a1610}
+.cert .big{font-family:Georgia,serif;font-size:1.6rem;margin:.3em 0}
+.cert dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;text-align:left;max-width:460px;margin:18px auto 0}
+.cert dt{color:#666}
+.cert dd{margin:0;font-weight:600}
+
+.kbd{font-family:var(--mono);background:var(--surface2);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:.85em}
+.hide{display:none!important}
+.center{text-align:center}
+.mt{margin-top:14px}
+.anim-bulb{transition:opacity .3s}
+
+@media print{
+  .topbar,.noprint,.toast,.scrim{display:none!important}
+  body{background:#fff;color:#000}
+  main{padding:0;max-width:none}
+  .card{box-shadow:none;border:none}
+  .cert{border-color:#8a6d1f}
+}
+
+@media (max-width:520px){.brand small{display:none}.brand{font-size:1rem}h1{font-size:1.35rem}.hero h1{font-size:1.6rem}main{padding:12px 12px 60px}.card{padding:12px}.wrow{grid-template-columns:48px minmax(0,1fr) auto;padding:6px}}
+
+.work{margin-top:6px;color:var(--ink)}.work summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:.875rem}.work[open]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}.work math{font-size:1em}
+</style>
+</head>
+<body>
+<noscript><p style="padding:16px">This page needs JavaScript turned on.</p></noscript>
+<script>/* Circuits Challenge offline engine. No network access, no external libraries. */
+(function(){
+'use strict';
+const CC = window.CC = {};
+
+/* ---------- small utils ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+CC.$ = $; CC.$$ = $$;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+CC.esc = esc;
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+CC.el = el;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+Object.assign(CC,{rnd,ri,pick,shuffle});
+CC.E12=[1,1.2,1.5,1.8,2.2,2.7,3.3,3.9,4.7,5.6,6.8,8.2];
+CC.E6=[1,1.5,2.2,3.3,4.7,6.8];
+/** random value from an E-series between lo and hi (inclusive) */
+CC.eVal=function(lo,hi,series=CC.E12){const out=[];for(let d=-15;d<=9;d++){for(const m of series){const v=+(m*Math.pow(10,d)).toPrecision(3);if(v>=lo*0.999&&v<=hi*1.001)out.push(v);}}return pick(out);};
+/** round to nearest E-series value */
+CC.eNear=function(x,series=CC.E12){const d=Math.floor(Math.log10(x));let best=null,bd=1e99;for(const dd of [d-1,d,d+1])for(const m of series){const v=+(m*Math.pow(10,dd)).toPrecision(3);const e=Math.abs(Math.log(v/x));if(e<bd){bd=e;best=v;}}return best;};
+CC.sig=(x,n=3)=>x===0?0:+x.toPrecision(n);
+/** format number for display: up to `n` significant figures, no exponent, trims zeros */
+CC.fmt=function(x,n=4){
+  if(x===null||x===undefined||isNaN(x))return '—';
+  if(!isFinite(x))return '∞';
+  if(Math.abs(x)<1e-12)return '0';
+  let v=+x.toPrecision(n);
+  let s;
+  const a=Math.abs(v);
+  if(a>=1e15||a<1e-9) s=v.toExponential(n-1);
+  else { const dec=Math.max(0,n-1-Math.floor(Math.log10(a))); s=v.toFixed(Math.min(dec,12)); if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,''); }
+  // thousands separators for readability on integers part
+  const parts=s.split('.'); if(Math.abs(v)>=10000) parts[0]=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,','); return parts.join('.');
+};
+/** parse a typed number. Accepts "1,234.5", "1.2e3", "−5", and SI suffixes k, M, m, u/µ, n, p if allowSuffix */
+CC.parse=function(str,allowSuffix=true){
+  if(str===null||str===undefined)return NaN;
+  let s=String(str).trim().replace(/[−–]/g,'-').replace(/\s+/g,'');
+  if(!s)return NaN;
+  s=s.replace(/,(?=\d{3}(\D|$))/g,'');
+  s=s.replace(/,/g,'.');
+  let mult=1;
+  if(allowSuffix){const m=s.match(/^(.*?)([kKMmuµnp])$/);if(m&&m[1]!==''&&!isNaN(+m[1])){mult={k:1e3,K:1e3,M:1e6,m:1e-3,u:1e-6,'µ':1e-6,n:1e-9,p:1e-12}[m[2]];s=m[1];}}
+  if(!/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(s))return NaN;
+  return parseFloat(s)*mult;
+};
+/** compare typed value with correct value */
+CC.prefixed=u=>/^(m|k|µ|μ|M|n|p|G)./.test(u||'');
+CC.close=function(user,correct,tol=0.02,absTol=null){
+  if(isNaN(user))return false;
+  if(absTol===null) absTol=Math.max(1e-9,Math.abs(correct)*1e-6);
+  if(Math.abs(user-correct)<=absTol)return true;
+  return Math.abs(user-correct)<=Math.abs(correct)*tol;
+};
+CC.fmtTime=function(ms){const s=Math.round(ms/1000);const h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(ss).padStart(2,'0');};
+CC.deg=r=>r*180/Math.PI;
+CC.rad=d=>d*Math.PI/180;
+
+/* complex numbers */
+const Cx=CC.Cx={
+  c:(re,im=0)=>({re,im}),
+  add:(a,b)=>({re:a.re+b.re,im:a.im+b.im}),
+  sub:(a,b)=>({re:a.re-b.re,im:a.im-b.im}),
+  mul:(a,b)=>({re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re}),
+  div:(a,b)=>{const d=b.re*b.re+b.im*b.im;return {re:(a.re*b.re+a.im*b.im)/d,im:(a.im*b.re-a.re*b.im)/d};},
+  abs:a=>Math.hypot(a.re,a.im),
+  inv:a=>Cx.div({re:1,im:0},a),
+  par:(a,b)=>Cx.div(Cx.mul(a,b),Cx.add(a,b))
+};
+
+/* ---------- storage (best effort) ---------- */
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+CC.store=store;
+
+/* ---------- TeX-subset → MathML ---------- */
+const GREEK={alpha:'α',beta:'β',gamma:'γ',delta:'δ',theta:'θ',pi:'π',omega:'ω',phi:'φ',lambda:'λ',tau:'τ',mu:'μ',rho:'ρ',sigma:'σ',epsilon:'ε',eta:'η',
+  Omega:'Ω',Delta:'Δ',Sigma:'Σ',Phi:'Φ',Theta:'Θ',Lambda:'Λ'};
+const OPS={cdot:'·',times:'×',approx:'≈',pm:'±',to:'→',ne:'≠',le:'≤',ge:'≥',angle:'∠',infty:'∞',deg:'°',div:'÷',parallel:'∥',cdots:'⋯',ldots:'…',
+  overline:null,rightarrow:'→',leftarrow:'←',Rightarrow:'⇒',equiv:'≡',neg:'¬',oplus:'⊕',odot:'⊙',vee:'∨',wedge:'∧',bar:null};
+function texToMathML(src,block){
+  const p={s:src,i:0,up:0};
+  const body=seq(p,null);
+  return '<math'+(block?' display="block"':'')+'><mrow>'+body+'</mrow></math>';
+}
+CC.tex=texToMathML;
+CC.m=s=>texToMathML(s,false);
+CC.M=s=>texToMathML(s,true);
+function seq(p,end){
+  let out='';
+  while(p.i<p.s.length){
+    const c=p.s[p.i];
+    if(end&&c===end){p.i++;return out;}
+    if(c===' '){p.i++;continue;}
+    let base=atom(p); if(base===null)continue;
+    let sub=null,sup=null;
+    for(;;){
+      while(p.s[p.i]===' ')p.i++;
+      const d=p.s[p.i];
+      if(d==='_'){p.i++;p.up++;sub=arg(p);p.up--;}
+      else if(d==='^'){p.i++;sup=arg(p);}
+      else break;
+    }
+    if(sub!==null&&sup!==null)out+='<msubsup>'+base+sub+sup+'</msubsup>';
+    else if(sub!==null)out+='<msub>'+base+sub+'</msub>';
+    else if(sup!==null)out+='<msup>'+base+sup+'</msup>';
+    else out+=base;
+  }
+  return out;
+}
+function arg(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  return atom(p)||'<mrow></mrow>';
+}
+function rawBraced(p){
+  while(p.s[p.i]===' ')p.i++;
+  if(p.s[p.i]!=='{'){const c=p.s[p.i];p.i++;return c;}
+  let depth=0,start=++p.i;
+  for(;p.i<p.s.length;p.i++){const c=p.s[p.i];if(c==='{')depth++;else if(c==='}'){if(depth===0)break;depth--;}}
+  const t=p.s.slice(start,p.i);p.i++;return t;
+}
+function mi(ch,p){return p.up?'<mi mathvariant="normal">'+esc(ch)+'</mi>':'<mi>'+esc(ch)+'</mi>';}
+function atom(p){
+  const s=p.s;let c=s[p.i];
+  if(c==='{'){p.i++;return '<mrow>'+seq(p,'}')+'</mrow>';}
+  if(c==='\\'){
+    p.i++;
+    let m=s.slice(p.i).match(/^[A-Za-z]+/);
+    if(!m){const ch=s[p.i];p.i++;
+      if(ch===',')return '<mspace width="0.17em"/>';
+      if(ch===';')return '<mspace width="0.28em"/>';
+      if(ch==='!')return '';
+      if(ch==='%')return '<mo>%</mo>';
+      return '<mo>'+esc(ch)+'</mo>';}
+    const name=m[0];p.i+=name.length;
+    switch(name){
+      case 'frac':{const a=arg(p),b=arg(p);return '<mfrac>'+a+b+'</mfrac>';}
+      case 'dfrac':{const a=arg(p),b=arg(p);return '<mstyle displaystyle="true"><mfrac>'+a+b+'</mfrac></mstyle>';}
+      case 'sqrt':{
+        if(s[p.i]==='['){const j=s.indexOf(']',p.i);const n=s.slice(p.i+1,j);p.i=j+1;const a=arg(p);return '<mroot>'+a+'<mrow>'+seq({s:n,i:0,up:0},null)+'</mrow></mroot>';}
+        return '<msqrt>'+arg(p)+'</msqrt>';}
+      case 'text':return '<mtext>'+esc(rawBraced(p))+'</mtext>';
+      case 'mathrm':case 'rm':case 'operatorname':case 'mathrm*':return '<mi mathvariant="normal">'+esc(rawBraced(p))+'</mi>';
+      case 'mathbf':return '<mi mathvariant="bold">'+esc(rawBraced(p))+'</mi>';
+      case 'quad':return '<mspace width="1em"/>';
+      case 'qquad':return '<mspace width="2em"/>';
+      case 'left':case 'right':{const ch=s[p.i];p.i++;if(ch==='.')return '';if(ch==='\\'){const mm=s.slice(p.i).match(/^[A-Za-z]+/);if(mm){p.i+=mm[0].length;return '<mo stretchy="true">'+(mm[0]==='lbrace'?'{':mm[0]==='rbrace'?'}':'|')+'</mo>';}const c2=s[p.i];p.i++;return '<mo stretchy="true">'+esc(c2)+'</mo>';}return '<mo stretchy="true">'+esc(ch)+'</mo>';}
+      case 'overline':case 'bar':{const a=arg(p);return '<mover>'+a+'<mo stretchy="true">¯</mo></mover>';}
+      case 'arctan':case 'tan':case 'sin':case 'cos':case 'log':case 'ln':case 'atan':return '<mi>'+name+'</mi><mo>&#x2061;</mo>';
+    }
+    if(GREEK[name]){const g=GREEK[name];return (name[0]===name[0].toUpperCase())?'<mi mathvariant="normal">'+g+'</mi>':mi(g,p);}
+    if(OPS[name])return '<mo>'+OPS[name]+'</mo>';
+    return '<mi>'+esc(name)+'</mi>';
+  }
+  if(/[0-9.]/.test(c)){const m=s.slice(p.i).match(/^[0-9]*\.?[0-9]+|^[0-9]+\.?/);p.i+=m[0].length;return '<mn>'+m[0]+'</mn>';}
+  if(/[A-Za-z]/.test(c)){p.i++;return mi(c,p);}
+  if(c==='°'||c==='Ω'||c==='µ'||c==='μ'){p.i++;return '<mi mathvariant="normal">'+c+'</mi>';}
+  if(c==='}'){p.i++;return null;}
+  p.i++;
+  const map={'*':'·','-':'−'};
+  const ch=map[c]||c;
+  if(c==='('||c===')'||c==='['||c===']'||c==='|')return '<mo stretchy="false">'+esc(ch)+'</mo>';
+  return '<mo>'+esc(ch)+'</mo>';
+}
+
+/* ---------- SVG schematic primitives ---------- */
+const S=CC.svg={};
+S.stroke='currentColor';
+function vSym(t,x,y,label,o={}){
+  // vertical symbol centred at (x,y), occupying y-30..y+30, leads included
+  let g='';
+  const L=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  switch(t){
+    case 'R':{g+=L(x,y-30,x,y-21);let d=`M${x},${y-21}`;for(let i=0;i<6;i++){d+=` L${x+(i%2?-7:7)},${y-17.5+i*7}`;}d+=` L${x},${y+21}`;g+=`<path d="${d}" fill="none"/>`+L(x,y+21,x,y+30);break;}
+    case 'C':g+=L(x,y-30,x,y-4)+L(x-13,y-4,x+13,y-4)+L(x-13,y+4,x+13,y+4)+L(x,y+4,x,y+30);break;
+    case 'L':{g+=L(x,y-30,x,y-20);let d=`M${x},${y-20}`;for(let i=0;i<4;i++){d+=` a5,5 0 0 1 0,10`;}g+=`<path d="${d}" fill="none"/>`+L(x,y+20,x,y+30);if(o.core)g+=L(x+10,y-20,x+10,y+20)+L(x+13,y-20,x+13,y+20);break;}
+    case 'F':g+=L(x,y-30,x,y-14)+`<rect x="${x-6}" y="${y-14}" width="12" height="28" rx="2" fill="none"/>`+L(x,y-14,x,y+14)+L(x,y+14,x,y+30);break;
+    case 'W':g+=L(x,y-30,x,y+30);break;
+    case 'lamp':g+=L(x,y-30,x,y-13)+`<circle cx="${x}" cy="${y}" r="13" fill="none"/>`+L(x-9,y-9,x+9,y+9)+L(x+9,y-9,x-9,y+9)+L(x,y+13,x,y+30);break;
+    case 'ac':g+=L(x,y-30,x,y-17)+`<circle cx="${x}" cy="${y}" r="17" fill="none"/><path d="M${x-10},${y} q5,-11 10,0 t10,0" fill="none"/>`+L(x,y+17,x,y+30);break;
+    case 'dc':g+=L(x,y-30,x,y-6)+L(x-15,y-6,x+15,y-6)+`<line x1="${x-8}" y1="${y+3}" x2="${x+8}" y2="${y+3}" stroke-width="4"/>`+L(x-15,y+12,x+15,y+12)+`<line x1="${x-8}" y1="${y+21}" x2="${x+8}" y2="${y+21}" stroke-width="4"/>`+L(x,y+21,x,y+30)+`<text x="${x+18}" y="${y-8}" font-size="12" stroke="none" fill="currentColor">+</text>`;break;
+    case 'D':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+L(x-10,y+8,x+10,y+8)+L(x,y+8,x,y+30);break;
+    case 'Dz':g+=L(x,y-30,x,y-9)+`<path d="M${x-10},${y-9} L${x+10},${y-9} L${x},${y+8} Z" fill="currentColor"/>`+`<path d="M${x-13},${y+12} L${x-10},${y+8} L${x+10},${y+8} L${x+13},${y+4}" fill="none"/>`+L(x,y+8,x,y+30);break;
+    case 'SW':g+=L(x,y-30,x,y-12)+`<circle cx="${x}" cy="${y-12}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+12}" r="2.5" fill="currentColor"/>`+(o.closed?L(x,y-12,x,y+12):L(x,y+12,x-12,y-8))+L(x,y+12,x,y+30);break;
+    case 'open':g+=L(x,y-30,x,y-8)+L(x,y+8,x,y+30)+`<circle cx="${x}" cy="${y-8}" r="2.5" fill="currentColor"/><circle cx="${x}" cy="${y+8}" r="2.5" fill="currentColor"/>`;break;
+  }
+  let lab='';
+  if(label){const side=o.side||'right';const off=(t==='ac'||t==='dc')?24:16;const lx=side==='right'?x+off:x-off;const anchor=side==='right'?'start':'end';
+    const lines=String(label).split('\n');
+    lab=lines.map((ln,i)=>`<text x="${lx}" y="${y+5+(i-(lines.length-1)/2)*15}" text-anchor="${anchor}" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g>${g}</g>${lab}`;
+}
+S.vSym=vSym;
+function hSym(t,x,y,label,o={}){
+  // horizontal: rotate a vertical symbol
+  const inner=vSym(t,0,0,null,o);
+  let lab='';if(label){const lines=String(label).split('\n');lab=lines.map((ln,i)=>`<text x="${x}" y="${y-(o.below?-30-i*15:22+(lines.length-1-i)*15)}" text-anchor="middle" font-size="13" stroke="none" fill="currentColor" font-weight="${i===0?700:400}">${esc(ln)}</text>`).join('');}
+  return `<g transform="translate(${x},${y}) rotate(-90)">${inner}</g>${lab}`;
+}
+S.hSym=hSym;
+S.wrap=(w,h,inner,cls='')=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="${cls}" role="img" aria-label="circuit schematic" style="color:var(--ink)"><g stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</g></svg>`;
+S.dot=(x,y)=>`<circle cx="${x}" cy="${y}" r="3.5" fill="currentColor" stroke="none"/>`;
+S.line=(pts)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none"/>`;
+/** source on left; components stacked vertically on the right side (series loop) */
+S.series=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length;
+  const step=74, top=24, h=top*2+Math.max(n*step,120), xs=46, xr=o.wide?220:190, w=xr+(o.labelW||110);
+  let g=S.line([[xs,top],[xr,top]])+S.line([[xs,h-top],[xr,h-top]]);
+  const my=h/2;g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  const span=(h-2*top), seg=span/n;
+  comps.forEach((c,i)=>{const cy=top+seg*(i+.5);g+=S.line([[xr,top+seg*i],[xr,cy-30]])+vSym(c.t,xr,cy,c.label,c)+S.line([[xr,cy+30],[xr,top+seg*(i+1)]]);});
+  return S.wrap(w,h,g);
+};
+/** source on left, parallel branches to the right */
+S.parallel=function(comps,o={}){
+  const src=o.src||'ac', n=comps.length, top=24, h=o.h||170, xs=46, gap=o.gap||92, x0=xs+(o.first||96);
+  const w=x0+gap*(n-1)+(o.labelW||70);
+  const my=h/2;
+  let g=S.line([[xs,top],[x0+gap*(n-1),top]])+S.line([[xs,h-top],[x0+gap*(n-1),h-top]]);
+  g+=S.line([[xs,top],[xs,my-30]])+vSym(src,xs,my,o.srcLabel,{side:'left'})+S.line([[xs,my+30],[xs,h-top]]);
+  comps.forEach((c,i)=>{const x=x0+gap*i;g+=S.line([[x,top],[x,my-30]])+vSym(c.t,x,my,c.label,Object.assign({side:'right'},c))+S.line([[x,my+30],[x,h-top]]);if(i<n-1){g+=S.dot(x,top)+S.dot(x,h-top);}});
+  return S.wrap(w,h,g);
+};
+/** phasor diagram. vecs:[{x,y,label,color,dash}] in arbitrary units; origin auto-placed */
+S.phasor=function(vecs,o={}){
+  const W=o.w||280,H=o.h||220,pad=34;
+  let maxX=0,minX=0,maxY=0,minY=0;
+  vecs.forEach(v=>{maxX=Math.max(maxX,v.x,v.x0||0);minX=Math.min(minX,v.x,v.x0||0);maxY=Math.max(maxY,v.y,v.y0||0);minY=Math.min(minY,v.y,v.y0||0);});
+  const sx=(W-2*pad)/Math.max(1e-9,maxX-minX||1), sy=(H-2*pad)/Math.max(1e-9,maxY-minY||1); const k=Math.min(sx,sy);
+  const ox=pad-minX*k+((W-2*pad)-(maxX-minX)*k)/2, oy=pad+maxY*k+((H-2*pad)-(maxY-minY)*k)/2;
+  let g=`<line x1="${pad/2}" y1="${oy}" x2="${W-pad/2}" y2="${oy}" stroke="var(--ink2)" stroke-width="1"/><line x1="${ox}" y1="${pad/2}" x2="${ox}" y2="${H-pad/2}" stroke="var(--ink2)" stroke-width="1"/>`;
+  vecs.forEach((v,i)=>{const x0=ox+(v.x0||0)*k,y0=oy-(v.y0||0)*k,x1=ox+v.x*k,y1=oy-v.y*k;const col=v.color||'var(--accent)';
+    const ang=Math.atan2(y1-y0,x1-x0),len=Math.hypot(x1-x0,y1-y0);
+    g+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="${v.w||2.5}" ${v.dash?'stroke-dasharray="4 4"':''}/>`;
+    if(len>8&&!v.noArrow)g+=`<path d="M${x1},${y1} L${x1-9*Math.cos(ang-0.4)},${y1-9*Math.sin(ang-0.4)} L${x1-9*Math.cos(ang+0.4)},${y1-9*Math.sin(ang+0.4)} Z" fill="${col}" stroke="none"/>`;
+    if(v.label){const lx=(v.lx!==undefined?ox+v.lx*k:(x0+x1)/2)+(v.ldx||0),ly=(v.ly!==undefined?oy-v.ly*k:(y0+y1)/2)+(v.ldy||0);g+=`<text x="${lx}" y="${ly}" font-size="13" font-weight="700" fill="${col}" stroke="none" text-anchor="middle">${esc(v.label)}</text>`;}
+  });
+  if(o.theta!==undefined&&Math.abs(o.theta)>0.5){const r=30,a=CC.rad(o.theta);const x1=ox+r,y1=oy,x2=ox+r*Math.cos(a),y2=oy-r*Math.sin(a);g+=`<path d="M${x1},${y1} A${r},${r} 0 0 ${o.theta>0?0:1} ${x2},${y2}" stroke="var(--brand)" fill="none" stroke-width="1.5"/><text x="${ox+r+12}" y="${oy-(o.theta>0?6:-16)}" font-size="13" fill="var(--brand)" stroke="none">θ</text>`;}
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="vector diagram">${g}</svg>`;
+};
+
+/* ---------- icons ---------- */
+const IC={
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>',
+  wave:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="16" cy="16" r="12"/><path d="M8 16q4-9 8 0t8 0"/></svg>',
+  res:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M2 16h6l2-6 4 12 4-12 4 12 2-6h6"/></svg>',
+  cap:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M2 16h11M19 16h11M13 7v18M19 7v18"/></svg>',
+  ind:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 18h4a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0a3.5 3.5 0 0 1 7 0h3"/></svg>',
+  xfmr:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6a3 3 0 0 1 0 6M23 5a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6a3 3 0 0 0 0 6M15 4v24M17 4v24"/></svg>',
+  meter:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="24" height="24" rx="3"/><path d="M9 20a8 8 0 0 1 14 0M16 20l4-7"/></svg>',
+  wrench:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M20 4a7 7 0 0 0-6 9L4 23l5 5 10-10a7 7 0 0 0 9-6l-4 2-4-1-1-4z"/></svg>',
+  res2:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 26C10 26 12 6 16 6s6 20 12 20"/><path d="M2 26h28"/></svg>',
+  chip:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="6" width="16" height="20" rx="2"/><path d="M4 10h4M4 16h4M4 22h4M24 10h4M24 16h4M24 22h4"/></svg>',
+  gate:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 7h8a9 9 0 0 1 0 18H8z M2 12h6M2 20h6M25 16h5"/></svg>',
+  num:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><text x="3" y="22" font-size="13" fill="currentColor" stroke="none" font-family="monospace">101</text></svg>',
+  amp:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M8 5v22l18-11z M2 11h6M2 21h6M26 16h4"/><text x="9.5" y="14" font-size="7" fill="currentColor" stroke="none">−</text><text x="9.5" y="23" font-size="7" fill="currentColor" stroke="none">+</text></svg>',
+  diode:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16h8M22 16h8M10 8v16l12-8z M22 8v16"/></svg>',
+  trans:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="17" cy="16" r="11"/><path d="M4 16h8M12 9v14M12 13l9-6M12 19l9 6M21 7v-4M21 25v4"/></svg>',
+  bulb:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20a8 8 0 1 1 10 0v4H11z M12 28h8"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z M20 4h-4a2 2 0 0 0-2 2"/></svg>',
+  plug:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 3v7M21 3v7M8 10h16v5a8 8 0 0 1-16 0zM16 23v6"/></svg>',
+  wire:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 24c6 0 6-16 13-16s7 16 13 16"/><circle cx="3" cy="24" r="2" fill="currentColor"/><circle cx="29" cy="24" r="2" fill="currentColor"/></svg>',
+  ohm:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">Ω</text></svg>',
+  volt:'<svg viewBox="0 0 32 32"><text x="16" y="24" font-size="22" text-anchor="middle" fill="currentColor" font-weight="700">V</text></svg>',
+  power:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M18 3L7 18h8l-2 11 11-15h-8z"/></svg>',
+  clock:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="9" width="22" height="14" rx="2"/><path d="M9 19v-6h3v6h3v-6h3v6h3v-6"/></svg>',
+  ff:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="5" width="16" height="22" rx="1"/><text x="11" y="14" font-size="7" fill="currentColor" stroke="none">J</text><text x="11" y="25" font-size="7" fill="currentColor" stroke="none">K</text><text x="19" y="14" font-size="7" fill="currentColor" stroke="none">Q</text><path d="M8 17l3 2-3 2"/></svg>',
+  bread:'<svg viewBox="0 0 32 32" fill="currentColor"><rect x="3" y="6" width="26" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>'+[9,13,19,23].map(y=>[7,11,15,19,23].map(x=>`<circle cx="${x+1}" cy="${y}" r="1.3"/>`).join('')).join('')+'</svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12l5 5 9-10"/></svg>',
+};
+CC.icons=IC;
+
+/* ---------- modal / toast ---------- */
+CC.modal=function(html,buttons=[{label:'Close',primary:true}],opts={}){
+  return new Promise(res=>{
+    const sc=el(`<div class="scrim" role="dialog" aria-modal="true"><div class="modal">${html}<div class="row end mt modal-btns"></div></div></div>`);
+    const bb=$('.modal-btns',sc);
+    const close=v=>{sc.remove();document.removeEventListener('keydown',onKey);res(v);};
+    buttons.forEach((b,i)=>{const x=el(`<button class="btn ${b.primary?'primary':''} ${b.cls||''}">${b.label}</button>`);x.onclick=()=>{if(b.onClick&&b.onClick(sc)===false)return;close(b.value!==undefined?b.value:i);};bb.appendChild(x);});
+    const onKey=e=>{if(e.key==='Escape'&&!opts.noEscape)close(-1);};
+    document.addEventListener('keydown',onKey);
+    sc.addEventListener('click',e=>{if(e.target===sc&&!opts.noEscape)close(-1);});
+    document.body.appendChild(sc);
+    const f=$('input',sc)||$('.btn.primary',sc);if(f)setTimeout(()=>f.focus(),30);
+    if(opts.onOpen)opts.onOpen(sc);
+  });
+};
+CC.confirm=(msg,yes='Yes',no='Cancel')=>CC.modal(`<p>${msg}</p>`,[{label:no,value:false},{label:yes,primary:true,value:true}]).then(v=>v===true);
+CC.toast=function(msg,ms=2200){const t=el(`<div class="toast" role="status">${msg}</div>`);document.body.appendChild(t);setTimeout(()=>t.remove(),ms);};
+
+/* ---------- validity code ---------- */
+function hashStr(s){let h1=0x811c9dc5,h2=0x1b873593;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,16777619);h2=Math.imul(h2^c,2246822507);h2^=h2>>>13;}return [h1>>>0,h2>>>0];}
+CC.validity=function(prog,name,id,title,score,time,date){
+  const norm=[prog,name.trim().toUpperCase(),String(id).trim(),title.trim().toUpperCase(),String(score).trim(),String(time).trim(),String(date).trim()].join('|');
+  const [a,b]=hashStr(norm);const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let out='';let x=a,y=b;
+  for(let i=0;i<10;i++){const v=(i<5?x:y);out+=A[v%A.length];if(i<5)x=Math.floor(x/A.length);else y=Math.floor(y/A.length);}
+  return out.slice(0,5)+'-'+out.slice(5);
+};
+
+/* ---------- App shell ---------- */
+const App=CC.App={mods:{},order:[],cfg:null,last:null,running:null};
+App.key=k=>'cc:'+App.cfg.id+':'+k;
+App.student=()=>store.get('cc:student',null);
+App.opts=()=>Object.assign({certs:true,theme:'auto'},store.get('cc:opts',{}));
+App.applyTheme=function(){const t=App.opts().theme;if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);};
+App.init=function(cfg){
+  App.cfg=cfg;
+  cfg.groups.forEach(g=>g.items.forEach(m=>{App.mods[m.id]=m;m.group=g.title;App.order.push(m.id);}));
+  document.title=cfg.title;
+  App.applyTheme();
+  document.body.innerHTML=`<header class="topbar noprint"><div class="in">
+    <a class="brand" href="#/" aria-label="Home">${esc(cfg.title)}<small>${esc(cfg.tagline||'Interactive exercises')}</small></a>
+    <span class="sp"></span>
+    <button class="chip" id="who" title="Student name and ID">${IC.user.replace('<svg','<svg width="16" height="16"')}<span></span></button>
+    <a class="iconbtn" href="#/" title="Main menu" aria-label="Main menu">${IC.home}</a>
+  </div></header><main id="view"></main>`;
+  $('#who').onclick=()=>App.askStudent(true);
+  App.refreshWho();
+  window.addEventListener('hashchange',App.route);
+  App.route();
+};
+App.refreshWho=function(){const s=App.student();$('#who span').textContent=s?s.name:'Sign in';};
+App.askStudent=function(force){
+  return new Promise(res=>{
+    const cur=App.student();
+    if(cur&&!force)return res(cur);
+    CC.modal(`<h3>Student information</h3><p class="small muted">Your name and ID appear on certificates and in the grade file stored on this device.</p>
+      <div class="field"><label for="sn">Name</label><input id="sn" autocomplete="name" value="${cur?esc(cur.name):''}"></div>
+      <div class="field"><label for="sid">ID code (2–9 digits)</label><input id="sid" inputmode="numeric" value="${cur?esc(cur.id):''}"></div>
+      <p class="small" id="serr" style="color:var(--bad)"></p>`,
+      [{label:'Practice without signing in',value:'skip'},{label:'Save',primary:true,value:'ok',onClick:sc=>{
+        const n=$('#sn',sc).value.trim(),i=$('#sid',sc).value.trim();
+        if(n.length<2){$('#serr',sc).textContent='Name must be at least two characters.';return false;}
+        if(!/^\d{2,9}$/.test(i)){$('#serr',sc).textContent='ID code must have between 2 and 9 digits.';return false;}
+        store.set('cc:student',{name:n,id:i});App.refreshWho();}}]).then(v=>{
+          if(v==='skip'){App.guest=true;}
+          res(App.student());});
+  });
+};
+App.view=()=>$('#view');
+App.route=function(){
+  const h=location.hash.replace(/^#\/?/,'');const [r,a]=h.split('/');
+  if(App.running&&App.running.cleanup){App.running.cleanup();}
+  App.running=null;
+  window.scrollTo(0,0);
+  const v=App.view();v.innerHTML='';
+  if(!r)return App.home(v);
+  if(r==='m'&&App.mods[a])return App.intro(v,App.mods[a]);
+  if(r==='run'&&App.mods[a])return App.run(v,App.mods[a]);
+  if(r==='grades')return App.grades(v);
+  if(r==='validity')return App.validityView(v);
+  if(r==='manual')return App.manual(v);
+  if(r==='options')return App.options(v);
+  if(r==='cert')return App.certificate(v);
+  if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
+  App.home(v);
+};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.home=function(v){
+  const c=App.cfg;
+  v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
+    <div class="utils noprint"><a class="btn sm" href="#/manual">${IC.book.replace('<svg','<svg width="18" height="18"')} Manual</a><a class="btn sm" href="#/grades">Grade file</a><a class="btn sm" href="#/validity">Check validity</a><a class="btn sm" href="#/options">Options</a></div></div>
+    <div id="heroSlot"></div></section>`));
+  if(c.hero)c.hero($('#heroSlot',v));
+  c.groups.forEach(g=>{
+    v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
+    const m=el('<div class="menu"></div>');
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    v.appendChild(m);
+  });
+  v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
+};
+App.intro=function(v,m){
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px"><a class="btn sm ghost" href="#/">← Main menu</a></div><h1>${esc(m.title)}</h1><div class="card" id="introBody"></div>
+    <div class="row end mt"><a class="btn" href="#/">Quit</a><button class="btn primary" id="begin">Begin</button></div></div>`);
+  v.appendChild(wrap);
+  const body=$('#introBody',wrap);
+  if(typeof m.intro==='function')m.intro(body);else body.innerHTML=m.intro||'';
+  $('#begin',wrap).onclick=async()=>{
+    if(m.graded!==false&&!App.student()&&!App.guest)await App.askStudent(false);
+    location.hash='#/run/'+m.id;
+  };
+};
+App.run=function(v,m){
+  const s=new Session(m);
+  App.running=s;
+  const wrap=el(`<div><div class="row noprint" style="margin-bottom:8px;justify-content:space-between"><button class="btn sm ghost" id="quitx">← Quit</button><span class="small muted">${esc(m.title)}</span></div><div id="ex"></div></div>`);
+  v.appendChild(wrap);
+  $('#quitx',wrap).onclick=async()=>{if(s.done||await CC.confirm('Quit this exercise without grading?','Quit'))location.hash='#/';};
+  m.run($('#ex',wrap),s);
+};
+class Session{
+  constructor(m){this.m=m;this.t0=Date.now();this.done=false;this.timers=[];}
+  elapsed(){return Date.now()-this.t0;}
+  every(fn,ms){const t=setInterval(fn,ms);this.timers.push(t);return t;}
+  cleanup(){this.timers.forEach(clearInterval);}
+  restart(){location.hash='#/run/'+this.m.id;App.route();}
+  finish(score,summary){
+    if(this.done)return;this.done=true;this.cleanup();
+    score=Math.max(0,Math.min(100,Math.round(score)));
+    const st=App.student();
+    const time=CC.fmtTime(this.elapsed());
+    const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const rec={mid:this.m.id,title:this.m.title,score,time,date,name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
+    App.last=rec;
+    const pass=App.cfg.pass||80;
+    const certOk=App.opts().certs&&rec.id;
+    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${score>=pass?'ok':'bad'}">Score: ${score}%</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
+      [{label:'Main menu',value:'menu'},{label:'Review',value:'review'},...(certOk?[{label:'Certificate',value:'cert'}]:[]),{label:'Try again',primary:true,value:'again'}],{noEscape:false}).then(v=>{
+        if(v==='menu')location.hash='#/';
+        else if(v==='cert')location.hash='#/cert';
+        else if(v==='again')this.restart();
+      });
+  }
+}
+CC.Session=Session;
+
+App.certificate=function(v){
+  const r=App.last;
+  if(!r){v.appendChild(el('<div class="card"><p>No exercise has been completed in this session yet.</p><a class="btn" href="#/">Main menu</a></div>'));return;}
+  const code=CC.validity(App.cfg.id,r.name,r.id,r.title,r.score,r.time,r.date);
+  v.appendChild(el(`<div><div class="cert"><div style="font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:#7a5b10">Certificate of Completion</div>
+  <h2>${esc(App.cfg.title)}</h2><p>This certifies that</p><div class="big">${esc(r.name)}</div><p>has completed the exercise</p><div class="big" style="font-size:1.3rem">${esc(r.title)}</div>
+  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${r.score}%</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
+  <div class="row end mt noprint"><a class="btn" href="#/">Main menu</a><button class="btn primary" onclick="window.print()">Print certificate</button></div></div>`));
+};
+App.validityView=function(v){
+  const titles=App.order.map(id=>App.mods[id].title);
+  v.appendChild(el(`<div><h1>Check certificate validity</h1><div class="card"><p class="small muted">Type the information exactly as it appears on the certificate. A matching validity code means the certificate was very likely produced by this program and has not been altered.</p>
+  <div class="fields">
+   <div class="field"><label>Student name</label><input id="vn"></div>
+   <div class="field"><label>Student ID</label><input id="vi" inputmode="numeric"></div>
+   <div class="field"><label>Topic title</label><select id="vt" style="border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px">${titles.map(t=>`<option>${esc(t)}</option>`).join('')}</select></div>
+   <div class="field"><label>Exercise score (number only)</label><input id="vs" inputmode="numeric"></div>
+   <div class="field"><label>Time on task</label><input id="vtm" placeholder="e.g. 12:34"></div>
+   <div class="field"><label>Date / time</label><input id="vd"></div>
+   <div class="field"><label>Validity code</label><input id="vc" style="font-family:var(--mono)"></div>
+  </div><div class="row end"><button class="btn primary" id="vgo">Evaluate validity</button></div><p id="vres" class="verdict"></p></div></div>`));
+  $('#vgo',v).onclick=()=>{const code=CC.validity(App.cfg.id,$('#vn',v).value,$('#vi',v).value,$('#vt',v).value,$('#vs',v).value.replace('%',''),$('#vtm',v).value,$('#vd',v).value);
+    const ok=code.replace('-','')===$('#vc',v).value.trim().toUpperCase().replace(/[^A-Z]/g,'');const r=$('#vres',v);r.className='verdict '+(ok?'ok':'bad');r.textContent=ok?'Valid code — the data matches.':'Not valid — check each entry carefully, including capitalization of the date.';};
+};
+App.grades=function(v){
+  const g=store.get(App.key('grades'),[]);
+  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
+  v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored only in this browser on this device.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
+  <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
+  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
+  $('#gclr',v).onclick=async()=>{if(await CC.confirm('Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
+};
+App.manual=function(v){
+  v.appendChild(el(`<div><h1>Manual</h1><div class="card intro-text">${App.cfg.manual||''}
+  <h2>Using this offline edition</h2>
+  <p>This page is a self-contained web version of the original Windows program. It needs no internet connection and runs in any modern browser on phones, tablets, Chromebooks, Macs and PCs. Copy the file to any device and open it.</p>
+  ${App.cfg.numericAnswers===false?'':`<p>${App.cfg.tolNote||'Numeric answers are accepted within the tolerance stated on each exercise\'s intro page, so normal rounding is fine.'} Type plain numbers in the unit shown next to each answer box (for example <span class="kbd">4.7</span> in a box marked mA). In a box with a plain unit such as V, Ω or A you may also use an engineering suffix such as <span class="kbd">4.7k</span> or <span class="kbd">22m</span>.</p>`}
+  <p>Your name, ID and grade file are stored in this browser only. Use <b>Grade file</b> on the main menu to print or download them.</p></div></div>`));
+};
+App.options=function(v){
+  const o=App.opts();
+  v.appendChild(el(`<div><h1>Options</h1><div class="card">
+   <label class="row"><input type="checkbox" id="oc" ${o.certs?'checked':''}> Certificate printing enabled</label>
+   <div class="field mt"><label>Appearance</label><div class="row"><label class="row"><input type="radio" name="th" value="auto" ${o.theme==='auto'?'checked':''}> Match device</label><label class="row"><input type="radio" name="th" value="light" ${o.theme==='light'?'checked':''}> Light</label><label class="row"><input type="radio" name="th" value="dark" ${o.theme==='dark'?'checked':''}> Dark</label></div></div>
+   <div class="row mt"><button class="btn" id="ostu">Change student name / ID</button><button class="btn" id="oout">Sign out</button></div></div></div>`));
+  const save=()=>{const n={certs:$('#oc',v).checked,theme:($('input[name=th]:checked',v)||{}).value||'auto'};store.set('cc:opts',n);App.applyTheme();};
+  $$('input',v).forEach(i=>i.onchange=save);
+  $('#ostu',v).onclick=()=>App.askStudent(true);
+  $('#oout',v).onclick=()=>{store.del('cc:student');App.guest=false;App.refreshWho();CC.toast('Signed out');};
+};
+
+/* ---------- exercise kit: helpers for intro pages ---------- */
+CC.introPage=function({text,formulas,diagram,extra,how}){
+  let h='';
+  if(diagram)h+=`<div class="diagram" style="margin-bottom:12px">${diagram}</div>`;
+  if(text)h+=`<div class="intro-text">${text}</div>`;
+  if(formulas&&formulas.length){h+=`<h3>Key relationships</h3><div class="formulas">${formulas.map(f=>`<div class="formula">${f.cap?`<span class="cap">${f.cap}</span>`:''}${CC.M(f.tex||f)}${f.where?`<div class="where">${f.where}</div>`:''}</div>`).join('')}</div>`;}
+  if(extra)h+=extra;
+  if(how)h+=`<h3>How this exercise works</h3><div class="small intro-text">${how}</div>`;
+  return h;
+};
+
+/* worked solution renderer: steps are TeX strings (math) or strings starting with '>' (prose) */
+CC.workHTML=function(steps,label='Show worked solution'){
+  if(!steps||!steps.length)return '';
+  const body=steps.map(t=>typeof t==='string'&&t.startsWith('>')?`<p class="small">${t.slice(1)}</p>`:CC.M(t)).join('');
+  return `<details class="work"><summary>${label}</summary>${body}</details>`;
+};
+/* ---------- Worksheet: one circuit, many answers, Check (-2) Help (-3) Grade ---------- */
+CC.worksheet=function(root,s,spec){
+  CC._last=spec;
+  const checkCost=spec.checkCost??2, helpCost=spec.helpCost??3, N=spec.items.length;
+  let pen=0;const helped=new Set();
+  const w=el(`<div>
+    <div class="statusbar"><span class="pill" id="wpen">Deductions: 0</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
+    <div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title||'Circuit')}</h2><div class="diagram">${spec.diagram||''}</div><div class="givens">${spec.givens.map(g=>`<div class="given"><div class="k">${g.k}</div><div class="v">${g.v}</div></div>`).join('')}</div>${spec.note?`<p class="small muted">${spec.note}</p>`:''}</div><div id="wextra"></div></div>
+    <div><div class="card"><h2 style="margin-top:0">Find</h2><div class="ws" id="ws"></div>
+    <div class="row end mt"><button class="btn primary" id="wgrade">Grade</button></div></div></div></div></div>`);
+  root.appendChild(w);
+  const wsEl=$('#ws',w);
+  const upd=()=>{$('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  s.every(()=>{$('#wtime',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const ok=(it,val)=>{if(it.signFree)return CC.close(Math.abs(val),Math.abs(it.value),it.tol??spec.tol??0.02,it.absTol??null);return CC.close(val,it.value,it.tol??spec.tol??0.02,it.absTol??null);};
+  spec.items.forEach((it,i)=>{
+    const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
+      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points." aria-label="Help">?</button></div><div class="fb"></div></div>`);
+    it._row=r;const inp=$('input',r);
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
+    $('[data-a=c]',r).onclick=()=>{
+      const val=CC.parse(inp.value,!CC.prefixed(it.unit));
+      if(isNaN(val)){CC.toast('Type a number first.');return;}
+      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';}
+      else{pen+=checkCost;r.className='wrow bad';$('.fb',r).textContent=`Not right — ${checkCost} points deducted.`;upd();}
+    };
+    $('[data-a=h]',r).onclick=async()=>{
+      const first=!helped.has(i);
+      if(first){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. It costs ${helpCost} points, charged once per item.</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
+        if(go!==true)return;helped.add(i);pen+=helpCost;upd();}
+      CC.modal(`<h3>${CC.m(it.sym)}${it.name?` — ${esc(it.name)}`:''}</h3>${(it.help||[]).map(h=>typeof h==='string'&&h.startsWith('$')?CC.M(h.slice(1)):`<p>${h}</p>`).join('')}`);
+    };
+    wsEl.appendChild(r);
+  });
+  $('#wgrade',w).onclick=async()=>{
+    const blanks=spec.items.filter(it=>!$('input',it._row).value.trim()).length;
+    if(blanks&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
+    let right=0;
+    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good)right++;inp.disabled=true;
+      it._row.className='wrow '+(good?'ok':'bad');$('.fb',it._row).innerHTML=(good?'Right! ':'')+`Correct answer: <b>${CC.fmt(it.value)} ${esc(it.unit||'')}</b>`+CC.workHTML(typeof it.work==='function'?it.work():it.work);$$('button',it._row).forEach(b=>b.disabled=true);});
+    $('#wgrade',w).disabled=true;
+    const raw=right/N*100;const score=raw-pen;
+    if(spec.after)spec.after($('#wextra',w));
+    s.finish(score,`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
+    const again=el('<div class="row end mt noprint"><button class="btn primary">New problem</button></div>');$('button',again).onclick=()=>s.restart();$('#wgrade',w).parentNode.after(again);
+  };
+};
+
+/* ---------- Problem set: N problems one at a time, each graded immediately ---------- */
+CC.problemSet=function(root,s,spec){
+  const N=spec.count;let i=0,right=0,total=0;const log=[];
+  const probs=spec.list?spec.list():Array.from({length:N},(_,k)=>spec.gen(k));
+  CC._last=probs;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="pn"></span><span class="pill" id="ps">Correct: 0</span><span class="pill" id="pt">0:00</span></div><div class="progress"><i id="pb" style="width:0"></i></div><div id="pbody" class="mt"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#pt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const show=()=>{
+    const p=probs[i];
+    $('#pn',w).textContent=`Problem ${i+1} of ${probs.length}`;$('#pb',w).style.width=(i/probs.length*100)+'%';
+    const body=$('#pbody',w);body.innerHTML='';
+    const card=el(`<div class="card"><div class="cols2"><div>${p.title?`<h2 style="margin-top:0">${p.title}</h2>`:''}${p.prompt?`<div>${p.prompt}</div>`:''}${p.diagram?`<div class="diagram mt">${p.diagram}</div>`:''}</div>
+      <div><div class="fields" id="pf"></div><div id="pfb"></div><div class="row end mt"><button class="btn primary" id="pg">${spec.gradeLabel||'Grade answers'}</button></div></div></div></div>`);
+    body.appendChild(card);
+    const pf=$('#pf',card);
+    p.fields.forEach(f=>{
+      let fe;
+      if(f.choices){
+        fe=el(`<div class="field"><label>${f.label}</label><div class="faults">${f.choices.map((c,ci)=>`<label><input type="radio" name="ch_${f.key}" value="${ci}"> <span>${c}</span></label>`).join('')}</div></div>`);
+      } else {
+        fe=el(`<div class="field"><label>${f.label}${f.unit?` <span class="muted">(${esc(f.unit)})</span>`:''}</label><input type="text" inputmode="${f.text?'text':'decimal'}" autocomplete="off" ${f.given?'readonly':''} class="${f.given?'known':'ask'}" value="${f.given?esc(f.show||CC.fmt(f.value)):''}"></div>`);
+        const inp=$('input',fe);inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const all=$$('input:not([readonly])',pf);const k=all.indexOf(inp);if(all[k+1])all[k+1].focus();else $('#pg',card).click();}});
+      }
+      f._el=fe;pf.appendChild(fe);
+    });
+    const firstAsk=$('input:not([readonly])',pf);if(firstAsk&&window.innerWidth>700)firstAsk.focus();
+    $('#pg',card).onclick=()=>{
+      const btn=$('#pg',card);
+      if(btn.dataset.done){i++;if(i>=probs.length)return end();return show();}
+      let pr=0,pt=0;const fbs=[];
+      p.fields.forEach(f=>{if(f.given)return;pt++;let good;
+        if(f.choices){const c=$('input:checked',f._el);good=c&&+c.value===f.answer;$$('.faults label',f._el).forEach((lb,ci)=>{if(ci===f.answer)lb.classList.add('correct');else if(c&&+c.value===ci)lb.classList.add('wrong');});$$('input',f._el).forEach(x=>x.disabled=true);}
+        else{const inp=$('input',f._el);
+          if(f.check)good=f.check(inp.value);
+          else if(f.text)good=inp.value.trim().toUpperCase().replace(/\s+/g,'')===String(f.value).toUpperCase().replace(/\s+/g,'');
+          else{const v=CC.parse(inp.value,f.suffix!==false&&!CC.prefixed(f.unit));good=f.signFree?CC.close(Math.abs(v),Math.abs(f.value),f.tol??spec.tol??0.02,f.absTol??null):CC.close(v,f.value,f.tol??spec.tol??0.02,f.absTol??null);}
+          inp.classList.add(good?'ok':'bad');inp.readOnly=true;
+          if(!good)fbs.push(`${f.label}: correct answer is <b>${f.show||CC.fmt(f.value)}${f.unit?' '+esc(f.unit):''}</b>`);}
+        if(good)pr++;});
+      right+=pr;total+=pt;log.push({i,pr,pt});
+      $('#ps',w).textContent=`Correct: ${right} of ${total}`;
+      const allGood=pr===pt;
+      $('#pfb',card).innerHTML=`<p class="verdict ${allGood?'ok':'bad'}">${allGood?'Correct!':(pr?`${pr} of ${pt} correct`:'Incorrect')}</p>${fbs.length?`<p class="small">${fbs.join('<br>')}</p>`:''}${p.explain?`<div class="formula mt">${p.explain}</div>`:''}${CC.workHTML(typeof p.work==='function'?p.work():p.work)}`;
+      btn.dataset.done='1';btn.textContent=i+1<probs.length?'Next problem':'Finish';btn.focus();
+    };
+  };
+  const end=()=>{$('#pb',w).style.width='100%';const score=total?right/total*100:0;s.finish(score,`${right} of ${total} answers correct.`);
+    const again=el('<div class="card mt center"><p>Exercise finished.</p><div class="row" style="justify-content:center"><a class="btn" href="#/">Main menu</a><button class="btn primary">New problem set</button></div></div>');$('button',again).onclick=()=>s.restart();$('#pbody',w).appendChild(again);};
+  show();
+};
+
+/* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}]}} */
+CC.trouble=function(root,s,spec){
+  const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
+  const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const next=()=>{
+    const b=spec.build(k);let pts=P;CC._last=b;
+    if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
+    $('#tn',w).textContent=`Problem ${k+1} of ${N}`;
+    const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for this item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};
+    updP();
+    const body=$('#tbody',w);body.innerHTML='';
+    const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button></div></div>
+      <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
+      <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
+      <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
+    body.appendChild(card);
+    $('#info',card).innerHTML=b.info?b.info():'';
+    const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
+    const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
+    $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    const meterHTML=()=>{
+      const ms=(b.meters?b.meters():[]).map(m=>`<div class="meterbox"><span class="ml">${m.label}</span><span class="lcd">${m.text}</span></div>`).join('');
+      let main='----';
+      if(probe.red&&probe.black){main=b.measure(probe.red,probe.black).text;}
+      return `<div class="meterbox"><span class="ml">${spec.meterLabel||'Voltmeter'}</span><span class="lcd">${main}</span></div>`+ms;
+    };
+    const draw=()=>{
+      const pads=b.pads.map(p=>{const r=probe.red===p.id,bl=probe.black===p.id;
+        return `<g class="pad" data-id="${p.id}" tabindex="0" role="button" aria-label="Test point ${esc(p.label||p.id)}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="7" fill="#d8d8d8" stroke="#777" stroke-width="2"/><circle cx="${p.x}" cy="${p.y}" r="2.5" fill="#555"/>${r?`<circle cx="${p.x}" cy="${p.y}" r="11" fill="none" stroke="#d32f2f" stroke-width="4"/><text x="${p.x+12}" y="${p.y-10}" fill="#d32f2f" font-weight="800" font-size="14">+</text>`:''}${bl?`<circle cx="${p.x}" cy="${p.y}" r="${r?15:11}" fill="none" stroke="#111" stroke-width="4"/><text x="${p.x-20}" y="${p.y-10}" fill="#111" font-weight="800" font-size="16">−</text>`:''}<circle class="hit" cx="${p.x}" cy="${p.y}" r="16"/></g>`;}).join('');
+      $('#bw',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
+      $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+      $('#mt',card).innerHTML=meterHTML();
+    };
+    const tap=id=>{
+      if(card.dataset.graded)return;
+      probe[probe.active]=id;
+      setActive(probe.active==='red'?'black':'red');
+      if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
+        const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
+        $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
+      draw();
+    };
+    draw();
+    $('#tg',card).onclick=()=>{
+      const btn=$('#tg',card);
+      if(card.dataset.graded){k++;if(k>=N)return end();return next();}
+      const c=$('input:checked',fl);
+      if(!c){CC.modal('<p>You did not select a fault. Select a fault, then choose Grade item.</p>');return;}
+      card.dataset.graded='1';
+      const good=+c.value===b.answer;const got=good?pts:0;earned+=got;
+      $$('label',fl).forEach((lb,i)=>{if(i===b.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
+      $$('input',fl).forEach(x=>x.disabled=true);
+      $('#ts',w).textContent=`Score: ${earned}`;
+      $('#tfb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Correct!':'Incorrect'}</p><p class="small">${good?`You earned ${got} point${got===1?'':'s'} on this item.`:`The correct answer is highlighted: <b>${esc(b.faults[b.answer])}</b>.`} Your total score so far is ${earned} point${earned===1?'':'s'}.</p>${b.explain?`<p class="small muted">${b.explain()}</p>`:''}${CC.workHTML(typeof b.work==='function'?b.work():b.work,'Show how to find this fault')}`;
+      btn.textContent=k+1<N?'Continue':'Finish';
+    };
+  };
+  const end=()=>{const score=earned/(N*P)*100;s.finish(score,`${earned} of ${N*P} possible points.`);};
+  next();
+};
+
+/* meter helpers */
+CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.008,0.008));};
+CC.lcd=(v,dec=2)=>{if(!isFinite(v))return 'OL';const a=Math.abs(v);if(a<0.005)return (0).toFixed(dec);return v.toFixed(a>=100?1:dec);};
+
+/* ---------- PC-board drawing kit ---------- */
+const B=CC.board={};
+B.svg=(w,h,inner)=>`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="printed circuit board" font-family="system-ui,sans-serif">${inner}</svg>`;
+B.pcb=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="var(--board)" stroke="var(--board-dark)" stroke-width="3"/>`+[[x+10,y+10],[x+w-10,y+10],[x+10,y+h-10],[x+w-10,y+h-10]].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--board-dark)"/>`).join('');
+B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--trace)" stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>`+(label?`<text x="${lp[0]}" y="${lp[1]}" font-size="11" font-weight="700" fill="#5a3b12" ${lp[2]?`transform="rotate(${lp[2]} ${lp[0]} ${lp[1]})"`:''} text-anchor="middle">${label}</text>`:'');
+B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
+/** component between two pad points (horizontal or vertical) */
+B.part=(type,a,b,label)=>{
+  const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+  let body='';const bl=Math.min(L-26,64);
+  const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
+  if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
+  if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
+  if(type==='F')body=`<rect x="${-bl/2}" y="-7" width="${bl}" height="14" rx="3" fill="#e9f3f7" stroke="#8aa"/><rect x="${-bl/2}" y="-7" width="8" height="14" fill="#bbb"/><rect x="${bl/2-8}" y="-7" width="8" height="14" fill="#bbb"/><line x1="${-bl/2+8}" y1="0" x2="${bl/2-8}" y2="0" stroke="#777" stroke-width="1"/>`;
+  if(type==='D')body=`<rect x="${-bl/2}" y="-6" width="${bl}" height="12" rx="3" fill="#222"/><rect x="${bl/2-9}" y="-6" width="4" height="12" fill="#ddd"/>`;
+  const flip=Math.abs(ang)>90;
+  const lab=label?`<text x="${cx+(Math.abs(ang)===90?14:0)}" y="${cy+(Math.abs(ang)===90?4:22)}" font-size="12" font-weight="700" fill="#2b1a05" text-anchor="${Math.abs(ang)===90?'start':'middle'}">${esc(label)}</text>`:'';
+  return `<g transform="translate(${cx},${cy}) rotate(${flip?ang-180:ang})">${lead}${body}</g>${lab}`;
+};
+B.xfmr=(x,y,w,h,label)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#2a8c8c" stroke="#145"/><rect x="${x+w*.25}" y="${y-6}" width="${w*.5}" height="${h+12}" rx="3" fill="#cfd8dc" stroke="#78909c"/><text x="${x+w/2}" y="${y+h/2+4}" font-size="11" font-weight="800" text-anchor="middle" fill="#455a64" transform="rotate(-90 ${x+w/2} ${y+h/2})">ACME</text>${label?B.label(x+w/2,y+h+24,label):''}`;
+B.supply=(x,y,w,h,title,readout)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#4a3b33" stroke="#2a201b" stroke-width="2"/><rect x="${x+8}" y="${y+8}" width="${w-16}" height="${h-16}" rx="5" fill="#e9e4dc"/><text x="${x+w/2}" y="${y+26}" font-size="11" font-weight="800" text-anchor="middle" fill="#b3261e">${esc(title)}</text>${readout?`<text x="${x+w/2}" y="${y+46}" font-size="13" font-weight="700" text-anchor="middle" fill="#333">${esc(readout)}</text>`:''}`;
+
+})();
+</script>
+<script>/* Op Amp Challenge: student-facing text (HTML). Rewritten from the original ETCAI lessons. */
+(function(){
+'use strict';
+const m=CC.m,M=CC.M;
+const T=window.OAT={};
+
+/* ---------- program ---------- */
+T.whatIs=`<p>An operational amplifier, or <b>op amp</b>, is an integrated-circuit amplifier with a very high voltage gain, typically 100,000 or more. On its own that gain is far too high to be useful, so almost every op amp circuit uses <b>negative feedback</b>: a resistor network feeds part of the output back to the inverting input and sets a smaller, precise gain.</p>
+<p>The symbol is a triangle with two inputs and one output. A signal on the <b>+ (noninverting)</b> input appears at the output with the same polarity. A signal on the <b>− (inverting)</b> input appears at the output with the opposite polarity (shifted 180° for AC).</p>
+<p>Most op amps come in an 8-pin DIP or a small surface-mount package. On the popular 741 pinout, pin 2 is the inverting input, pin 3 the noninverting input, pin 6 the output, pin 7 the positive supply and pin 4 the negative supply.</p>`;
+T.hints=`<h3>Power supplies</h3><p>Most op amp circuits run from a dual supply such as ±15 V. The point where the two supplies join is the circuit ground. The supplies are usually equal, but they don't have to be. The supply pins are drawn on the symbols in this program; many schematics leave them off, but the op amp still needs power.</p>
+<p>An op amp can also run from a single supply. The signal then has to be referenced to about half the supply voltage, which makes connecting signal sources a little more involved.</p>
+<h3>Output limits</h3><p>The output can't go beyond the supply voltages. A typical op amp output saturates (clips) one to two volts inside each rail, so a ±15 V op amp swings to about ±13.5 V. If a formula predicts a larger output, the real output simply stops at the saturation level.</p>
+<p>Most op amps can only supply a few milliamps (a 741 about 20 mA). For heavier loads, add a current booster: a complementary pair of power transistors inside the feedback loop. The loop gain removes the crossover distortion of the transistor pair.</p>`;
+T.manual=`<p>Op Amp Challenge gives you practice analyzing, designing and troubleshooting common op amp circuits. It works best alongside a textbook or class. Every activity picks new component values and a new item order each time, so you can repeat an activity as often as you like without memorizing answers.</p>
+<h3>Activities</h3>
+<ul>
+<li><b>Simple Op Amp Applications</b>: followers, comparators and current-to-voltage converters.</li>
+<li><b>Inverting Amplifiers</b> and <b>Noninverting Amplifiers</b>: gain, input and output impedance, output voltage, choosing resistors.</li>
+<li><b>Sum and Difference Amps</b>: summing amplifiers (equal and weighted inputs) and difference amplifiers.</li>
+<li><b>Op Amp Characteristics</b>: gain-bandwidth, slew rate, bias and offset currents, common-mode rejection.</li>
+<li><b>OA Troubleshooting One to Four</b>: find the fault on a virtual inverting amplifier board or instrumentation amplifier board with a DC voltmeter. Two and Four charge a point for every reading.</li>
+<li><b>Design calculators</b> (ungraded): second-order active filters, RC sine-wave oscillators and a square/triangle wave generator.</li>
+</ul>
+<h3>Answering and scoring</h3>
+<p>Each activity's start page explains how it is scored. In the calculation activities a numeric answer is correct when it is within ±1% of the exact answer, so three significant figures are enough. Type the number in the unit shown next to the answer box. After you grade an item you can open a worked solution that uses that item's numbers.</p>
+<p>Significant figures are the digits that carry meaning, not counting leading zeros: 30.46 has four, 0.00073 has two. Keep full precision while you calculate and round only the final answer.</p>`;
+
+/* ---------- shared scoring note ---------- */
+T.howItems=(n,extra)=>`<p>You will get ${n} items, one at a time, in random order. Some ask for a number and some are multiple choice. Each item is graded as soon as you choose <b>Grade answer</b>, and your score is the percentage of items you get right.</p>
+<p>Numeric answers are accepted within <b>±1%</b> of the exact value, so three significant figures are enough. Enter the number in the unit shown beside the box (for example, if the box says kΩ, type <span class="kbd">4.7</span>, not 4700). After grading you can open a worked solution with the item's own numbers.</p>${extra||''}`;
+
+/* ---------- simple applications ---------- */
+T.simpleIntro=`<p>This activity covers three simple op amp circuits that need no more than an op amp and one resistor: the voltage follower, the comparator and the current-to-voltage (I to V) converter.</p>`;
+T.follower=`<p>A <b>voltage follower</b> connects the output straight back to the inverting input. The output equals the input, so the voltage gain is 1. That sounds useless, but the follower has two very useful properties:</p>
+<ul><li><b>Very high input impedance.</b> The closed-loop input impedance is about the op amp's open-loop gain times its own input impedance, often thousands of megohms. The follower barely loads the signal source.</li>
+<li><b>Very low output impedance.</b> Usually well under 1 Ω, so the follower can drive the circuits that follow it.</li></ul>
+<p>Followers are used as buffers between a weak, high-impedance source (such as a sensor) and the rest of a system.</p>`;
+T.comparator=`<p>A <b>comparator</b> tells you which of two voltages is greater. With no feedback, the op amp's huge gain drives the output to its limit:</p>
+<ul><li>If input B (the + input) is greater than input A (the − input), the output goes to about <b>+V</b>.</li>
+<li>If input A is greater than input B, the output goes to about <b>−V</b>.</li></ul>
+<p>"Greater" means further to the right on the number line, so −1 V is greater than −5 V. In practice the output stops a volt or two short of each supply rail.</p>
+<p>Comparators are usually part of a larger circuit, such as a voltage regulator, a level detector or an analog-to-digital converter.</p>`;
+T.itov=`<p>A <b>current-to-voltage (I to V) converter</b> feeds the input current into the inverting input, which is held at virtual ground. All of that current flows through the feedback resistor ${m('R_f')}, so by Ohm's law:</p>${M('V_{out}=-I_{in}R_f')}
+<p>For example, with ${m('R_f=100\\text{ k}\\Omega')} and ${m('I_{in}=20\\text{ µA}')}, the output is 2 V (negative for current flowing into the input as drawn). Going the other way, ${m('I_{in}=V_{out}/R_f')}.</p>
+<p>Because the input sits at virtual ground, the current source sees almost zero resistance and doesn't have to supply any voltage. Sensors such as photodiodes produce a current, and an I to V converter turns it into a voltage the next stage can use.</p>`;
+
+/* ---------- inverting ---------- */
+T.invIntro=`<p>The <b>inverting amplifier</b> gives a fixed gain set by two resistors and an output that is opposite in polarity to the input. A positive DC input gives a negative output, and an AC output is 180° out of phase with the input.</p>
+<p>The inverting input is held at virtual ground (0 V) by the feedback, so the input resistor ${m('R_i')} connects the source to 0 V. That makes the input impedance simply ${m('R_i')}, and the output impedance is close to 0 Ω.</p>
+<p>Resistor ${m('R_1')} from the + input to ground is optional. When it's used it should equal ${m('R_i')} in parallel with ${m('R_f')}. The two inputs then see the same DC resistance, so the bias currents create equal voltage drops that cancel, and the output offset is smaller. ${m('R_1')} doesn't change the gain.</p>`;
+T.invMistakes=`<p class="small"><b>Common mistakes:</b> forgetting the minus sign on the output; using ${m('R_f/R_i+1')} (that's the noninverting formula); mixing kΩ and Ω in the same calculation; and forgetting that the output can't exceed the saturation level (about ±13.5 V on ±15 V supplies).</p>`;
+
+/* ---------- noninverting ---------- */
+T.noninvIntro=`<p>The <b>noninverting amplifier</b> applies the signal to the + input. The output has the same polarity as the input, and the gain is always at least 1:</p>${M('A=\\frac{R_f}{R_i}+1')}
+<p>Its big advantage is input impedance. Negative feedback multiplies the op amp's own input impedance ${m('z_{in}')} by one plus the loop gain:</p>${M('Z_{in}=z_{in}\\left(1+A_{OL}B\\right)')}${M('B=\\frac{R_i}{R_i+R_f}=\\frac{1}{A}')}
+<p>With an open-loop gain ${m('A_{OL}')} of 100,000 or more, the result is in the gigohms, so for most purposes it is "very high". The output impedance is close to 0 Ω.</p>`;
+T.noninvMistakes=`<p class="small"><b>Common mistakes:</b> forgetting the "+1" in the gain; using ${m('Z_{in}=R_i')} (that's the inverting amplifier); and using the closed-loop gain ${m('A')} instead of the open-loop gain ${m('A_{OL}')} in the input-impedance formula.</p>`;
+
+/* ---------- sum and difference ---------- */
+T.sumIntro=`<p>Op amps got their name from doing math operations. Voltages can stand for numbers (for example 0.1 V = 1), and simple op amp circuits can then add and subtract them.</p>`;
+T.summing=`<p>A <b>summing amplifier</b> is an inverting amplifier with several input resistors. The inverting input is a virtual ground, so each input current is ${m('V_n/R_n')} and all of them flow through ${m('R_f')}:</p>${M('V_{out}=-\\left(\\frac{R_f}{R_1}V_1+\\frac{R_f}{R_2}V_2+\\frac{R_f}{R_3}V_3\\right)')}
+<p>When all the resistors are equal this becomes ${m('V_{out}=-(V_1+V_2+V_3)')}. When the input resistors are equal and ${m('R_f')} is larger, the sum is multiplied by ${m('R_f/R_1')}. When the input resistors differ, each input has its own weight (a <b>scaling adder</b>). Remember the output is the <i>negative</i> of the sum.</p>
+<p>Summing amplifiers are also used as audio mixers. The virtual ground keeps the inputs from interacting.</p>`;
+T.difference=`<p>A <b>difference amplifier</b> sends ${m('V_1')} to the − input through ${m('R_1')}, and ${m('V_2')} to the + input through the divider ${m('R_2')} and ${m('R_3')}. When the resistor ratios match (${m('R_f/R_1=R_3/R_2')}):</p>${M('V_{out}=\\frac{R_f}{R_1}\\left(V_2-V_1\\right)')}
+<p>With all four resistors equal, ${m('V_{out}=V_2-V_1')}. Treat the voltages as signed numbers: ${m('-4-(-6)=+2\\text{ V}')}.</p>`;
+T.sumMistakes=`<p class="small"><b>Common mistakes:</b> dropping the minus sign on a summing amplifier; mishandling negative inputs (write each one in parentheses); and subtracting in the wrong order on the difference amplifier (it's ${m('V_2-V_1')}, the + side minus the − side).</p>`;
+
+/* ---------- characteristics ---------- */
+T.gbw=`<p>An op amp's gain falls as frequency rises. For a stable, internally compensated op amp the product of closed-loop gain and bandwidth is constant. This is the <b>gain-bandwidth product</b> (GBW), also called the unity-gain frequency ${m('f_T')}. It's on the data sheet: 1 MHz for a 741.</p>${M('BW=\\frac{GBW}{A_{CL}}')}
+<p>Here ${m('A_{CL}')} is the <b>noise gain</b> ${m('1+R_f/R_i')}. For a noninverting amplifier that equals the signal gain. For an inverting amplifier it is one more than ${m('R_f/R_i')}. Many textbooks simply divide by ${m('R_f/R_i')}; for large gains the difference is small, and both methods are accepted in this activity.</p>`;
+T.slew=`<p>The <b>slew rate</b> (SR) is the fastest the output voltage can change, in volts per microsecond. A 741's slew rate is about 0.5 V/µs. When a fast pulse hits the input, the output ramps at the slew rate instead of jumping, so the time to reach the final value is:</p>${M('\\Delta t=\\frac{|V_{out}|}{SR}')}
+<p>Work out the final output first (gain × input), then divide by the slew rate. Time is always positive. Slow slewing turns square edges into slopes and limits the largest undistorted sine wave at high frequency.</p>`;
+T.offset=`<p>With both inputs grounded, the output should be 0 V, but small mismatches in the input transistors cause an <b>input offset voltage</b> of a few millivolts. Negative feedback keeps its effect small. Op amps like the 741 have offset-null pins for a trimmer potentiometer that is adjusted for 0 V out with 0 V in. Leave the null pins open if you don't need them.</p>`;
+T.bias=`<p>The op amp inputs draw tiny DC currents called <b>input bias currents</b>: nanoamps to microamps for bipolar op amps, picoamps for FET-input types. Smaller is better. Each input needs a DC path to ground for its bias current.</p>
+<p>The data sheet <b>input bias current</b> is the average of the two input currents, and the <b>input offset current</b> is the difference between them:</p>${M('I_{B}=\\frac{I_A+I_B}{2}')}${M('I_{OS}=\\left|I_A-I_B\\right|')}
+<p>Bias currents flowing through the input resistors create small error voltages. Giving both inputs the same DC resistance (resistor ${m('R_1')} on an inverting amplifier) makes the drops cancel, leaving only the effect of the offset current.</p>`;
+T.cmrr=`<p>A <b>common-mode</b> signal is one that appears equally on both inputs, such as hum picked up on both wires from a sensor. An ideal difference amplifier ignores it. A real one passes a little of it, with a common-mode gain ${m('A_{cm}=V_{out}/V_{CM}')}. The <b>common-mode rejection ratio</b> compares the wanted differential gain ${m('A_d')} with that unwanted gain:</p>${M('\\mathrm{CMRR}=20\\log\\left(\\frac{A_d}{A_{cm}}\\right)\\text{ dB}')}
+<p>To measure it, tie both inputs of a difference amplifier together and drive them with ${m('V_{CM}')}, as in the figure. With matched resistors, any output is due to the op amp. When ${m('A_d=1')} the formula reduces to ${m('20\\log(V_{CM}/V_{out})')}. A larger CMRR is better; 70 to 100 dB is typical.</p>`;
+T.charMistakes=`<p class="small"><b>Common mistakes:</b> mixing mV and V in the CMRR ratio (convert both to volts); using ${m('10\\log')} instead of ${m('20\\log')} for a voltage ratio; using kHz and MHz inconsistently in bandwidth problems; and dividing the input, not the output, voltage by the slew rate.</p>`;
+
+/* ---------- troubleshooting ---------- */
+T.tsInv1=`<p>OA Troubleshooting One gives you ten inverting amplifier boards. Each one is either working or has a single fault. Use the DC voltmeter (black lead on ground) and the adjustable DC source on IN1 to find it.</p>`;
+T.tsInv2=`<p>OA Troubleshooting Two uses the same inverting amplifier board, but every new meter reading costs a point, so plan your measurements. Changing the input voltage is free.</p>`;
+T.tsInst3=`<p>OA Troubleshooting Three gives you ten instrumentation amplifier boards, each either working or with a single fault. Use the DC voltmeter and the adjustable DC sources on IN1 and IN2.</p>`;
+T.tsInst4=`<p>OA Troubleshooting Four uses the same instrumentation amplifier board, but every new meter reading costs a point, so plan your measurements. Changing the input voltages is free.</p>`;
+T.howTs=per=>per?`<p>There are 10 boards. Each starts with <b>15 points</b>, and every time you move the probe to a new pad the board loses 1 point (down to 0). Select the fault and choose <b>Grade selection</b>; a correct answer earns the points that remain, a wrong answer earns 0. You get one try per board. The maximum is 150 points, but real scores are much lower because several readings are always needed. Your percentage is your points out of 150.</p>`
+  :`<p>There are 10 boards worth <b>10 points</b> each, for a maximum of 100. You can take as many readings and change the input as often as you like. Select the fault and choose <b>Grade selection</b>; you get one try per board.</p>`;
+T.meterNote=`<p>Like a real meter, the voltmeter has a little drift and calibration error, but it is accurate enough to find every fault. Tap a solder pad to move the red probe.</p>`;
+T.invGeneral=`<p>The board is an inverting amplifier with ${m('R_1=10\\text{ k}\\Omega')} and ${m('R_2=100\\text{ k}\\Omega')}, so the gain is 10 and the output is inverted:</p>${M('A=\\frac{R_2}{R_1}=10\\qquad OUT=-A\\,(IN1)')}
+<p>R3 gives the + input the same DC resistance to ground as the − input, to reduce offset; it doesn't affect the gain. With ±15 V supplies the output saturates near ±13.5 V, so inputs larger than about ±1.35 V drive the output to its limit. In normal operation pin 2, the right end of R1 and the top of R2 sit at virtual ground (0 V) whatever the input.</p>`;
+T.instGeneral=`<p>The board is an instrumentation amplifier. IC1 and IC2 are followers that give both inputs a very high input impedance. IC3 is a difference amplifier with ${m('R_1=R_2=10\\text{ k}\\Omega')} and ${m('R_3=R_4=100\\text{ k}\\Omega')}:</p>${M('A=\\frac{R_3}{R_1}=10\\qquad OUT=A\\,(IN2-IN1)')}
+<p>So IN2 is amplified by 10 without inversion, and IN1 is amplified by 10 and inverted. With ±15 V supplies the output saturates near ±13.5 V. The circuit is DC coupled, so a fault in IC1 or IC2 drives an input of IC3 and can make IC3 look faulty. Always check the stage feeding a suspect op amp.</p>`;
+T.opampFail=`<p>An op amp contains many transistors, and one can fail in many ways. Most failures are drastic: the output latches near the positive or negative supply and no longer responds to the input. Those are the failures simulated here.</p>
+<p>But a saturated output does <i>not</i> prove the op amp is bad. Four things can put the output near a rail:</p>
+<ol><li>The input is large enough to drive the output into saturation.</li><li>An input pin is open (feedback or bias path broken).</li><li>The +V or −V supply is missing at the IC.</li><li>The op amp really is defective.</li></ol>
+<p>Blame the op amp only after ruling out the other three.</p>`;
+T.traceGen=`<p>An open PC board trace is usually a hairline crack in the copper, often too small to see. Every point on a good trace has the same voltage, so <b>different voltages at the two ends of a trace mean that trace is open</b>.</p>`;
+T.invTraces=`<ul>
+<li><b>Trace 1</b> (IN1 to R1): with a nonzero input, IN1 and the left end of R1 read differently. The output stays at 0 V.</li>
+<li><b>Trace 2</b> (+15 V to pin 7): pin 7 no longer reads +15 V. A starved pin 7 usually floats near the <i>negative</i> supply, and the output sits near −V regardless of the input.</li>
+<li><b>Trace 3</b> (−15 V to pin 4): pin 4 reads a positive voltage instead of −15 V, and the output sits near +V.</li>
+<li><b>Trace 4</b> (R1/R2 junction to pin 2): pin 2 floats at a few millivolts, the loop is broken and the output latches. R1 and R2 then form a divider between IN1 and the output, so the junction is no longer at 0 V.</li>
+<li><b>Trace 5</b> (pin 6 to OUT): pin 6 is correct but the OUT terminal reads about 0 V.</li></ul>`;
+T.invResistors=`<p>Carbon resistors almost always fail open, so open resistors are simulated here.</p><ul>
+<li><b>R1 open:</b> no signal reaches the op amp. The circuit acts as a follower with no input, so the output stays at 0 V. Every voltage looks normal except that the output doesn't respond to IN1.</li>
+<li><b>R2 open:</b> no feedback, so the op amp runs at full open-loop gain. A tiny positive input drives the output to −V, a tiny negative input to +V. Pin 2 reads the same as IN1.</li>
+<li><b>R3 open:</b> pin 3 floats and the output usually latches near −V. Pin 3 reads a few millivolts negative while the bottom of R3 reads 0 V. Pin 2 sits at the R1/R2 divider voltage, about −1.2 V with IN1 at 0.</li></ul>`;
+T.instTraces=`<ul>
+<li><b>Trace 1</b> (−15 V bus to pin 4 of IC1, IC2 and IC3): every pin 4 reads a positive voltage instead of −15 V, and all three outputs sit near +V.</li>
+<li><b>Trace 2</b> (+15 V to IC1 and IC2 pin 7): both pin 7s float near the negative supply and both follower outputs sit near −V. IC3 sees equal inputs, so OUT stays near 0 V and doesn't respond to either input.</li>
+<li><b>Trace 3</b> (branch to IC1 pin 7 only): IC1 pin 7 floats negative and IC1's output sits near −V, which drives OUT toward +V. IC2's pin 7 is still at +15 V.</li>
+<li><b>Trace 4</b> (+15 V to IC3 pin 7): IC3 pin 7 floats negative and OUT latches near −V. IC1 and IC2 still follow their inputs.</li></ul>`;
+T.instResistors=`<p>Resistors R1 and R2 can fail open.</p><ul>
+<li><b>R1 open:</b> IC1's signal no longer reaches IC3. IC3 becomes a follower of its + input, so OUT = ${m('IN2\\cdot R_4/(R_2+R_4)')}, about 0.91 × IN2, and IN1 has no effect.</li>
+<li><b>R2 open:</b> IC2's signal no longer reaches IC3. R4 pulls pin 3 to 0 V, IC3 becomes an inverting amplifier with gain 10, and OUT = −10 × IN1. IN2 has no effect.</li></ul>`;
+
+/* ---------- calculators ---------- */
+T.filtIntro=`<p>Filters pass some frequencies and reject others. Passive RC or LC filters lose signal in their components; <b>active filters</b> add an amplifier (here an op amp) to keep the signal level up and allow responses passive filters can't easily give.</p>
+<p>This calculator covers the second-order (two-pole) <b>Sallen-Key</b> low-pass and high-pass filters. Change any component and it recalculates the corner frequency ${m('f_c')}, the passband gain ${m('A')} and the damping factor ${m('D')}, and plots the response.</p>
+<p>The damping factor decides the shape of the response, often as much as ${m('f_c')} does:</p>
+<ul><li><b>Chebyshev</b> (blue, ${m('D')} below about 1.3): a hump just before cutoff, then a fast roll-off. It can ring on transients.</li>
+<li><b>Butterworth</b> (red, ${m('D=1.414')}): as flat as possible in the passband, a good general choice.</li>
+<li><b>Bessel</b> (green, ${m('D=1.732')}): gradual roll-off with the cleanest pulse response.</li></ul>
+<p>${m('D')} at or below zero means the circuit will oscillate instead of filtering.</p>`;
+T.filtNote=`<p>For an equal-component design (${m('R_1=R_2')}, ${m('C_1=C_2')}) the damping factor is simply ${m('D=3-A')}. That gives ${m('A=1.586')} (${m('R_f/R_i=0.586')}) for Butterworth, ${m('A=1.268')} for Bessel and ${m('A=1.955')} for a 1 dB Chebyshev. ${m('f_c')} is the circuit's natural (corner) frequency; it is the −3 dB point only for the Butterworth response. Use stable capacitors (film types) and values below about 1 µF.</p>`;
+T.oscIntro=`<p>The <b>Wien-bridge</b> and <b>phase-shift</b> oscillators generate sine waves, usually at audio and lower frequencies. Both use an op amp to supply gain and an RC network to set the frequency.</p>
+<p>An oscillator needs to meet the <b>Barkhausen criterion</b>: the feedback must come back in phase, and the loop gain ${m('AB')} (amplifier gain × feedback-network loss) must equal 1. If ${m('AB')} is even slightly below 1 the oscillation dies out. If it is above 1 the output grows until it clips, which distorts the sine wave. So the gain must be set carefully, or stabilized automatically.</p>
+<p>Real circuits run somewhat off the calculated frequency because of component tolerances and loading, especially the phase-shift oscillator, so build and tune the final design on a breadboard.</p>`;
+T.psNote=`<p>The three RC sections each shift the phase by 60°, for 180° in total; the inverting amplifier adds the other 180°. At the oscillation frequency the network divides the signal by 29, so the amplifier gain ${m('A=R_f/R_i')} must be at least 29. Set it a little higher so oscillation always starts. Keep ${m('R_i')} at least ten times ${m('R')} so it doesn't load the last RC section (heavier loading raises the gain needed).</p>`;
+T.wbNote=`<p>The series RC and parallel RC arms of the Wien bridge give zero phase shift and a loss of exactly 3 at ${m('f_o=1/(2\\pi RC)')}. The noninverting amplifier must therefore have a gain ${m('A=1+R_f/R_i')} of at least 3; slightly more makes sure oscillation starts, and much more causes distortion.</p>`;
+T.gainStab=`<p>Because the Wien-bridge oscillator needs a gain of almost exactly 3, practical circuits stabilize it automatically. A classic method replaces ${m('R_i')} with a small incandescent lamp. The cold filament has a low resistance, so the gain starts above 3 and oscillation builds up. As the signal grows, the filament heats, its resistance rises and the gain falls until it settles at 3 with low distortion.</p>
+<p>The lamp must be a very low-current type (about 10 V at 14 mA, such as the 1869), and ${m('R_f')} is chosen at a little over twice the lamp's cold resistance (for example 750 Ω). Modern designs often use a JFET or diodes in the feedback path instead.</p>`;
+T.sqIntro=`<p>IC1 is a <b>relaxation oscillator</b>. Capacitor C1 charges through R1 toward the output voltage, and the op amp compares the capacitor voltage with a fraction of the output set by the divider ${m('R_a')} (feedback) and ${m('R_b')} (to ground). Each time the capacitor crosses that threshold the output flips, which makes a square wave. IC2, R2 and C2 form an <b>integrator</b> that turns the square wave into a triangle wave.</p>`;
+T.sqNote=`<p>The period depends on R1, C1 and the feedback fraction ${m('B=R_b/(R_a+R_b)')}:</p>${M('T=2R_1C_1\\ln\\left(\\frac{1+B}{1-B}\\right)=2R_1C_1\\ln\\left(1+\\frac{2R_b}{R_a}\\right)')}
+<p>The integrator makes a good triangle wave when its time constant ${m('R_2C_2')} is at least five times the period. A longer time constant gives a straighter but smaller triangle; add an amplifier after the integrator if you need more amplitude. The square wave is drawn ideal; a real op amp's slew rate rounds its edges, so use this circuit for low frequencies.</p>`;
+})();
+
+/* Op Amp Challenge kit: schematic DSL, single-probe DMM troubleshooting engine, plot helper */
+(function(){
+'use strict';
+const K=window.OAK={};
+try{const st=document.createElement('style');st.textContent='.cols2>div{min-width:0}.board-wrap.oak-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}@media (max-width:620px){.board-wrap.oak-scroll svg{min-width:560px}}';document.head.appendChild(st);}catch(e){}
+const S=CC.svg,esc=CC.esc;
+
+/* ---------- schematic DSL ---------- */
+K.W=(...p)=>S.line(p);
+K.comp=(t,x1,y1,x2,y2,label,o={})=>{
+  if(y1===y2){const a=Math.min(x1,x2),b=Math.max(x1,x2),cx=(a+b)/2;return S.line([[a,y1],[cx-30,y1]])+S.line([[cx+30,y1],[b,y1]])+S.hSym(t,cx,y1,label,o);}
+  const a=Math.min(y1,y2),b=Math.max(y1,y2),cy=(a+b)/2;return S.line([[x1,a],[x1,cy-30]])+S.line([[x1,cy+30],[x1,b]])+S.vSym(t,x1,cy,label,o);
+};
+K.R=(...a)=>K.comp('R',...a);
+K.C=(...a)=>K.comp('C',...a);
+K.G=(x,y)=>`<line x1="${x-11}" y1="${y}" x2="${x+11}" y2="${y}"/><line x1="${x-7}" y1="${y+5}" x2="${x+7}" y2="${y+5}"/><line x1="${x-3}" y1="${y+10}" x2="${x+3}" y2="${y+10}"/>`;
+K.D=S.dot;
+K.T=(x,y,label,anchor='end',dx)=>`<circle cx="${x}" cy="${y}" r="4" fill="var(--surface)"/>`+(label?`<text x="${x+(dx!==undefined?dx:(anchor==='end'?-8:anchor==='start'?8:0))}" y="${y+(anchor==='middle'?-9:4.5)}" font-size="13" font-weight="700" text-anchor="${anchor}" stroke="none" fill="currentColor">${esc(label)}</text>`:'');
+K.txt=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||600}" text-anchor="${o.anchor||'middle'}" stroke="none" fill="${o.fill||'currentColor'}">${esc(t)}</text>`;
+/** op amp triangle; left edge x, centre y. swap=true puts + on top. Returns svg and pin coordinates */
+K.OA=(x,y,o={})=>{
+  const top=o.swap?'+':'−',bot=o.swap?'−':'+';
+  let g=`<path d="M${x},${y-35} L${x},${y+35} L${x+70},${y} Z" fill="var(--surface)"/>`+
+    `<text x="${x+6}" y="${y-13}" font-size="15" stroke="none" fill="currentColor">${top}</text><text x="${x+6}" y="${y+24}" font-size="15" stroke="none" fill="currentColor">${bot}</text>`;
+  if(o.label)g+=K.txt(x+28,y+4,o.label,{size:11});
+  if(o.power!==false)g+=`<line x1="${x+35}" y1="${y-17}" x2="${x+35}" y2="${y-30}"/><line x1="${x+35}" y1="${y+17}" x2="${x+35}" y2="${y+30}"/>`+K.txt(x+47,y-24,'+V',{size:10,anchor:'start'})+K.txt(x+47,y+33,'−V',{size:10,anchor:'start'});
+  if(o.pins)g+=K.txt(x-4,y-22,'2',{size:9,anchor:'end'})+K.txt(x-4,y+14,'3',{size:9,anchor:'end'})+K.txt(x+72,y-5,'6',{size:9,anchor:'start'})+K.txt(x+30,y-30,'7',{size:9,anchor:'end'})+K.txt(x+30,y+38,'4',{size:9,anchor:'end'});
+  const inv=[x,o.swap?y+18:y-18],non=[x,o.swap?y-18:y+18];
+  return {svg:g,inv,non,out:[x+70,y],top:[x,y-18],bot:[x,y+18]};
+};
+K.wrap=(w,h,g)=>S.wrap(w,h,g);
+
+/* ---------- standard figures ---------- */
+K.fig={};
+K.fig.inverting=(o={})=>{const a=K.OA(150,108,{pins:o.pins});let g=a.svg;
+  g+=K.T(20,90,o.vin||'Vin','middle',0)+K.R(24,90,130,90,o.ri||'Ri')+K.W([130,90],[150,90])+K.D(130,90)+K.W([130,90],[130,40])+K.R(130,40,245,40,o.rf||'Rf')+K.W([245,40],[245,108])+K.W([220,108],[275,108])+K.D(245,108)+K.T(279,108,o.vout||'Vout','middle',0);
+  g+=K.W([150,126],[130,126]);
+  if(o.r1){g+=K.R(130,126,130,196,o.r1,{side:'left'})+K.G(130,196);}else g+=K.W([130,126],[130,150])+K.G(130,150);
+  return K.wrap(300,215,g);};
+K.fig.noninv=(o={})=>{const a=K.OA(130,100,{swap:true});let g=a.svg;
+  g+=K.T(24,82,o.vin||'Vin','middle',0)+K.W([28,82],[130,82])+K.W([130,118],[110,118],[110,140])+K.D(110,140)+K.R(110,140,110,206,o.ri||'Ri',{side:'left'})+K.G(110,206)+K.R(110,140,235,140,o.rf||'Rf',{below:true})+K.W([235,140],[235,100])+K.W([200,100],[262,100])+K.D(235,100)+K.T(266,100,o.vout||'Vout','middle',0);
+  return K.wrap(290,225,g);};
+K.fig.follower=(o={})=>{const a=K.OA(110,90,{swap:true});let g=a.svg;
+  g+=K.T(24,72,'Vin','middle',0)+K.W([28,72],[110,72])+K.W([110,108],[92,108],[92,150],[205,150],[205,90])+K.W([180,90],[240,90])+K.D(205,90)+K.T(244,90,'Vout','middle',0);
+  return K.wrap(270,170,g);};
+K.fig.comparator=(o={})=>{const a=K.OA(120,90,{});let g=a.svg;
+  g+=K.T(30,72,o.va||'A','middle',o.va?22:0)+K.W([34,72],[120,72])+K.T(30,108,o.vb||'B','middle',o.vb?22:0)+K.W([34,108],[120,108])+K.W([190,90],[240,90])+K.T(244,90,'Vout','middle',0);
+  return K.wrap(270,150,g);};
+K.fig.itov=(o={})=>{const a=K.OA(150,108,{});let g=a.svg;
+  g+=`<circle cx="56" cy="90" r="14" fill="none"/><path d="M48,90 L64,90 M58,84 L64,90 L58,96" fill="none"/>`+K.txt(56,72,'Iin',{size:12})+K.W([70,90],[150,90])+K.D(130,90)+K.W([130,90],[130,40])+K.R(130,40,245,40,o.rf||'Rf')+K.W([245,40],[245,108])+K.W([220,108],[275,108])+K.D(245,108)+K.T(279,108,'Vout','middle',0);
+  g+=K.W([42,90],[30,90],[30,150])+K.G(30,150)+K.W([150,126],[130,126],[130,150])+K.G(130,150);
+  return K.wrap(300,175,g);};
+K.fig.summing=(n=3,o={})=>{const a=K.OA(180,170,{});let g=a.svg;const ys=n===3?[64,108,152]:[108,152];
+  ys.forEach((y,i)=>{g+=K.T(30,y,'V'+(i+1),'middle',0)+K.R(34,y,150,y,'R'+(i+1));});
+  g+=K.W([150,ys[0]],[150,152],[180,152]);ys.slice(0,-1).forEach(y=>g+=K.D(150,y));g+=K.D(150,152);
+  g+=K.W([150,ys[0]],[150,30])+K.R(150,30,272,30,'Rf')+K.W([272,30],[272,170])+K.W([250,170],[302,170])+K.D(272,170)+K.T(306,170,'Vout','middle',0)+K.W([180,188],[160,188],[160,210])+K.G(160,210);
+  return K.wrap(330,235,g);};
+K.fig.difference=(o={})=>{const a=K.OA(170,110,{});let g=a.svg;
+  g+=K.T(24,92,'V1','middle',0)+K.R(28,92,150,92,'R1')+K.W([150,92],[170,92])+K.D(150,92)+K.W([150,92],[150,40])+K.R(150,40,262,40,'Rf')+K.W([262,40],[262,110])+K.W([240,110],[292,110])+K.D(262,110)+K.T(296,110,'Vout','middle',0);
+  g+=K.T(24,128,'V2','middle',0)+K.R(28,128,150,128,'R2',{below:true})+K.W([150,128],[170,128])+K.D(150,128)+K.R(150,128,150,200,'R3',{side:'left'})+K.G(150,200);
+  return K.wrap(320,220,g);};
+K.fig.bias=()=>{const a=K.OA(150,90,{});let g=a.svg;
+  g+=K.W([150,72],[60,72])+K.R(60,72,60,150,'',{})+K.G(60,150)+K.W([150,108],[105,108])+K.R(105,108,105,170,'',{})+K.G(105,170)+
+    `<path d="M112,64 L130,64 M124,59 L130,64 L124,69" fill="none" stroke="var(--brand)"/><path d="M118,100 L136,100 M130,95 L136,100 L130,105" fill="none" stroke="var(--brand)"/>`+K.txt(121,56,'I(A)',{size:11,fill:'var(--brand)'})+K.txt(126,124,'I(B)',{size:11,fill:'var(--brand)'})+K.W([220,90],[255,90])+K.T(259,90,'Vout','middle',0);
+  return K.wrap(285,190,g);};
+K.fig.cmrr=(o={})=>{const a=K.OA(190,110,{});let g=a.svg;
+  // difference amplifier with both inputs driven by one common-mode source
+  g+=K.R(70,92,170,92,o.r1||'R1')+K.W([170,92],[190,92])+K.D(170,92)+K.W([170,92],[170,40])+K.R(170,40,282,40,o.rf||'Rf')+K.W([282,40],[282,110])+K.W([260,110],[312,110])+K.D(282,110)+K.T(316,110,'Vout','middle',0);
+  g+=K.R(70,128,170,128,o.r2||'R2',{below:true})+K.W([170,128],[190,128])+K.D(170,128)+K.R(170,128,170,200,o.r3||'R3',{side:'left'})+K.G(170,200);
+  g+=K.W([70,92],[70,128])+K.D(70,110)+K.W([70,110],[40,110])+K.W([40,110],[40,128])+S.vSym('ac',40,158,'')+K.W([40,188],[40,200])+K.G(40,200)+K.txt(40,226,'VCM',{size:11});
+  return K.wrap(340,240,g);};
+
+/* ---------- single-probe DMM troubleshooting ---------- */
+/* spec: {count, points, perReading:bool, build(k)->{svg(), pads:[{id,x,y,label}], faults, answer, read(id,inputs)->volts, inputs:[{key,label,value,min,max,step}], schematic, explain}} */
+K.trouble=function(root,s,spec){
+  const N=spec.count||10,P=spec.points||10,per=!!spec.perReading;let k=0,earned=0;const max=N*P;
+  const w=CC.el(`<div><div class="statusbar"><span class="pill" id="tn"></span>${per?'<span class="pill" id="tp"></span>':''}<span class="pill" id="ts">Points earned: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{CC.$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const next=()=>{
+    const b=spec.build(k);CC._last=b;let pts=P,probe=null;const inputs={};(b.inputs||[]).forEach(i=>inputs[i.key]=i.value);
+    const meter=CC.meterErr();
+    CC.$('#tn',w).textContent=`Item ${k+1} of ${N}`;
+    const upd=()=>{if(per){CC.$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for item`;CC.$('#tp',w).className='pill'+(pts<P/2?' bad':'');}};upd();
+    const body=CC.$('#tbody',w);body.innerHTML='';
+    const card=CC.el(`<div class="cols2"><div><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="small muted">Tap a solder pad to move the meter probe. The black lead is on ground.</span><button class="btn sm" id="sch">Schematic</button></div>
+      <div class="board-wrap oak-scroll" id="bw"></div><div class="diagram mt hide" id="schd">${b.schematic||''}</div>
+      <div class="row mt" style="align-items:stretch"><div class="meterbox"><span class="ml">DC voltmeter</span><span class="lcd" id="lcd">----</span><span class="small" style="color:#c9cdd2" id="where">Probe not placed</span></div><div id="srcs" class="row"></div></div></div></div>
+      <div><div class="card"><h3 style="margin-top:0">Select the circuit fault</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade selection</button></div><div id="tfb"></div></div>
+      <div class="card small muted">${spec.note||''}</div></div></div>`);
+    body.appendChild(card);
+    CC.$('#sch',card).onclick=()=>{const d=CC.$('#schd',card);d.classList.toggle('hide');CC.$('#sch',card).textContent=d.classList.contains('hide')?'Schematic':'Schematic off';};
+    b.faults.forEach((f,i)=>CC.$('#fl',card).appendChild(CC.el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
+    const srcs=CC.$('#srcs',card);
+    (b.inputs||[]).forEach(inp=>{const e=CC.el(`<div class="meterbox"><span class="ml">${esc(inp.label)} DC source</span><div class="row" style="gap:6px"><button class="btn sm" data-d="-1" aria-label="Decrease ${esc(inp.label)}">▼</button><span class="lcd" style="min-width:6ch" data-v></span><button class="btn sm" data-d="1" aria-label="Increase ${esc(inp.label)}">▲</button></div></div>`);
+      const show=()=>{CC.$('[data-v]',e).textContent=(inputs[inp.key]>=0?'+':'')+inputs[inp.key].toFixed(2);};show();
+      CC.$$('[data-d]',e).forEach(bt=>bt.onclick=()=>{if(card.dataset.graded)return;inputs[inp.key]=Math.max(inp.min,Math.min(inp.max,+(inputs[inp.key]+(+bt.dataset.d)*inp.step).toFixed(3)));show();readout(false);});
+      srcs.appendChild(e);});
+    const readout=(charge)=>{
+      if(!probe){CC.$('#lcd',card).textContent='----';return;}
+      const v=meter(b.read(probe,inputs))+CC.rnd(-0.002,0.002);
+      CC.$('#lcd',card).textContent=(v>=0?'+':'')+(Math.abs(v)<10?v.toFixed(3):v.toFixed(2));
+      const p=b.pads.find(q=>q.id===probe);CC.$('#where',card).textContent=p.label;
+      if(charge&&per&&pts>0){pts--;upd();}
+    };
+    const draw=()=>{
+      const pads=b.pads.map(p=>`<g class="pad" data-id="${p.id}" tabindex="0" role="button" aria-label="Solder pad ${esc(p.label)}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="6" fill="#e0e0e0" stroke="#777" stroke-width="2"/><circle cx="${p.x}" cy="${p.y}" r="2" fill="#555"/>${probe===p.id?`<circle cx="${p.x}" cy="${p.y}" r="10" fill="none" stroke="#d32f2f" stroke-width="4"/><path d="M${p.x+6},${p.y-6} l18,-22" stroke="#d32f2f" stroke-width="5" stroke-linecap="round"/>`:''}<circle class="hit" cx="${p.x}" cy="${p.y}" r="13"/></g>`).join('');
+      CC.$('#bw',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
+      CC.$$('.pad',card).forEach(g=>{const f=()=>{if(card.dataset.graded)return;const ch=probe!==g.dataset.id;probe=g.dataset.id;draw();readout(ch);};g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+    };
+    draw();
+    CC.$('#tg',card).onclick=()=>{
+      const btn=CC.$('#tg',card);
+      if(card.dataset.graded){k++;if(k>=N)return end();return next();}
+      const c=CC.$('input:checked',CC.$('#fl',card));
+      if(!c){CC.modal('<p>You did not select a fault. Select a fault, then choose Grade selection.</p>');return;}
+      card.dataset.graded='1';const good=+c.value===b.answer;const got=good?pts:0;earned+=got;
+      CC.$$('#fl label',card).forEach((lb,i)=>{if(i===b.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
+      CC.$$('#fl input',card).forEach(x=>x.disabled=true);
+      CC.$('#ts',w).textContent=`Points earned: ${earned}`;
+      CC.$('#tfb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Right!':'Incorrect'}</p><p class="small">${good?`You earned ${got} point${got===1?'':'s'} on this item.`:`The correct answer is highlighted: <b>${esc(b.faults[b.answer])}</b>.`} Your total score so far is ${earned} point${earned===1?'':'s'}.</p>${b.explain?`<p class="small">${typeof b.explain==='function'?b.explain():b.explain}</p>`:''}${CC.workHTML(typeof b.work==='function'?b.work():b.work,'Show how to find this fault')}`;
+      btn.textContent=k+1<N?'Continue':'Finish';
+    };
+  };
+  const end=()=>s.finish(earned/max*100,`${earned} of ${max} possible points.`);
+  next();
+};
+
+/* ---------- small plot helper ---------- */
+K.plot=function({w=340,h=200,xs,series,xlog,ylab,xlab,ymin,ymax,xticks,yticks}){
+  const L=42,R=26,T=10,B=30;const pw=w-L-R,ph=h-T-B;
+  const x0=xs[0],x1=xs[xs.length-1];const fx=xlog?(x=>L+(Math.log10(x)-Math.log10(x0))/(Math.log10(x1)-Math.log10(x0))*pw):(x=>L+(x-x0)/(x1-x0)*pw);
+  let lo=ymin,hi=ymax;if(lo===undefined){lo=Infinity;hi=-Infinity;series.forEach(s=>s.ys.forEach(y=>{if(isFinite(y)){lo=Math.min(lo,y);hi=Math.max(hi,y);}}));const pad=(hi-lo)*0.08||1;lo-=pad;hi+=pad;}
+  const fy=y=>T+(1-(Math.max(lo,Math.min(hi,y))-lo)/(hi-lo))*ph;
+  let g=`<rect x="${L}" y="${T}" width="${pw}" height="${ph}" fill="var(--surface)" stroke="var(--line)"/>`;
+  (yticks||[]).forEach(t=>{g+=`<line x1="${L}" x2="${L+pw}" y1="${fy(t)}" y2="${fy(t)}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${L-4}" y="${fy(t)+4}" font-size="10" text-anchor="end" fill="var(--ink2)">${t}</text>`;});
+  (xticks||[]).forEach(t=>{g+=`<line y1="${T}" y2="${T+ph}" x1="${fx(t.v)}" x2="${fx(t.v)}" stroke="var(--line)" stroke-dasharray="2 3"/><text y="${T+ph+13}" x="${fx(t.v)}" font-size="10" text-anchor="middle" fill="var(--ink2)">${t.l}</text>`;});
+  series.forEach(s=>{g+=`<polyline fill="none" stroke="${s.color||'var(--accent)'}" stroke-width="2" points="${xs.map((x,i)=>fx(x).toFixed(1)+','+fy(s.ys[i]).toFixed(1)).join(' ')}"/>`;});
+  if(ylab)g+=`<text x="12" y="${T+ph/2}" font-size="10" fill="var(--ink2)" text-anchor="middle" transform="rotate(-90 12 ${T+ph/2})">${esc(ylab)}</text>`;
+  if(xlab)g+=`<text x="${L+pw/2}" y="${h-2}" font-size="10" fill="var(--ink2)" text-anchor="middle">${esc(xlab)}</text>`;
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="graph">${g}</svg>`;
+};
+
+/* ---------- calculator form ---------- */
+/* fields:[{key,label(tex),unit,value}], compute(vals)->html */
+K.calc=function(root,{title,diagram,fields,compute,note}){
+  const card=CC.el(`<div class="cols2"><div class="card"><h2 style="margin-top:0">${title}</h2><div class="diagram">${diagram}</div>${note?`<p class="small muted">${note}</p>`:''}</div><div class="card"><div class="fields" id="cf"></div><div class="row end"><button class="btn primary" id="cgo">Recalculate</button></div><div id="cout" class="mt"></div></div></div>`);
+  root.appendChild(card);
+  const cf=CC.$('#cf',card);
+  fields.forEach(f=>{const e=CC.el(`<div class="field"><label>${CC.m(f.label)} <span class="muted">(${esc(f.unit)})</span></label><input type="text" inputmode="decimal" value="${f.value}" data-k="${f.key}"></div>`);cf.appendChild(e);});
+  const go=()=>{const v={};let bad=false;CC.$$('input',cf).forEach(i=>{const x=CC.parse(i.value,false);if(!(x>0)){i.classList.add('bad');bad=true;}else{i.classList.remove('bad');v[i.dataset.k]=x;}});
+    CC.$('#cout',card).innerHTML=bad?'<p class="small" style="color:var(--bad)">Enter positive numbers in every block.</p>':compute(v);};
+  CC.$$('input',cf).forEach(i=>{i.addEventListener('change',go);i.addEventListener('keydown',e=>{if(e.key==='Enter')go();});});
+  CC.$('#cgo',card).onclick=go;go();
+};
+})();
+
+</script>
+<script>(function(){
+'use strict';
+const {fmt,pick,rnd,ri,shuffle,eVal,m,M,svg:S,board:B,esc}=CC;
+const T=window.OAT,F=OAK.fig,{W,R,C,G,D,txt}=OAK;
+const Mq=s=>s.split('\\qquad').map(x=>M(x)).join('');
+const splitQ=w=>w&&w.flatMap(t=>t.startsWith('>')?[t]:t.split('\\qquad'));
+const H3=t=>`<h3>${t}</h3>`;
+const ex=(q,steps)=>`<div class="formula"><p class="small" style="margin-top:0">${q}</p>${steps.map(s=>Mq(s)).join('')}</div>`;
+const kO=v=>fmt(v,4)+' kΩ';
+const TOL=0.01;
+const fig=(svg,cap='Figure One')=>`<figure style="margin:0;text-align:center">${svg}<figcaption class="small muted">${cap}</figcaption></figure>`;
+/* TeX number helpers for worked solutions */
+const N=(v,d=4)=>fmt(v,d);
+const P_=(v,d=4)=>v<0?`(${N(v,d)})`:N(v,d);          // parenthesize negatives
+const kT=v=>`${N(v)}\\text{ k}\\Omega`;
+const sg=(v,n=3)=>+(+v).toPrecision(n);                 // value exactly as displayed
+const sci=v=>{if(v===0)return '0';const e=Math.floor(Math.log10(Math.abs(v)));if(e>=-2&&e<4)return N(v);return `${N(v/Math.pow(10,e))}\\times10^{${e}}`;};
+
+/* ---------- item helpers ---------- */
+function mc(q,correct,others,diagram,why){const opts=shuffle([correct,...others]);return {title:'',prompt:`<p>${q}</p>`,diagram,fields:[{key:'a',label:'Select the best answer',choices:opts.map(esc),answer:opts.indexOf(correct)}],work:why?['>'+why]:undefined};}
+function num(q,value,unit,diagram,extra,method,work){return {prompt:`<p>${q}</p>`,diagram,fields:[Object.assign({key:'a',label:'Answer',unit,value},extra||{})],explain:method,work:splitQ(work)};}
+const vSigned=v=>(v>0?'+':'')+fmt(v,3).replace('-','−');
+const tip=t=>`<p class="small" style="margin:6px 0 0">${t}</p>`;
+
+/* ---------- Simple applications ---------- */
+function simpleItems(){
+  const it=[];
+  it.push(mc('What type of circuit is shown in figure one?','Follower',['Comparator','I to V Converter'],fig(F.follower()),'The output is wired straight back to the − input and the signal goes to the + input, with no resistors. That is a voltage follower (gain 1).'));
+  it.push(mc('What type of circuit is shown in figure one?','Comparator',['Follower','I to V Converter'],fig(F.comparator()),'Two signals go to the two inputs and there is no feedback from the output, so the op amp compares them and the output swings to one rail or the other. That is a comparator.'));
+  it.push(mc('What type of circuit is shown in figure one?','I to V Converter',['Follower','Comparator'],fig(F.itov()),'A current source drives the − input (virtual ground) and a feedback resistor Rf converts that current into an output voltage. That is a current-to-voltage converter.'));
+  const vin=+(rnd(-9,9)).toFixed(2)||1.25;
+  it.push(num(`Input voltage = ${fmt(vin)} V. What is the output voltage of the circuit in figure one?`,vin,'V',fig(F.follower()),{},M('V_{out}=V_{in}'),['>A follower has a gain of exactly 1 and no inversion, so the output copies the input, sign included.','V_{out}=V_{in}=' +N(vin)+'\\text{ V}']));
+  it.push(num('What is the voltage gain of the circuit in figure one?',1,'',fig(F.follower()),{},M('A=1'),['>The output is fed back directly to the − input, so the op amp makes the output equal to the + input.','A=\\frac{V_{out}}{V_{in}}=1']));
+  it.push(mc('The input impedance of the circuit in figure one is ______.','Very High',['Very Low'],fig(F.follower()),'Feedback multiplies the op amp’s own input impedance by about its open-loop gain, so a follower’s input impedance is thousands of megohms: very high.'));
+  it.push(mc('The output impedance of the circuit in figure one is ______.','Very Low',['Very High'],fig(F.follower()),'Negative feedback divides the op amp’s output impedance by the loop gain, so the follower’s output impedance is far below 1 Ω: very low.'));
+  for(let j=0;j<2;j++){
+    const V=pick([12,15]);let va,vb;do{va=+(rnd(-9,9)).toFixed(1);vb=+(rnd(-9,9)).toFixed(1);}while(Math.abs(va-vb)<0.3);
+    const out=vb>va?V:-V;
+    it.push({prompt:`<p>The supply voltages are ±${V} V. Input A = ${vSigned(va)} V and input B = ${vSigned(vb)} V. What is the approximate output voltage of the circuit in figure one?</p>`,diagram:fig(F.comparator({va:'A '+vSigned(va)+' V',vb:'B '+vSigned(vb)+' V'})),
+      fields:[{key:'a',label:'Answer',unit:'V',value:out,show:(out>0?'+':'')+out,check:s=>{const u=CC.parse(s);return !isNaN(u)&&Math.sign(u)===Math.sign(out)&&Math.abs(u)>=V*0.85&&Math.abs(u)<=V*1.001;}}],
+      explain:tip(`Any answer from ${fmt(V*0.85,3)} V to ${V} V with the correct sign is accepted, because a real output stops a volt or two short of the rail.`),
+      work:[`>Input B is the + input and input A is the − input. Compare them on the number line: B = ${vSigned(vb)} V is ${vb>va?'greater':'less'} than A = ${vSigned(va)} V.`,`>${vb>va?'B > A, so the output swings to the positive rail':'A > B, so the output swings to the negative rail'}: about ${out>0?'+':'−'}${V} V (a real op amp gets within about 1 to 2 V of the rail).`]});
+  }
+  for(let j=0;j<2;j++){const rf=pick([1,1.5,2,3,4.7,10,22,47]);const imax=Math.min(900,Math.floor(12/rf*1000));const iin=ri(20,imax);const vo=iin*1e-6*rf*1e3;
+    it.push(num(`Rf = ${fmt(rf)} kΩ and the input current is ${iin} µA. What is the magnitude of the output voltage of the circuit in figure one?`,vo,'V',fig(F.itov({rf:'Rf'})),{signFree:true},M('|V_{out}|=I_{in}R_f')+tip('With the current flowing into the input as drawn, the output is negative; either sign is accepted.'),
+      ['>Convert to base units first: µA to A and kΩ to Ω.',`|V_{out}|=I_{in}R_f=(${iin}\\times10^{-6}\\text{ A})(${N(rf*1e3)}\\text{ }\\Omega)`,`|V_{out}|=${N(vo)}\\text{ V}`]));}
+  {const rf=pick([1,2,3,10,100]);const vo=+(rnd(0.5,9)).toFixed(2);const ii=vo/(rf*1e3)*1e6;
+    it.push(num(`Rf = ${fmt(rf)} kΩ and the output voltage is ${fmt(vo)} V. What is the input current of the circuit in figure one?`,ii,'µA',fig(F.itov()),{signFree:true},M('I_{in}=\\frac{V_{out}}{R_f}'),
+      [`I_{in}=\\frac{V_{out}}{R_f}=\\frac{${N(vo)}\\text{ V}}{${N(rf*1e3)}\\text{ }\\Omega}`,`I_{in}=${N(ii/1e6,4)}\\text{ A}=${N(ii)}\\text{ µA}`]));}
+  return shuffle(it);
+}
+
+/* ---------- Inverting ---------- */
+function invItems(){
+  const it=[];const pr=()=>{let ri_,rf;do{ri_=eVal(1,47);rf=eVal(2.2,470);}while(rf/ri_<1.5||rf/ri_>60);return [ri_,rf];};
+  for(let j=0;j<2;j++){const [a,b]=pr();it.push(num(`Ri = ${kO(a)} and Rf = ${kO(b)}. What is the voltage gain of figure one?`,b/a,'',fig(F.inverting()),{signFree:true},M('A=\\frac{R_f}{R_i}')+tip('You may enter the gain as positive or negative; the minus sign just means the output is inverted.'),
+    [`A=\\frac{R_f}{R_i}=\\frac{${kT(b)}}{${kT(a)}}`,`A=${N(b/a)}`,'>You may also write the gain as negative to show the inversion.']));}
+  for(let j=0;j<2;j++){const [a,b]=pr();it.push(num(`Ri = ${kO(a)} and Rf = ${kO(b)}. What value should resistor R1 be in figure one?`,a*b/(a+b),'kΩ',fig(F.inverting({r1:'R1'})),{},M('R_1=\\frac{R_f R_i}{R_f+R_i}'),
+    ['>R1 should equal Ri in parallel with Rf, so both inputs see the same DC resistance and the bias-current offsets cancel.',`R_1=\\frac{R_fR_i}{R_f+R_i}=\\frac{(${N(b)})(${N(a)})}{${N(b)}+${N(a)}}\\text{ k}\\Omega`,`R_1=${kT(a*b/(a+b))}`]));}
+  for(let j=0;j<2;j++){const z=eVal(1,100);it.push(num(`An input impedance of ${kO(z)} is required. What value should Ri be in figure one?`,z,'kΩ',fig(F.inverting()),{},M('R_i=Z_{in}'),
+    ['>The − input is a virtual ground, so the source sees only Ri.',`R_i=Z_{in}=${kT(z)}`]));}
+  for(let j=0;j<2;j++){const A=pick([2,3,4,5,6,7,8,10,12,15,20,25,50]);const a=eVal(1,22);it.push(num(`Ri = ${kO(a)}. What value of Rf is required for a gain of ${A} in figure one?`,A*a,'kΩ',fig(F.inverting()),{},M('R_f=A\\,R_i'),
+    [`R_f=A\\,R_i=(${A})(${kT(a)})`,`R_f=${kT(A*a)}`]));}
+  const zo=['near 0 ohms','equal to Ri','equal to Rf','equal to R1'];
+  for(let j=0;j<2;j++)it.push(mc('The output impedance of the circuit in figure one is ______.','near 0 ohms',zo.slice(1),fig(F.inverting({r1:'R1'})),'Negative feedback makes the op amp hold its output voltage regardless of load, so the output impedance is close to 0 Ω.'));
+  for(let j=0;j<2;j++)it.push(mc('The input impedance of the circuit in figure one is ______.','equal to Ri',['near 0 ohms','equal to Rf','equal to R1'],fig(F.inverting({r1:'R1'})),'The − input is held at virtual ground, so the signal source drives Ri to 0 V. The input impedance equals Ri.'));
+  for(let j=0;j<4;j++){let a,b,vin,vo,mv;do{[a,b]=pr();mv=Math.random()<0.5;vin=sg(mv?rnd(-900,900):rnd(-3,3));vo=-b/a*vin;}while(Math.abs(mv?vo/1000:vo)>12||Math.abs(vin)<(mv?5:0.05));
+    const u=mv?'mV':'V';
+    it.push(num(`Ri = ${kO(a)}, Rf = ${kO(b)} and Vin = ${vSigned(vin)} ${u}. What is the output voltage of figure one?`,vo,u,fig(F.inverting()),{},M('V_{out}=-\\frac{R_f}{R_i}V_{in}'),
+      [`A=\\frac{R_f}{R_i}=\\frac{${kT(b)}}{${kT(a)}}=${N(b/a)}`,`V_{out}=-A\\,V_{in}=-(${N(b/a)})${P_(vin)}\\text{ ${u}}`,`V_{out}=${N(vo)}\\text{ ${u}}`,'>The output has the opposite sign to the input.']));}
+  {// saturation item: the formula predicts more than the output can deliver
+    let a,b,vin,ideal;do{a=eVal(1,10);b=eVal(47,470);vin=sg(rnd(0.4,2)*(Math.random()<0.5?-1:1),2);ideal=-b/a*vin;}while(Math.abs(ideal)<20||Math.abs(ideal)>200);
+    const sat=ideal>0?13.5:-13.5;
+    it.push({prompt:`<p>Ri = ${kO(a)}, Rf = ${kO(b)} and Vin = ${vSigned(vin)} V. The supplies are ±15 V and the output can swing to within about 1.5 V of each supply. What is the output voltage of figure one?</p>`,diagram:fig(F.inverting()),
+      fields:[{key:'a',label:'Answer',unit:'V',value:sat,show:(sat>0?'+':'−')+'13.5',check:s=>{const u=CC.parse(s);return !isNaN(u)&&Math.sign(u)===Math.sign(sat)&&Math.abs(u)>=13&&Math.abs(u)<=15;}}],
+      explain:M('V_{out}=-\\frac{R_f}{R_i}V_{in}')+tip('Answers from 13 V to 15 V with the correct sign are accepted.'),
+      work:[`V_{out}=-\\frac{R_f}{R_i}V_{in}=-\\frac{${kT(b)}}{${kT(a)}}${P_(vin)}\\text{ V}=${N(ideal)}\\text{ V}`,`>That is more than the op amp can deliver. The output saturates about 1.5 V inside the ${sat>0?'positive':'negative'} supply.`,`V_{out}\\approx${sat>0?'+':'-'}13.5\\text{ V}`]});}
+  return shuffle(it);
+}
+/* ---------- Noninverting ---------- */
+function noninvItems(){
+  const it=[];const pr=()=>{let a,b;do{a=eVal(1,47);b=eVal(2.2,470);}while(b/a<1||b/a>60);return [a,b];};
+  for(let j=0;j<2;j++){const [a,b]=pr();it.push(num(`Ri = ${kO(a)} and Rf = ${kO(b)}. What is the voltage gain of figure one?`,b/a+1,'',fig(F.noninv()),{},M('A=\\frac{R_f}{R_i}+1'),
+    [`A=\\frac{R_f}{R_i}+1=\\frac{${kT(b)}}{${kT(a)}}+1`,`A=${N(b/a)}+1=${N(b/a+1)}`]));}
+  for(let j=0;j<2;j++){const A=pick([2,3,4,5,8,10,11,16,21,26,31,51]);const a=eVal(1,22);it.push(num(`A voltage gain, A, of ${A} is required. Ri = ${kO(a)}. What value should Rf be in figure one?`,a*(A-1),'kΩ',fig(F.noninv()),{},M('R_f=R_i(A-1)'),
+    ['>Rearrange the gain formula: A = Rf/Ri + 1, so Rf = Ri(A − 1).',`R_f=R_i(A-1)=(${kT(a)})(${A}-1)`,`R_f=${kT(a*(A-1))}`]));}
+  for(let j=0;j<2;j++)it.push(mc('The input impedance of the circuit in figure one is ______.','very high',['equal to Ri','equal to Rf','very low'],fig(F.noninv()),'The signal drives the op amp’s + input directly, and feedback multiplies the op amp’s own input impedance by (1 + loop gain). The result is very high, typically gigohms.'));
+  for(let j=0;j<2;j++)it.push(mc('The output impedance of the circuit in figure one is ______.','near 0 ohms',['equal to Ri','equal to Rf','very high'],fig(F.noninv()),'Negative feedback holds the output voltage constant as the load changes, so the output impedance is close to 0 Ω.'));
+  for(let j=0;j<2;j++){let a,b,vin,vo;do{[a,b]=pr();vin=sg(rnd(-900,900));vo=(b/a+1)*vin;}while(Math.abs(vo)>12000||Math.abs(vin)<5);
+    it.push(num(`Ri = ${kO(a)}, Rf = ${kO(b)} and Vin = ${vSigned(vin)} mV. What is the output voltage of figure one?`,vo,'mV',fig(F.noninv()),{},M('V_{out}=A\\,V_{in}=\\left(\\frac{R_f}{R_i}+1\\right)V_{in}'),
+      [`A=\\frac{${kT(b)}}{${kT(a)}}+1=${N(b/a+1)}`,`V_{out}=A\\,V_{in}=(${N(b/a+1)})${P_(vin)}\\text{ mV}`,`V_{out}=${N(vo)}\\text{ mV}`,'>A noninverting amplifier keeps the sign of the input.']));}
+  for(let j=0;j<2;j++){const [a,b]=pr();const z=pick([1,1.5,2,3,5]);const aol=pick([50000,100000,200000]);const A=b/a+1;const Z=z*1e6*(1+aol/A);
+    it.push(num(`Ri = ${kO(a)}, Rf = ${kO(b)}. The op amp has an open-loop gain ${m('A_{OL}')} of ${fmt(aol)} and an open-loop input impedance ${m('z_{in}')} of ${z} MΩ. What is the closed-loop input impedance of figure one?`,Z/1e9,'GΩ',fig(F.noninv()),{},Mq('Z_{in}=z_{in}\\left(1+A_{OL}B\\right)\\qquad B=\\frac{R_i}{R_i+R_f}=\\frac{1}{A}'),
+      [`>First find the feedback fraction ${m('B')}, then multiply ${m('z_{in}')} by one plus the loop gain ${m('A_{OL}B')}.`,`A=\\frac{R_f}{R_i}+1=${N(A)}\\qquad B=\\frac{1}{A}=${N(1/A)}`,`A_{OL}B=\\frac{${fmt(aol)}}{${N(A)}}=${N(aol/A)}`,`Z_{in}=(${z}\\text{ M}\\Omega)(1+${N(aol/A)})=${N(Z/1e6)}\\text{ M}\\Omega`,`Z_{in}=${N(Z/1e9)}\\text{ G}\\Omega`]));}
+  return shuffle(it);
+}
+/* ---------- Sum and difference ---------- */
+function sumItems(){
+  const it=[];const v=()=>+(rnd(-5,5)).toFixed(1)||0.5;
+  const vlist=vs=>vs.map(x=>P_(x)).join('+');
+  const sumQ=(n,ratio)=>{let vs,out,r,rf;do{vs=Array.from({length:n},v);r=eVal(1,47);rf=ratio?sg(r*pick([2,3,4,5])):r;out=-(rf/r)*vs.reduce((a,b)=>a+b,0);}while(Math.abs(out)>12);
+    const names=n===3?'R1, R2, R3':'R1, R2';
+    const given=ratio?`${names.replace(/, (?=R\d$)/,' and ')} = ${kO(r)}, Rf = ${kO(rf)}`:`${names} and Rf = ${kO(r)}`;
+    const vv=vs.map((_,i)=>'V_'+(i+1)).join('+');
+    const tex=ratio?`V_{out}=-\\frac{R_f}{R_1}(${vv})`:`V_{out}=-(${vv})`;const S=vs.reduce((a,b)=>a+b,0);
+    const work=ratio?[`V_{out}=-\\frac{R_f}{R_1}(${vv})=-\\frac{${kT(rf)}}{${kT(r)}}(${vlist(vs)})\\text{ V}`,`V_{out}=-(${N(rf/r)})${P_(S)}\\text{ V}=${N(out)}\\text{ V}`]:[`V_{out}=-(${vv})=-(${vlist(vs)})\\text{ V}`,`V_{out}=-${P_(S)}\\text{ V}=${N(out)}\\text{ V}`];
+    return num(`${given}. What is the output voltage of the circuit if ${vs.map((x,i)=>`V${i+1} = ${vSigned(x)} V`).join(', ')}?`,out,'V',fig(F.summing(n),n===3?'Figure Two':'Figure One'),{absTol:0.005},M(tex),work);};
+  const wsumQ=()=>{let vs,out,r1,r2,rf;do{vs=[v(),v()];r1=eVal(1,47);r2=sg(r1*pick([2,3,4,5,10]));rf=sg(r1*pick([1,2,3,5]));out=-(rf/r1*vs[0]+rf/r2*vs[1]);}while(Math.abs(out)>12||Math.abs(out)<0.05);
+    return num(`R1 = ${kO(r1)}, R2 = ${kO(r2)} and Rf = ${kO(rf)}. What is the output voltage of the circuit if V1 = ${vSigned(vs[0])} V and V2 = ${vSigned(vs[1])} V?`,out,'V',fig(F.summing(2)),{},M('V_{out}=-\\left(\\frac{R_f}{R_1}V_1+\\frac{R_f}{R_2}V_2\\right)'),
+      ['>The input resistors differ, so each input has its own gain.',`\\frac{R_f}{R_1}=\\frac{${kT(rf)}}{${kT(r1)}}=${N(rf/r1)}\\qquad\\frac{R_f}{R_2}=\\frac{${kT(rf)}}{${kT(r2)}}=${N(rf/r2)}`,`V_{out}=-\\left((${N(rf/r1)})${P_(vs[0])}+(${N(rf/r2)})${P_(vs[1])}\\right)\\text{ V}`,`V_{out}=${N(out)}\\text{ V}`]);};
+  for(let j=0;j<3;j++)it.push(sumQ(2,false));
+  for(let j=0;j<3;j++)it.push(sumQ(3,false));
+  for(let j=0;j<2;j++)it.push(sumQ(2,true));
+  it.push(sumQ(3,true));
+  for(let j=0;j<2;j++)it.push(wsumQ());
+  const diffQ=ratio=>{let v1,v2,r,rf,out;do{v1=v();v2=v();r=eVal(1,47);rf=ratio?sg(r*pick([2,3,5])):r;out=(rf/r)*(v2-v1);}while(Math.abs(out)>12||v1===v2);
+    const given=ratio?`R1 and R2 = ${kO(r)}, R3 and Rf = ${kO(rf)}`:`R1, R2, R3 and Rf = ${kO(r)}`;
+    const work=ratio?[`>The ratios match (${m('R_3/R_2=R_f/R_1')}), so the simple formula applies.`,`\\frac{R_f}{R_1}=\\frac{${kT(rf)}}{${kT(r)}}=${N(rf/r)}`,`V_{out}=\\frac{R_f}{R_1}(V_2-V_1)=(${N(rf/r)})(${N(v2)}-${P_(v1)})\\text{ V}`,`V_{out}=(${N(rf/r)})${P_(v2-v1)}\\text{ V}=${N(out)}\\text{ V}`]
+      :[`V_{out}=V_2-V_1=${N(v2)}-${P_(v1)}\\text{ V}`,`V_{out}=${N(out)}\\text{ V}`];
+    return num(`${given}. What is the output voltage of the difference amplifier when V1 = ${vSigned(v1)} V and V2 = ${vSigned(v2)} V?`,out,'V',fig(F.difference()),{},M(ratio?'V_{out}=\\frac{R_f}{R_1}(V_2-V_1)':'V_{out}=V_2-V_1'),work);};
+  for(let j=0;j<4;j++)it.push(diffQ(false));
+  for(let j=0;j<2;j++)it.push(diffQ(true));
+  return shuffle(it);
+}
+/* ---------- Characteristics ---------- */
+function charItems(){
+  const it=[];
+  for(let j=0;j<3;j++){const ad=pick([1,1,10]);const vcm=+(rnd(1,10)).toFixed(1);const vo=+(rnd(0.05,5)).toFixed(2);const acm=vo/1000/vcm;const cm=20*Math.log10(ad/acm);
+    const rr=ad===1?`all four resistors are 10 kΩ, so the differential gain ${m('A_d')} is 1`:`R1 = R2 = 10 kΩ and Rf = R3 = 100 kΩ, so the differential gain ${m('A_d')} is 10`;
+    it.push(num(`In the difference amplifier of figure one, ${rr}. The resistors are perfectly matched. With both inputs tied together, a common-mode signal ${m('V_{CM}')} = ${fmt(vcm)} V PP produces an output of ${fmt(vo)} mV PP. What is the CMRR of the op amp?`,cm,'dB',fig(F.cmrr(ad===1?{r1:'R1 10k',r2:'R2 10k',r3:'R3 10k',rf:'Rf 10k'}:{r1:'R1 10k',r2:'R2 10k',r3:'R3 100k',rf:'Rf 100k'})),{},Mq('\\mathrm{CMRR}=20\\log\\left(\\frac{A_d}{A_{cm}}\\right)\\qquad A_{cm}=\\frac{V_{out}}{V_{CM}}'),
+      ['>Convert the output to volts before dividing.',`A_{cm}=\\frac{V_{out}}{V_{CM}}=\\frac{${N(vo/1000)}\\text{ V}}{${N(vcm)}\\text{ V}}=${sci(acm)}`,`\\mathrm{CMRR}=20\\log\\left(\\frac{${ad}}{${sci(acm)}}\\right)=20\\log(${N(ad/acm)})`,`\\mathrm{CMRR}=${N(cm)}\\text{ dB}`]));}
+  const amps=[()=>({n:'follower',A:1,NG:1,fig:F.follower(),g:''}),()=>{const a=eVal(1,10),b=eVal(10,470);return {n:'inverting amplifier',A:b/a,NG:b/a+1,inv:true,a,b,fig:F.inverting(),g:`Ri = ${kO(a)}, Rf = ${kO(b)}. `};},()=>{const a=eVal(1,10),b=eVal(10,470);return {n:'noninverting amplifier',A:b/a+1,NG:b/a+1,a,b,fig:F.noninv(),g:`Ri = ${kO(a)}, Rf = ${kO(b)}. `};}];
+  shuffle(amps).forEach(f=>{const a=f();const gbw=pick([1,2,3,4]);const bw=gbw*1e3/a.NG,bw2=gbw*1e3/a.A;
+    const fld=a.inv?{check:s=>{const u=CC.parse(s);return CC.close(u,bw,TOL)||CC.close(u,bw2,TOL);}}:{};
+    const work=a.inv?['>Use the noise gain, one more than the signal gain:',`A_{CL}=1+\\frac{R_f}{R_i}=1+\\frac{${kT(a.b)}}{${kT(a.a)}}=${N(a.NG)}`,`BW=\\frac{GBW}{A_{CL}}=\\frac{${gbw}\\text{ MHz}}{${N(a.NG)}}=${N(bw)}\\text{ kHz}`,`>Using the signal gain ${m('R_f/R_i')} = ${N(a.A)} instead gives ${N(bw2)} kHz, which is also accepted; the two agree closely when the gain is large.`]
+      :a.A===1?['>A follower has a closed-loop gain of 1, so it gets the full gain-bandwidth product.',`BW=\\frac{GBW}{A_{CL}}=\\frac{${gbw}\\text{ MHz}}{1}=${N(bw)}\\text{ kHz}`]
+      :[`A_{CL}=\\frac{R_f}{R_i}+1=${N(a.A)}`,`BW=\\frac{GBW}{A_{CL}}=\\frac{${gbw}\\text{ MHz}}{${N(a.A)}}=\\frac{${gbw*1000}\\text{ kHz}}{${N(a.A)}}=${N(bw)}\\text{ kHz}`];
+    it.push(num(`The op amp gain-bandwidth product = ${gbw} MHz. ${a.g}What is the bandwidth of the ${a.n} in figure one?`,bw,'kHz',fig(a.fig),fld,M('BW=\\frac{GBW}{A_{CL}}'),work));});
+  shuffle(amps).forEach(f=>{const sr=pick([0.5,1,2]);let a,vin,vo,w,dt;do{a=f();vin=+(rnd(0.5,4)).toFixed(1);vo=vin*a.A;dt=vo/sr;w=pick([20,25,40,50,100]);}while(vo>12||w<1.5*dt);
+    const work=[a.A===1?`V_{out}=V_{in}=${N(vin)}\\text{ V}`:a.inv?`|V_{out}|=V_{in}\\frac{R_f}{R_i}=(${N(vin)}\\text{ V})(${N(a.A)})=${N(vo)}\\text{ V}`:`V_{out}=V_{in}\\left(\\frac{R_f}{R_i}+1\\right)=(${N(vin)}\\text{ V})(${N(a.A)})=${N(vo)}\\text{ V}`,
+      `\\Delta t=\\frac{|V_{out}|}{SR}=\\frac{${N(vo)}\\text{ V}}{${sr}\\text{ V/µs}}=${N(dt)}\\text{ µs}`,`>That is shorter than the ${w} µs pulse, so the output does reach its full value.`];
+    it.push(num(`Slew rate = ${sr} volt${sr===1?'':'s'}/microsecond. ${a.g}A +${fmt(vin)} V, ${w} microsecond pulse is applied to the input of the ${a.n}. From the start of the input pulse, how much time is required for the output of the circuit to reach maximum amplitude?`,dt,'µs',fig(a.fig),{},M('\\Delta t=\\frac{|V_{out}|}{SR}'),work));});
+  {const ia=sg(rnd(40,400)),ib=sg(ia*rnd(0.6,0.95));const avg=(ia+ib)/2,os=ia-ib;
+    it.push(num(`In figure one, I(A) = ${fmt(ia)} nA and I(B) = ${fmt(ib)} nA. What is the input bias current of the op amp?`,avg,'nA',fig(F.bias()),{},M('I_{B}=\\frac{I_A+I_B}{2}'),
+      ['>The specified input bias current is the average of the two input currents.',`I_{B}=\\frac{${N(ia)}+${N(ib)}}{2}\\text{ nA}=${N(avg)}\\text{ nA}`]));
+    const ia2=sg(rnd(40,400)),ib2=sg(ia2*rnd(0.6,0.95));
+    it.push(num(`In figure one, I(A) = ${fmt(ia2)} nA and I(B) = ${fmt(ib2)} nA. What is the input offset current of the op amp?`,ia2-ib2,'nA',fig(F.bias()),{},M('I_{OS}=\\left|I_A-I_B\\right|'),
+      ['>The input offset current is the difference between the two input currents.',`I_{OS}=|${N(ia2)}-${N(ib2)}|\\text{ nA}=${N(ia2-ib2)}\\text{ nA}`]));}
+  it.push(mc('The main purpose of R1 in figure one is to ______.','reduce the output offset caused by input bias currents',['set the closed-loop gain','set the input impedance','make the input bias currents zero'],fig(F.inverting({r1:'R1'})),'R1 (equal to Ri ∥ Rf) gives the + input the same DC resistance as the − input. The bias currents then make equal voltage drops at both inputs, which cancel, so the output stays closer to 0 V. R1 does not affect the gain or the input impedance, and it cannot make the bias currents zero.'));
+  it.push(mc('The difference between the currents I(A) and I(B) in figure one is called the ______.','input offset current',['input bias current','input average current','input null current'],fig(F.bias()),'The input offset current is |I(A) − I(B)|. The input bias current is their average.'));
+  it.push(mc('The currents I(A) and I(B) in figure one are called ______.','input bias currents',['input offset currents','input average currents','input null currents'],fig(F.bias()),'The small DC currents that flow into (or out of) the op amp inputs are the input bias currents.'));
+  it.push(mc('Ideally, the input bias currents of an op amp should be ______.','as near zero as possible',['as large as possible','equal to the output current','equal to the supply current'],fig(F.bias()),'Bias currents create error voltages across the input resistors, so smaller is better. FET-input op amps get them down to picoamps.'));
+  it.push(mc('Ideally, the CMRR of an op amp should be ______.','as large as possible',['as near 0 dB as possible','equal to the closed-loop gain','as small as possible'],fig(F.cmrr()),'CMRR is the ratio of wanted (differential) gain to unwanted (common-mode) gain, so a larger CMRR means better rejection of noise common to both inputs.'));
+  return shuffle(it);
+}
+const itemsRun=list=>(el,s)=>CC.problemSet(el,s,{list,tol:TOL,gradeLabel:'Grade answer'});
+
+/* ---------- troubleshooting: inverting amplifier board ---------- */
+const VP=15,VN=-15,SATP=13.6,SATN=-13.5;
+const clamp=v=>Math.max(SATN,Math.min(SATP,v));
+const dip=(x,y,label)=>{let g=`<rect x="${x}" y="${y}" width="60" height="96" rx="4" fill="#2b2b2b"/><path d="M${x+22},${y} a8,8 0 0 0 16,0" fill="#555"/><text x="${x+30}" y="${y+54}" font-size="13" font-weight="800" fill="#ddd" text-anchor="middle">${label}</text><text x="${x+30}" y="${y+70}" font-size="9" fill="#aaa" text-anchor="middle">741</text>`;
+  for(let i=0;i<4;i++){g+=`<rect x="${x-10}" y="${y+10+i*24}" width="10" height="6" fill="#bbb"/><rect x="${x+60}" y="${y+10+i*24}" width="10" height="6" fill="#bbb"/><text x="${x+8}" y="${y+17+i*24}" font-size="8" fill="#ccc">${i+1}</text><text x="${x+52}" y="${y+17+i*24}" font-size="8" fill="#ccc" text-anchor="end">${8-i}</text>`;}
+  return g;};
+const pinXY=(x,y,pin)=>pin<=4?[x-18,y+13+(pin-1)*24]:[x+78,y+13+(8-pin)*24];
+const term=(x,y,l,anchor='middle')=>`<rect x="${x-13}" y="${y-13}" width="26" height="26" rx="4" fill="#c9c9c9" stroke="#777"/>`+B.label(x,y-19,l,{size:11});
+const supT=(pts,label,lp,col)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${col||'var(--trace)'}" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"/>`+(label?`<text x="${lp[0]}" y="${lp[1]}" font-size="10" font-weight="800" fill="#5a3b12" text-anchor="middle" ${lp[2]?`transform="rotate(${lp[2]} ${lp[0]} ${lp[1]})"`:''}>${label}</text>`:'');
+
+function invBoard(){
+  const faults=['No Faults','Trace1 Open','Trace2 Open','Trace3 Open','Trace4 Open','Trace5 Open','R1 Open','R2 Open','R3 Open','IC1 Defective'];
+  const ans=ri(0,faults.length-1),f=faults[ans];const R1=10,R2=100;const latch=Math.random()<0.5?SATP:SATN;
+  const div=(a,b)=>a+(b-a)*R1/(R1+R2);
+  const read=(id,inp)=>{const vin=inp.in1;let n={IN1:vin,R1L:vin,P3:0,P4:VN,P7:VP,VPT:VP,VNT:VN,GND:0,R3B:0};let out,J;
+    const normal=()=>{out=clamp(-R2/R1*vin);J=Math.abs(out)>13.4?div(vin,out):0.0003*Math.sign(out);};
+    switch(f){
+      case 'Trace1 Open':n.R1L=0;out=0;J=0;break;
+      case 'Trace2 Open':n.P7=-14.2;out=-14.0;J=div(vin,out);break;
+      case 'Trace3 Open':n.P4=13.1;out=13.9;J=div(vin,out);break;
+      case 'Trace4 Open':out=13.5;J=div(vin,out);n.P2=-0.004;break;
+      case 'R1 Open':out=0;J=0;break;
+      case 'R2 Open':J=vin;out=vin>0.0002?SATN:vin<-0.0002?SATP:SATP;break;
+      case 'R3 Open':n.P3=-0.021;out=SATN;J=div(vin,out);break;
+      case 'IC1 Defective':out=latch;J=div(vin,out);break;
+      default:normal();
+    }
+    n.R1R=J;n.R2L=J;if(n.P2===undefined)n.P2=J;n.P6=out;n.R2R=out;n.OUT=f==='Trace5 Open'?0.002:out;n.R3T=n.P3;
+    return n[id];};
+  const X=300,Y=104;const p=pin=>pinXY(X,Y,pin);
+  const P2=p(2),P3=p(3),P4=p(4),P6=p(6),P7=p(7);
+  const pos={IN1:[40,100],R1L:[110,100],R1R:[200,100],R2L:[455,80],R2R:[455,P6[1]],R3T:[250,214],R3B:[250,280],P2,P3,P4,P6,P7,OUT:[530,214],VPT:[530,150],VNT:[530,262],GND:[40,280]};
+  const names={IN1:'IN1',R1L:'R1 left',R1R:'R1 right',R2L:'R2 top',R2R:'R2 bottom',R3T:'R3 top',R3B:'R3 bottom',P2:'IC1 pin 2',P3:'IC1 pin 3',P4:'IC1 pin 4',P6:'IC1 pin 6',P7:'IC1 pin 7',OUT:'OUT',VPT:'+V supply',VNT:'−V supply',GND:'Ground'};
+  const svg=()=>B.svg(570,320,B.pcb(12,20,546,290)+
+    B.trace([pos.IN1,pos.R1L],'TRACE 1',[75,92])+B.trace([pos.R1R,[200,50],[455,50],pos.R2L])+B.trace([pos.R1R,[232,100],[232,P2[1]],P2],'TRACE 4',[222,132,-90])+
+    B.trace([pos.R2R,P6])+B.trace([pos.R2R,[490,P6[1]],[490,214],pos.OUT],'TRACE 5',[470,200])+
+    B.trace([pos.VPT,[410,150],[410,P7[1]],P7],'TRACE 2',[505,166])+B.trace([P4,[P4[0],262],pos.VNT],'TRACE 3',[420,276])+
+    B.trace([P3,[250,P3[1]],pos.R3T])+B.trace([pos.R3B,pos.GND])+
+    dip(X,Y,'IC1')+B.part('R',pos.R1L,pos.R1R,'R1 10k')+B.part('R',pos.R2L,pos.R2R,'R2 100k')+B.part('R',pos.R3T,pos.R3B,'R3 9.1k')+
+    term(...pos.IN1,'IN1')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,'+15V')+term(...pos.VNT,'−15V'));
+  const pads=Object.keys(pos).map(id=>({id,x:pos[id][0],y:pos[id][1],label:names[id]}));
+  const rd=(id,v)=>{const x=read(id,{in1:v});return (x>0.0005?'+':'')+fmt(Math.abs(x)<0.0005?0:x,3)+' V';};
+  const why={
+    'No Faults':['>Both supplies are correct at the IC (pin 7 = '+rd('P7',0)+', pin 4 = '+rd('P4',0)+').',`>With IN1 = +0.5 V the output reads ${rd('OUT',0.5)}, and with IN1 = −0.5 V it reads ${rd('OUT',-0.5)}: a gain of −10, exactly as designed.`,'>Pin 2 stays at virtual ground (0 V), and the voltage is the same at both ends of every trace. Nothing is wrong.'],
+    'Trace1 Open':['>Set IN1 to a nonzero value, for example +0.5 V.',`>IN1 reads ${rd('IN1',0.5)} but the left end of R1 reads ${rd('R1L',0.5)}. The two ends of trace 1 differ, so trace 1 is open.`,'>Because no signal reaches R1, the output stays at 0 V for every input.'],
+    'Trace2 Open':[`>The output is stuck at ${rd('OUT',0)} whatever the input.`,`>The +15 V terminal reads ${rd('VPT',0)}, but pin 7 reads ${rd('P7',0)}. Different voltages at the two ends of trace 2 mean it is open; a starved pin 7 floats near the negative supply.`],
+    'Trace3 Open':[`>The output is stuck at ${rd('OUT',0)} whatever the input.`,`>The −15 V terminal reads ${rd('VNT',0)}, but pin 4 reads ${rd('P4',0)}. Trace 3 is open, and the starved pin 4 floats positive.`],
+    'Trace4 Open':[`>The output is latched at ${rd('OUT',0)}.`,`>With IN1 = 0 V, the right end of R1 and top of R2 read ${rd('R1R',0)} (R1 and R2 are acting as a divider between IN1 and the output), but pin 2 reads ${rd('P2',0)}.`,'>The junction should be at virtual ground and should match pin 2. The two ends of trace 4 differ, so trace 4 is open.'],
+    'Trace5 Open':[`>Pin 6 responds normally (IN1 = +0.5 V gives ${rd('P6',0.5)} at pin 6),`,`>but the OUT terminal reads ${rd('OUT',0.5)}. The two ends of trace 5 differ, so trace 5 is open.`],
+    'R1 Open':['>Supplies and traces check good.',`>With IN1 = +0.5 V, both IN1 and the left end of R1 read ${rd('R1L',0.5)}, but the right end of R1 reads ${rd('R1R',0.5)} and the output stays at ${rd('OUT',0.5)}.`,'>Voltage appears across R1 yet no signal gets through and the output never moves, so R1 is open. (With trace 1 open, the left end of R1 would read 0 V instead.)'],
+    'R2 Open':[`>With no feedback the op amp runs open loop: IN1 = +0.5 V gives ${rd('OUT',0.5)} and IN1 = −0.5 V gives ${rd('OUT',-0.5)}.`,`>Pin 2 is no longer a virtual ground. It follows IN1 (${rd('P2',0.5)} at IN1 = +0.5 V), because no current flows through R1.`,'>In a working circuit pin 2 stays at 0 V. Here it follows IN1 and the output snaps to a rail for tiny inputs, so the feedback path is broken: R2 is open. (The supplies and trace 4 check good.)'],
+    'R3 Open':[`>The output is latched at ${rd('OUT',0)} for every input, and the supplies are correct.`,`>The top of R3 (pin 3) reads ${rd('R3T',0)} while the bottom of R3 reads ${rd('R3B',0)}. With a good R3 both would be essentially 0 V, so pin 3 is floating: R3 is open.`],
+    'IC1 Defective':[`>The output is latched at ${rd('OUT',0)} for every input.`,`>Both supply pins are correct (pin 7 = ${rd('P7',0)}, pin 4 = ${rd('P4',0)}), pin 3 is at 0 V with R3 good, and pin 2 sits at the R1/R2 divider voltage (${rd('P2',0)} at IN1 = 0), so both inputs are connected.`,'>No input, supply or trace problem explains the latched output, so the op amp itself has failed.']};
+  return {svg,pads,faults,answer:ans,read,inputs:[{key:'in1',label:'IN1',value:0,min:-2,max:2,step:0.1}],schematic:invSchematic(),work:why[f]};
+}
+function invSchematic(){const a=OAK.OA(160,110,{pins:true,label:'IC1'});let g=a.svg;
+  g+=OAK.T(24,92,'IN1','middle',0)+R(28,92,140,92,'R1 10k')+W([140,92],[160,92])+D(140,92)+W([140,92],[140,40])+R(140,40,255,40,'R2 100k')+W([255,40],[255,110])+W([230,110],[285,110])+D(255,110)+OAK.T(289,110,'OUT','middle',0)+W([160,128],[140,128])+R(140,128,140,196,'R3 9.1k',{side:'left'})+G(140,196);
+  return OAK.wrap(320,215,g);}
+
+/* ---------- troubleshooting: instrumentation amplifier ---------- */
+function instBoard(){
+  const faults=['No Faults','Trace1 Open','Trace2 Open','Trace3 Open','Trace4 Open','R1 Open','R2 Open','IC1 Defective','IC2 Defective','IC3 Defective'];
+  const ans=ri(0,faults.length-1),f=faults[ans];const latch=Math.random()<0.5?SATP:SATN;const r=10/110;
+  const read=(id,inp)=>{const n={IN1:inp.in1,IN2:inp.in2,VPT:VP,VNT:VN,GND:0,R4B:0,I1p4:VN,I2p4:VN,I3p4:VN,I1p7:VP,I2p7:VP,I3p7:VP};
+    if(f==='Trace1 Open'){n.I1p4=12.8;n.I2p4=12.7;n.I3p4=12.9;}   // whole −V bus cut off at the terminal
+    if(f==='Trace2 Open'){n.I1p7=-14.2;n.I2p7=-14.1;}
+    if(f==='Trace3 Open'){n.I1p7=-14.3;}
+    if(f==='Trace4 Open'){n.I3p7=-14.2;}
+    const force=(ic,p7,p4)=>{if(f==='IC'+ic+' Defective')return latch;if(p7<0)return -13.9;if(p4>0)return 13.8;return null;};
+    const o1=force(1,n.I1p7,n.I1p4),o2=force(2,n.I2p7,n.I2p4),o3f=force(3,n.I3p7,n.I3p4);
+    n.I1p3=n.IN1;n.I2p3=n.IN2;n.I1p6=o1===null?clamp(n.IN1):o1;n.I2p6=o2===null?clamp(n.IN2):o2;n.I1p2=n.I1p6;n.I2p2=n.I2p6;
+    n.R1L=n.I1p6;n.R2L=n.I2p6;
+    let p3=f==='R2 Open'?0:n.I2p6*r*10;let out,p2;
+    if(o3f!==null){out=o3f;p2=f==='R1 Open'?out:n.I1p6+(out-n.I1p6)*10/110;}
+    else if(f==='R1 Open'){out=clamp(p3);p2=out;}
+    else{out=clamp(10*(p3/(r*10)-n.I1p6));if(f==='R2 Open')out=clamp(-10*n.I1p6);p2=Math.abs(out)>13.4?n.I1p6+(out-n.I1p6)*10/110:p3;}
+    n.I3p3=p3;n.R2R=p3;n.R4T=p3;n.I3p2=p2;n.R1R=p2;n.R3L=p2;n.I3p6=out;n.R3R=out;n.OUT=out;
+    return n[id];};
+  const c1=[150,40],c2=[150,214],c3=[360,127];
+  const pp=(c,pin)=>pinXY(c[0],c[1],pin);
+  const pos={IN1:[40,101],IN2:[40,275],GND:[40,330],VPT:[545,30],VNT:[545,330],OUT:[545,151]};
+  const names={IN1:'IN1',IN2:'IN2',GND:'Ground',VPT:'+V supply',VNT:'−V supply',OUT:'OUT'};
+  [[c1,'I1','IC1'],[c2,'I2','IC2'],[c3,'I3','IC3']].forEach(([c,k,l])=>[2,3,4,6,7].forEach(pin=>{pos[k+'p'+pin]=pp(c,pin);names[k+'p'+pin]=l+' pin '+pin;}));
+  Object.assign(pos,{R1L:[250,140],R1R:[318,140],R2L:[250,290],R2R:[318,290],R3L:[360,100],R3R:[480,100],R4T:[300,206],R4B:[300,262]});
+  Object.assign(names,{R1L:'R1 left',R1R:'R1 right',R2L:'R2 left',R2R:'R2 right',R3L:'R3 left',R3R:'R3 right',R4T:'R4 top',R4B:'R4 bottom'});
+  const jw=(a,b,lift)=>`<path d="M${a[0]},${a[1]} C${a[0]-lift},${a[1]-30} ${b[0]+lift},${b[1]-30} ${b[0]},${b[1]}" fill="none" stroke="#1565c0" stroke-width="3"/>`;
+  const jv=(a,b,dx)=>`<path d="M${a[0]},${a[1]} C${a[0]+dx},${a[1]+8} ${b[0]+dx},${b[1]-8} ${b[0]},${b[1]}" fill="none" stroke="#1565c0" stroke-width="3"/><circle cx="${b[0]}" cy="${b[1]}" r="4" fill="#bbb" stroke="#777"/>`;
+  const BUS=312;
+  const svg=()=>B.svg(580,350,B.pcb(12,12,556,330)+
+    B.trace([pos.IN1,pos.I1p3])+B.trace([pos.IN2,pos.I2p3])+
+    B.trace([pos.I1p6,[235,pos.I1p6[1]],[235,140],pos.R1L])+B.trace([pos.R1R,pos.I3p2])+B.trace([pos.I2p6,[238,pos.I2p6[1]],[238,290],pos.R2L])+B.trace([pos.R2R,[326,290],[326,pos.I3p3[1]],pos.I3p3])+
+    B.trace([pos.R4T,[300,pos.I3p3[1]],[326,pos.I3p3[1]]])+B.trace([[300,330],pos.GND])+B.trace([pos.R1R,[318,100],pos.R3L])+B.trace([pos.R3R,[492,100],[492,pos.I3p6[1]],pos.I3p6])+B.trace([[492,151],pos.OUT])+
+    supT([pos.VNT,[545,BUS],[22,BUS],[22,pos.I1p4[1]],pos.I1p4],'TRACE 1',[455,BUS-7])+supT([pos.I2p4,[pos.I2p4[0],BUS]])+supT([[pos.I3p4[0],BUS],pos.I3p4])+
+    supT([pos.VPT,[275,30],[275,pos.I2p7[1]],pos.I2p7],'TRACE 2',[400,24])+supT([[275,pos.I1p7[1]],pos.I1p7],'TRACE 3',[252,pos.I1p7[1]-8])+supT([pos.VPT,[545,50],[460,50],[460,pos.I3p7[1]],pos.I3p7],'TRACE 4',[505,44])+
+    dip(...c1,'IC1')+dip(...c2,'IC2')+dip(...c3,'IC3')+jw(pos.I1p2,pos.I1p6,-40)+jw(pos.I2p2,pos.I2p6,-40)+jv(pos.R4B,[300,330],-46)+
+    B.part('R',pos.R1L,pos.R1R,'R1')+B.part('R',pos.R2L,pos.R2R,'R2')+B.part('R',pos.R3L,pos.R3R,'R3')+B.part('R',pos.R4T,pos.R4B,'R4')+
+    term(...pos.IN1,'IN1')+term(...pos.IN2,'IN2')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,'+15V')+term(...pos.VNT,'−15V'));
+  const pads=Object.keys(pos).map(id=>({id,x:pos[id][0],y:pos[id][1],label:names[id]}));
+  const rd=(id,a,b)=>{const x=read(id,{in1:a,in2:b});return (x>0.0005?'+':'')+fmt(Math.abs(x)<0.0005?0:x,3)+' V';};
+  const lat=ic=>[`>OUT is stuck at ${rd('OUT',0,0)} whatever the inputs.`,`>IC${ic}'s supply pins are correct (pin 7 = ${rd('I'+ic+'p7',0,0)}, pin 4 = ${rd('I'+ic+'p4',0,0)}) and its input pin 3 reads ${ic===3?'the R2/R4 divider voltage, as it should':'its input voltage'}, but its output (pin 6) reads ${rd('I'+ic+'p6',0,0)} and doesn't respond.`,ic===3?'>IC1 and IC2 follow their inputs correctly, so nothing feeding IC3 explains its latched output: IC3 is defective.':`>A follower's output should equal its input, so IC${ic} itself has failed. IC3 is only reacting to the bad voltage IC${ic} feeds it.`];
+  const why={
+    'No Faults':['>All six supply pins are correct.',`>IC1 and IC2 outputs equal IN1 and IN2. With IN1 = 0 and IN2 = +0.5 V, OUT reads ${rd('OUT',0,0.5)}; with IN1 = +0.5 V and IN2 = 0, OUT reads ${rd('OUT',0.5,0)}.`,'>OUT = 10(IN2 − IN1), so the board is working.'],
+    'Trace1 Open':[`>Every output is stuck near +V: IC1 and IC2 pin 6 read ${rd('I1p6',0,0)}, OUT reads ${rd('OUT',0,0)}.`,`>The −15 V terminal reads ${rd('VNT',0,0)}, but pin 4 of every IC reads about ${rd('I3p4',0,0)}. The −V bus is cut off from the terminal, so trace 1 is open.`],
+    'Trace2 Open':[`>IC1 and IC2 pin 7 read ${rd('I1p7',0,0)} and ${rd('I2p7',0,0)}, but the +15 V terminal reads ${rd('VPT',0,0)}. IC3's pin 7 is fine.`,`>Both follower outputs sit near −V, IC3 sees two equal inputs, and OUT stays near ${rd('OUT',0.5,0)} whatever the inputs. The shared +V trace to IC1 and IC2 (trace 2) is open.`],
+    'Trace3 Open':[`>IC1 pin 7 reads ${rd('I1p7',0,0)} but IC2 pin 7 reads ${rd('I2p7',0,0)}. Only IC1 has lost its +V, so the branch to IC1 (trace 3) is open.`,`>IC1's output sits at ${rd('I1p6',0,0)}, which drives OUT to ${rd('OUT',0,0)}.`],
+    'Trace4 Open':[`>OUT is stuck at ${rd('OUT',0,0)}. IC1 and IC2 follow their inputs.`,`>IC3 pin 7 reads ${rd('I3p7',0,0)} instead of +15 V, so the +V trace to IC3 (trace 4) is open.`],
+    'R1 Open':['>Supplies and both followers are fine.',`>IN1 no longer has any effect: with IN2 = 0, OUT reads ${rd('OUT',0.5,0)} for IN1 = +0.5 V.`,`>With IN2 = +0.5 V, OUT reads ${rd('OUT',0,0.5)}, the same as IC3 pin 3: IC3 is acting as a follower of its + input (0.91 × IN2). That only happens when nothing connects IC1's output to IC3's − input, so R1 is open.`],
+    'R2 Open':['>Supplies and both followers are fine.',`>IN2 no longer has any effect, and IC3 pin 3 reads ${rd('I3p3',0,0.5)} even with IN2 = +0.5 V (the left end of R2 reads ${rd('R2L',0,0.5)}).`,`>IN1 is still amplified by −10 (IN1 = +0.5 V gives OUT = ${rd('OUT',0.5,0)}), so R2 is open.`],
+    'IC1 Defective':lat(1),'IC2 Defective':lat(2),'IC3 Defective':lat(3)};
+  return {svg,pads,faults,answer:ans,read,inputs:[{key:'in1',label:'IN1',value:0,min:-1.5,max:1.5,step:0.1},{key:'in2',label:'IN2',value:0,min:-1.5,max:1.5,step:0.1}],schematic:instSchematic(),work:why[f]};
+}
+function instSchematic(){
+  const a=OAK.OA(70,60,{swap:true,label:'IC1',power:false}),b=OAK.OA(70,200,{swap:true,label:'IC2',power:false}),c=OAK.OA(250,130,{label:'IC3',power:false});
+  let g=a.svg+b.svg+c.svg+OAK.T(20,42,'IN1','middle',0)+W([24,42],[70,42])+W([70,78],[58,78],[58,100],[150,100],[150,60])+D(150,60)+OAK.T(20,182,'IN2','middle',0)+W([24,182],[70,182])+W([70,218],[58,218],[58,240],[150,240],[150,200])+D(150,200);
+  g+=W([140,60],[150,60])+W([140,200],[150,200])+W([150,60],[175,60],[175,112])+R(175,112,250,112,'')+txt(212,98,'R1')+W([150,200],[175,200],[175,148])+R(175,148,250,148,'')+txt(212,170,'R2')+D(232,112)+W([232,112],[232,30])+R(232,30,345,30,'R3')+W([345,30],[345,130])+W([320,130],[370,130])+D(345,130)+OAK.T(374,130,'OUT','middle',0)+D(232,148)+R(232,148,232,250,'R4',{side:'left'})+G(232,250);
+  return OAK.wrap(400,270,g);}
+
+const tsIntro=(ab,general,parts,board,per)=>CC.introPage({text:`<div class="cols2"><div>${ab}${T.meterNote}</div><div class="diagram">${board}</div></div>${H3('How the circuit works')}${general}${H3('Defective op amps')}${T.opampFail}${H3('Open traces')}${T.traceGen}${parts}`,how:T.howTs(per)});
+const tsRun=(board,per)=>(el,s)=>OAK.trouble(el,s,{count:10,points:per?15:10,perReading:per,build:board,note:T.meterNote+(per?'<p>Each new probe position costs 1 point. Changing the input voltage is free.</p>':'<p>Readings are free, so check both ends of any suspect trace.</p>')});
+
+/* ---------- calculators ---------- */
+const kF=(x)=>fmt(x,4);
+function lpFig(hp){const a=OAK.OA(200,120,{swap:true,label:'IC1'});let g=a.svg;const t1=hp?'C':'R',t2=hp?'R':'C';
+  g+=OAK.T(20,102,'Vin','middle',0)+OAK.comp(t1,24,102,102,102,hp?'C1':'R1')+OAK.comp(t1,102,102,165,102,hp?'C2':'R2')+W([165,102],[200,102])+D(102,102)+D(165,102)+OAK.comp(t2,165,102,165,190,hp?'R2':'C2',{side:'left'})+G(165,190)+W([102,102],[102,45])+OAK.comp(t2,102,45,300,45,hp?'R1':'C1')+W([300,45],[300,120]);
+  g+=W([270,120],[335,120])+D(300,120)+OAK.T(339,120,'Vout','middle',0)+R(300,120,300,215,'Rf')+W([200,138],[192,138],[192,215],[300,215])+D(300,215)+R(300,215,300,285,'Ri')+G(300,285);
+  return OAK.wrap(360,305,g);}
+function filterRun(el,s){
+  const tabs=CC.el('<div class="row" style="margin-bottom:12px"><button class="btn blue" data-t="lp">Low pass filter</button><button class="btn" data-t="hp">High pass filter</button></div>');el.appendChild(tabs);
+  const host=CC.el('<div></div>');el.appendChild(host);
+  const show=t=>{CC.$$('[data-t]',tabs).forEach(b=>b.classList.toggle('blue',b.dataset.t===t));host.innerHTML='';const hp=t==='hp';
+    OAK.calc(host,{title:hp?'Second order high pass filter':'Second order low pass filter',diagram:lpFig(hp),note:T.filtNote,
+      fields:[{key:'R1',label:'R_1',unit:'kΩ',value:10},{key:'R2',label:'R_2',unit:'kΩ',value:10},{key:'C1',label:'C_1',unit:'µF',value:0.01},{key:'C2',label:'C_2',unit:'µF',value:0.01},{key:'Rf',label:'R_f',unit:'kΩ',value:5.86},{key:'Ri',label:'R_i',unit:'kΩ',value:10}],
+      compute:v=>{const R1=v.R1*1e3,R2=v.R2*1e3,C1=v.C1*1e-6,C2=v.C2*1e-6,A=v.Rf/v.Ri+1;const sq=Math.sqrt(R1*R2*C1*C2);const fc=1/(2*Math.PI*sq);
+        const Dd=hp?(R1*C1+R1*C2+R2*C2*(1-A))/sq:(R1*C2+R2*C2+R1*C1*(1-A))/sq;
+        const xs=Array.from({length:121},(_,i)=>fc*Math.pow(10,-2+i*4/120));
+        const ys=xs.map(f=>{const u=f/fc;const den=Math.hypot(1-u*u,Dd*u);return 20*Math.log10(A*(hp?u*u:1)/den);});
+        const kind=Dd<=0?'D is zero or negative: the circuit will oscillate instead of filtering.':Dd<1.3?'Chebyshev-like response: the gain peaks just before cutoff, then rolls off quickly.':Dd<1.55?'Butterworth-like response: flat passband (exactly Butterworth at D = 1.414).':'Bessel-like response: gradual roll-off with little overshoot (Bessel at D = 1.732).';
+        const dec=[0.01,0.1,1,10,100].map(k=>({v:fc*k,l:fmt(fc*k,2)}));
+        return `<div class="givens"><div class="given"><div class="k">${m('f_c')}</div><div class="v">${kF(fc)} Hz</div></div><div class="given"><div class="k">${m('D')}</div><div class="v">${kF(Dd)}</div></div><div class="given"><div class="k">${m('A')}</div><div class="v">${kF(A)}</div></div></div><p class="small">${kind}</p><div class="diagram">${OAK.plot({xs,series:[{ys}],xlog:true,ymin:Math.min(-60,...ys.filter(isFinite))>-200?-60:-60,ymax:Math.max(10,20*Math.log10(A)+12),xticks:dec,yticks:[-60,-40,-20,0],xlab:'Frequency (Hz)',ylab:'Gain (dB)'})}</div>
+          <div class="formulas mt"><div>${M('f_c=\\frac{1}{2\\pi\\sqrt{R_1R_2C_1C_2}}')}</div><div>${M(hp?'D=\\frac{R_1C_1+R_1C_2+R_2C_2(1-A)}{\\sqrt{R_1R_2C_1C_2}}':'D=\\frac{R_1C_2+R_2C_2+R_1C_1(1-A)}{\\sqrt{R_1R_2C_1C_2}}')}</div><div>${M('A=\\frac{R_f}{R_i}+1')}</div></div>`;}});};
+  CC.$$('[data-t]',tabs).forEach(b=>b.onclick=()=>show(b.dataset.t));show('lp');
+}
+function wienFig(){const a=OAK.OA(200,110,{swap:true,label:'IC1'});let g=a.svg;
+  g+=W([200,92],[150,92])+D(150,92)+W([150,92],[150,40])+R(150,40,215,40,'R')+OAK.comp('C',215,40,290,40,'C')+W([290,40],[290,110])+W([270,110],[324,110])+D(290,110)+OAK.T(328,110,'Vout','middle',0)+
+    W([150,92],[100,92])+R(100,92,100,190,'R',{side:'right'})+W([100,92],[50,92])+OAK.comp('C',50,92,50,190,'C',{side:'left'})+W([50,190],[100,190])+D(75,190)+W([75,190],[75,200])+G(75,200)+
+    W([200,128],[185,128],[185,185])+D(185,185)+W([185,185],[290,185])+R(290,110,290,185,'Rf')+R(185,185,185,255,'Ri',{side:'left'})+G(185,255);
+  return OAK.wrap(350,275,g);}
+function psFig(){const a=OAK.OA(150,70,{label:'IC1'});let g=a.svg;
+  g+=W([150,88],[135,88],[135,108])+G(135,108)+W([220,70],[290,70])+D(250,70)+OAK.T(294,70,'Vout','middle',0)+
+    W([150,52],[130,52])+D(130,52)+W([130,52],[130,20])+R(130,20,250,20,'Rf')+W([250,20],[250,70])+
+    W([250,70],[250,140])+OAK.comp('C',250,140,186,140,'C')+OAK.comp('C',186,140,122,140,'C')+OAK.comp('C',122,140,58,140,'C')+D(186,140)+D(122,140)+D(58,140)+
+    R(186,140,186,210,'R')+G(186,210)+R(122,140,122,210,'R')+G(122,210)+R(58,140,58,210,'R')+G(58,210)+R(58,140,58,52,'Ri',{side:'left'})+W([58,52],[130,52]);
+  return OAK.wrap(320,232,g);}
+function oscRun(el,s){
+  const tabs=CC.el('<div class="row" style="margin-bottom:12px"><button class="btn blue" data-t="ps">Phase-shift oscillator</button><button class="btn" data-t="wb">Wien-bridge oscillator</button></div>');el.appendChild(tabs);
+  const host=CC.el('<div></div>');el.appendChild(host);
+  const show=t=>{CC.$$('[data-t]',tabs).forEach(b=>b.classList.toggle('blue',b.dataset.t===t));host.innerHTML='';const ps=t==='ps';
+    OAK.calc(host,{title:ps?'Phase-shift oscillator calculator':'Wien-bridge oscillator calculator',diagram:ps?psFig():wienFig(),note:ps?T.psNote:T.wbNote,
+      fields:[{key:'Rf',label:'R_f',unit:'kΩ',value:ps?330:21},{key:'Ri',label:'R_i',unit:'kΩ',value:ps?10:10},{key:'R',label:'R',unit:'kΩ',value:ps?1:10},{key:'C',label:'C',unit:'µF',value:0.01}],
+      compute:v=>{const Rr=v.R*1e3,Cc=v.C*1e-6;const fo=ps?1/(2*Math.PI*Math.sqrt(6)*Rr*Cc):1/(2*Math.PI*Rr*Cc);const A=ps?v.Rf/v.Ri:v.Rf/v.Ri+1;
+        let msg;if(ps){msg=A<28?'The gain is too low to sustain oscillation (it must be at least 29). Increase Rf or reduce Ri.':A<29?'The gain is just below the critical value of 29, so the circuit probably won’t oscillate. Increase Rf or reduce Ri slightly.':A<29.6?'The gain is right at the critical value of 29. Oscillation may not start reliably; a little more gain helps.':A<33?'The gain is a little above 29, so oscillation will start. Reduce it if the sine wave is distorted.':'The gain is well above 29. The circuit will oscillate but the output will be distorted; reduce the gain.';
+          if(v.Ri<10*v.R)msg+=' Ri is less than ten times R, so it loads the last RC section: the real circuit will need more gain than 29 and will run off the calculated frequency. Make Ri larger.';}
+        else msg=A<2.9?'The gain is too low to sustain oscillation (it must be at least 3). Increase Rf or reduce Ri.':A<3.06?'The gain is right at the critical value of 3. Oscillation may not start reliably; a little more gain helps.':'The gain is above 3, so oscillation will start. Reduce it if the sine wave is distorted.';
+        return `<div class="givens"><div class="given"><div class="k">${m('f_o')}</div><div class="v">${kF(fo)} Hz</div></div><div class="given"><div class="k">${m('A')}</div><div class="v">${kF(A)}</div></div></div><p class="small">${msg}</p><div class="formulas mt"><div>${M(ps?'f_o=\\frac{1}{2\\pi\\sqrt{6}\\,RC}':'f_o=\\frac{1}{2\\pi RC}')}</div><div>${M(ps?'A=\\frac{R_f}{R_i}':'A=\\frac{R_f}{R_i}+1')}</div></div>`;}});};
+  CC.$$('[data-t]',tabs).forEach(b=>b.onclick=()=>show(b.dataset.t));show('ps');
+  el.appendChild(CC.el(`<div class="card mt"><h3 style="margin-top:0">Gain stabilization</h3>${T.gainStab}</div>`));
+}
+function sqFig(){const a=OAK.OA(120,110,{label:'IC1'}),b=OAK.OA(320,128,{label:'IC2'});let g=a.svg+b.svg;
+  g+=W([120,92],[80,92])+D(100,92)+W([100,92],[100,40])+R(100,40,215,40,'R1')+W([215,40],[215,110])+W([190,110],[240,110])+D(215,110)+OAK.comp('C',80,92,80,180,'C1',{side:'left'})+G(80,180)+
+    W([120,128],[112,128],[112,175])+W([112,175],[200,175])+D(160,175)+D(200,175)+R(200,175,200,110,'Ra')+R(160,175,160,240,'Rb',{side:'left'})+G(160,240)+
+    D(240,110)+OAK.T(240,96,'','middle',0)+txt(240,128,'Square',{size:10})+R(240,110,320,110,'R2')+D(300,110)+W([300,110],[300,62])+OAK.comp('C',300,62,405,62,'C2')+W([405,62],[405,128])+W([390,128],[430,128])+D(405,128)+OAK.T(434,128,'Triangle','middle',0)+W([320,146],[310,146],[310,175])+G(310,175);
+  return OAK.wrap(470,260,g);}
+function sqRun(el,s){
+  OAK.calc(el,{title:'Square-wave / triangle-wave generator',diagram:sqFig(),note:T.sqNote,
+    fields:[{key:'R1',label:'R_1',unit:'kΩ',value:10},{key:'C1',label:'C_1',unit:'µF',value:0.1},{key:'Ra',label:'R_a',unit:'kΩ',value:10},{key:'Rb',label:'R_b',unit:'kΩ',value:10},{key:'R2',label:'R_2',unit:'kΩ',value:100},{key:'C2',label:'C_2',unit:'µF',value:1}],
+    compute:v=>{const Tt=2*v.R1*1e3*v.C1*1e-6*Math.log(1+2*v.Rb/v.Ra),f=1/Tt,TC=v.R2*1e3*v.C2*1e-6;
+      const xs=Array.from({length:301},(_,i)=>i/300*3*Tt);const sq=xs.map(t=>((t/Tt)%1)<0.5?1:-1);const amp=Math.min(1,Tt/(4*TC))*1;let y=0,tri=[];const dt=xs[1]-xs[0];
+      // integrate centred
+      xs.forEach((t,i)=>{tri.push(y);y-=sq[i]*dt/TC;});const mid=(Math.max(...tri)+Math.min(...tri))/2;tri=tri.map(v=>(v-mid));const tmax=Math.max(...tri.map(Math.abs))||1;const relAmp=Math.min(1,Tt/(4*TC));tri=tri.map(v=>v/tmax*0.8);
+      const ok=TC>=5*Tt;
+      return `<div class="givens"><div class="given"><div class="k">Oscillator period ${m('T')}</div><div class="v">${kF(Tt*1e3)} ms</div></div><div class="given"><div class="k">Oscillator frequency</div><div class="v">${kF(f)} Hz</div></div><div class="given"><div class="k">Integrator time constant</div><div class="v">${kF(TC*1e3)} ms</div></div></div>
+      <p class="small">${ok?'The integrator time constant is at least five times the period, so the integrator output is a good triangle wave. Its peak-to-peak amplitude is about '+fmt(relAmp*100,2)+'% of the square wave’s (scaled up on the graph).':'The integrator time constant is less than five times the period, so the output won’t be a clean triangle wave. Increase R2 or C2.'}</p>
+      <div class="diagram">${OAK.plot({xs:xs.map(t=>t*1e3),series:[{ys:sq.map(v=>v*0.9),color:'var(--accent)'},{ys:tri.map(v=>v*0.9),color:'var(--brand)'}],ymin:-1.1,ymax:1.1,xlab:'Time (ms) — blue: square wave, red: integrator output',xticks:[0,1,2,3].map(k=>({v:k*Tt*1e3,l:fmt(k*Tt*1e3,3)}))})}</div>
+      <div class="formulas mt"><div>${M('T=2R_1C_1\\ln\\left(1+\\frac{2R_b}{R_a}\\right)')}<div class="where small">${m('R_a')}: output to + input · ${m('R_b')}: + input to ground</div></div><div>${M('f=\\frac{1}{T}')}</div><div>${M('TC=R_2C_2')}</div></div>`;}});
+}
+
+/* ---------- intro pages ---------- */
+const exInv=ex(''+m('R_{i}')+' = 3.3 kΩ, '+m('R_{f}')+' = 12 kΩ and '+m('V_{in}')+' = 28 mV in figure one.',['A=\\frac{R_f}{R_i}=\\frac{12\\text{ k}\\Omega}{3.3\\text{ k}\\Omega}=3.636','Z_{in}=R_i=3.3\\text{ k}\\Omega\\qquad Z_{out}\\approx0\\,\\Omega','R_1=\\frac{R_fR_i}{R_f+R_i}=\\frac{(12)(3.3)}{12+3.3}\\text{ k}\\Omega=2.588\\text{ k}\\Omega','V_{out}=-A\\,V_{in}=-(3.636)(28\\text{ mV})=-101.8\\text{ mV}'])+ex('Design an inverting amplifier with a gain of 7 and an input impedance of 12 kΩ.',['R_i=Z_{in}=12\\text{ k}\\Omega','R_f=A\\,R_i=(7)(12\\text{ k}\\Omega)=84\\text{ k}\\Omega','R_1=\\frac{R_fR_i}{R_f+R_i}=\\frac{(84)(12)}{84+12}\\text{ k}\\Omega=10.5\\text{ k}\\Omega']);
+const exNon=ex(''+m('R_{i}')+' = 1 kΩ and '+m('R_{f}')+' = 100 kΩ in figure one. The op amp has '+m('A_{OL}')+' = 100,000 and '+m('z_{in}')+' = 1 MΩ. '+m('V_{in}')+' = 17.3 mV.',['A=\\frac{R_f}{R_i}+1=\\frac{100\\text{ k}\\Omega}{1\\text{ k}\\Omega}+1=101','Z_{in}=z_{in}\\left(1+\\frac{A_{OL}}{A}\\right)=(1\\text{ M}\\Omega)\\left(1+\\frac{100{,}000}{101}\\right)=991\\text{ M}\\Omega','V_{out}=A\\,V_{in}=(101)(17.3\\text{ mV})=1.747\\text{ V}'])+ex('Design a noninverting amplifier with a gain of 16. Any '+m('R_{i}')+' above about 1 kΩ works; choose 2.2 kΩ.',['R_f=R_i(A-1)=(2.2\\text{ k}\\Omega)(16-1)=33\\text{ k}\\Omega']);
+const exSum=ex('R1, R2 and Rf = 10 kΩ in figure one. V1 = 2 V and V2 = 1.3 V.',['V_{out}=-(V_1+V_2)=-(2+1.3)\\text{ V}=-3.3\\text{ V}'])+ex('R1, R2, R3 and Rf = 3.3 kΩ in figure two. V1 = 1.7 V, V2 = −2.4 V and V3 = −3.4 V.',['V_{out}=-\\left(1.7+(-2.4)+(-3.4)\\right)\\text{ V}=-(-4.1)\\text{ V}=4.1\\text{ V}'])+ex('R1 = 10 kΩ, R2 = 20 kΩ and Rf = 20 kΩ. V1 = 1.5 V and V2 = −2 V.',['V_{out}=-\\left(\\frac{20}{10}(1.5)+\\frac{20}{20}(-2)\\right)\\text{ V}=-(3-2)\\text{ V}=-1\\text{ V}']);
+const exDiff=ex('All four resistors equal. V2 = 3 V and V1 = 1.2 V.',['V_{out}=V_2-V_1=3-1.2=1.8\\text{ V}'])+ex('All four resistors equal. V2 = −4 V and V1 = −6 V.',['V_{out}=-4-(-6)=-4+6=2\\text{ V}'])+ex('R1 = R2 = 10 kΩ, R3 = Rf = 30 kΩ. V2 = 0.5 V and V1 = 0.2 V.',['V_{out}=\\frac{R_f}{R_1}(V_2-V_1)=\\frac{30}{10}(0.5-0.2)\\text{ V}=0.9\\text{ V}']);
+const charIntro=()=>H3('Gain-bandwidth product')+T.gbw+ex('A 741 (GBW = 1 MHz) noninverting amplifier has a gain of 100.',['BW=\\frac{GBW}{A_{CL}}=\\frac{1\\text{ MHz}}{100}=10\\text{ kHz}'])+ex('A 741 inverting amplifier has '+m('R_{f}')+' = 22 kΩ and '+m('R_{i}')+' = 10 kΩ.',['A_{CL}=1+\\frac{R_f}{R_i}=1+2.2=3.2','BW=\\frac{1\\text{ MHz}}{3.2}=312.5\\text{ kHz}'])+'<p class="small">Dividing by the signal gain '+m('R_f/R_i=2.2')+' instead gives 454.5 kHz. Both answers are accepted in this activity.</p>'+
+  H3('Slew rate')+T.slew+ex('A +2 V pulse drives an inverting amplifier with '+m('R_{f}')+' = 30 kΩ and '+m('R_{i}')+' = 10 kΩ. The slew rate is 3 V/µs.',['|V_{out}|=V_{in}\\frac{R_f}{R_i}=(2\\text{ V})\\frac{30\\text{ k}\\Omega}{10\\text{ k}\\Omega}=6\\text{ V}','\\Delta t=\\frac{|V_{out}|}{SR}=\\frac{6\\text{ V}}{3\\text{ V/µs}}=2\\text{ µs}'])+
+  H3('Input offset voltage')+T.offset+two(H3('Input bias and offset currents')+T.bias,fig(F.bias()))+ex('I(A) = 90 nA and I(B) = 70 nA.',['I_B=\\frac{90+70}{2}\\text{ nA}=80\\text{ nA}\\qquad I_{OS}=|90-70|\\text{ nA}=20\\text{ nA}'])+
+  two(H3('Common-mode rejection ratio')+T.cmrr,fig(F.cmrr()))+ex('A unity-gain difference amplifier ('+m('A_{d}')+' = 1) with both inputs tied to a 3 V PP common-mode signal has a 1 mV PP output.',['A_{cm}=\\frac{1\\text{ mV}}{3\\text{ V}}=3.333\\times10^{-4}','\\mathrm{CMRR}=20\\log\\left(\\frac{1}{3.333\\times10^{-4}}\\right)=20\\log(3000)=69.54\\text{ dB}'])+T.charMistakes;
+
+const two=(a,b)=>`<div class="cols2" style="align-items:start"><div>${a}</div><div class="diagram">${b}</div></div>`;
+const progIntro=()=>two(H3('What is an op amp?')+T.whatIs,fig(OAK.wrap(240,130,OAK.OA(70,65,{}).svg+W([30,47],[70,47])+W([30,83],[70,83])+W([140,65],[200,65])+txt(20,51,'−')+txt(20,87,'+')+txt(205,69,'Out',{anchor:'start'})),'Figure one'))+T.hints;
+
+CC.App.init({
+  id:'opamp',title:'Op Amp Challenge',tagline:'Operational amplifier exercises · offline edition',
+  blurb:'Practice with followers, comparators, inverting, noninverting, summing and difference amplifiers and op amp characteristics, four virtual troubleshooting boards, and three design calculators. Every run picks new component values and a new item order.',
+  footer:'Based on Op Amp Challenge © ETCAI Products. Offline HTML edition.',pass:80,
+  manual:T.manual,
+  hero:slot=>{slot.appendChild(CC.el(`<div class="card"><div class="diagram">${F.inverting({r1:'R1'})}</div><p class="small muted center" style="margin-bottom:0">Inverting amplifier: ${m('A=-\\frac{R_f}{R_i}')}</p></div>`));},
+  groups:[
+    {title:'Getting started',items:[
+      {id:'intro',title:'Program Introduction',icon:'amp',sub:'what is an op amp?',graded:false,intro:progIntro(),run:(el,s)=>{el.appendChild(CC.el(`<div class="card intro-text">${T.manual}<div class="row end"><a class="btn primary" href="#/">Main menu</a></div></div>`));}},
+    ]},
+    {title:'Amplifier activities',items:[
+      {id:'simple',title:'Simple Op Amp Applications',icon:'amp',sub:'followers, comparators, I to V',intro:CC.introPage({text:T.simpleIntro+two(H3('Followers')+T.follower,fig(F.follower()))+two(H3('Comparators')+T.comparator,fig(F.comparator()))+two(H3('I to V converters')+T.itov,fig(F.itov())),how:T.howItems(12,'<p>Comparator answers are accepted anywhere from 85% of the supply voltage up to the supply voltage, with the correct sign.</p>')}),run:itemsRun(simpleItems)},
+      {id:'inv',title:'Inverting Amplifiers',icon:'amp',sub:'17 analysis and design items',intro:CC.introPage({text:two(T.invIntro,fig(F.inverting({r1:'R1'})))+`<div class="formulas"><div class="formula"><span class="cap">Gain</span>${M('A=\\frac{R_f}{R_i}')}</div><div class="formula"><span class="cap">Input impedance</span>${M('Z_{in}=R_i')}</div><div class="formula"><span class="cap">Output</span>${M('V_{out}=-A\\,V_{in}')}</div><div class="formula"><span class="cap">Offset resistor</span>${M('R_1=\\frac{R_fR_i}{R_f+R_i}')}</div></div>`+H3('Examples')+exInv+T.invMistakes,how:T.howItems(17,'<p>The gain may be entered with or without the minus sign. One item asks for an output that saturates; answers from 13 V to 15 V with the correct sign are accepted there.</p>')}),run:itemsRun(invItems)},
+      {id:'noninv',title:'Noninverting Amplifiers',icon:'amp',sub:'12 analysis and design items',intro:CC.introPage({text:two(T.noninvIntro,fig(F.noninv()))+`<div class="formulas"><div class="formula"><span class="cap">Gain</span>${M('A=\\frac{R_f}{R_i}+1')}</div><div class="formula"><span class="cap">Input impedance (closed loop)</span>${M('Z_{in}=z_{in}\\left(1+\\frac{A_{OL}}{A}\\right)')}</div><div class="formula"><span class="cap">Output</span>${M('V_{out}=A\\,V_{in}')}</div></div>`+H3('Examples')+exNon+T.noninvMistakes,how:T.howItems(12)}),run:itemsRun(noninvItems)},
+      {id:'sum',title:'Sum and Difference Amps',icon:'amp',sub:'17 analog math items',intro:CC.introPage({text:T.sumIntro+two(H3('Summing amplifier')+T.summing,fig(F.summing(3),'Figure Two'))+exSum+two(H3('Difference amplifier')+T.difference,fig(F.difference()))+exDiff+T.sumMistakes,how:T.howItems(17)}),run:itemsRun(sumItems)},
+      {id:'char',title:'Op Amp Characteristics',icon:'amp',sub:'bandwidth, slew rate, CMRR, bias',intro:CC.introPage({text:charIntro(),how:T.howItems(16,`<p>For the bandwidth of an inverting amplifier, answers using either the noise gain ${m('1+R_f/R_i')} or the signal gain ${m('R_f/R_i')} are accepted.</p>`)}),run:itemsRun(charItems)},
+    ]},
+    {title:'Troubleshooting',items:[
+      {id:'ts1',title:'OA Troubleshooting One',icon:'wrench',sub:'inverting amplifier · 10 points each',intro:tsIntro(T.tsInv1,T.invGeneral,H3('Open resistors')+T.invResistors,invSchematic(),false).replace(T.traceGen,T.traceGen+T.invTraces),run:tsRun(invBoard,false)},
+      {id:'ts2',title:'OA Troubleshooting Two',icon:'wrench',sub:'inverting amplifier · readings cost points',intro:tsIntro(T.tsInv2,T.invGeneral,H3('Open resistors')+T.invResistors,invSchematic(),true).replace(T.traceGen,T.traceGen+T.invTraces),run:tsRun(invBoard,true)},
+      {id:'ts3',title:'OA Troubleshooting Three',icon:'wrench',sub:'instrumentation amplifier · 10 points each',intro:tsIntro(T.tsInst3,T.instGeneral,H3('Open resistors')+T.instResistors,instSchematic(),false).replace(T.traceGen,T.traceGen+T.instTraces),run:tsRun(instBoard,false)},
+      {id:'ts4',title:'OA Troubleshooting Four',icon:'wrench',sub:'instrumentation amplifier · readings cost points',intro:tsIntro(T.tsInst4,T.instGeneral,H3('Open resistors')+T.instResistors,instSchematic(),true).replace(T.traceGen,T.traceGen+T.instTraces),run:tsRun(instBoard,true)},
+    ]},
+    {title:'Design calculators (ungraded)',items:[
+      {id:'filt',title:'Active Filter Calculator',icon:'wave',sub:'second-order low and high pass',graded:false,intro:CC.introPage({text:two(T.filtIntro,`<div><p class="small muted">Typical response shapes: Chebyshev (blue), Butterworth (red) and Bessel (green).</p>`+OAK.plot({xs:Array.from({length:81},(_,i)=>Math.pow(10,-1+i*2/80)),xlog:true,ymin:-30,ymax:6,yticks:[-30,-20,-10,0],xticks:[{v:0.1,l:'0.1 fc'},{v:1,l:'fc'},{v:10,l:'10 fc'}],series:[[1.0,'#1f5fa8'],[1.414,'#b3261e'],[1.732,'#1e7d43']].map(([d,c])=>({color:c,ys:Array.from({length:81},(_,i)=>{const u=Math.pow(10,-1+i*2/80);return -20*Math.log10(Math.hypot(1-u*u,d*u));})}))})+'</div>')+T.filtNote}),run:filterRun},
+      {id:'osc',title:'RC Oscillator Calculator',icon:'wave',sub:'phase-shift and Wien-bridge',graded:false,intro:CC.introPage({text:T.oscIntro}),run:oscRun},
+      {id:'sqw',title:'Square/Triangle Wave Generator',icon:'wave',sub:'relaxation oscillator + integrator',graded:false,intro:CC.introPage({text:two(T.sqIntro+T.sqNote,sqFig())}),run:sqRun},
+    ]}
+  ]
+});
+})();
+</script>
+<a href="index.html" style="position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;font:600 13px/1 system-ui,sans-serif;padding:9px 13px;border-radius:999px;background:#1d2733;color:#f3f0ea;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25);opacity:.92">&larr; Study home</a></body>
+</html>
