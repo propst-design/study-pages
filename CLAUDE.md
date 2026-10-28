@@ -62,11 +62,11 @@ Add-on (partial coverage is fine):
 5. The numbers add-on is only included when the topic has numbers worth scaling.
 6. **Explain every piece of notation.** Every unfamiliar symbol or operation in the article
    (integrals, d/dt, Σ, ∝, cos θ, subscripts like n_i, etc.) gets a plain-words answer somewhere
-   in the **Reading the symbols** list (kept separate from the concept Q&A), e.g. "What does dΦ/dt
+   in the **Symbols & terms** list (kept separate from the concept Q&A), e.g. "What does dΦ/dt
    mean if I don't do calculus?" Include units and jargon terms the article uses without defining
    (eV, kelvin, "normal to the loop", "frame", "event").
-   **Where a question goes:** "What does this mark/word say, how do I read it?" goes in Reading the
-   symbols. "Why is it like that?" goes in Questions, even if it is about notation (e.g. "Why does
+   **Where a question goes:** "What does this mark/word say, how do I read it?" goes in Symbols &
+   terms. "Why is it like that?" goes in Questions, even if it is about notation (e.g. "Why does
    anything to the power 0 equal 1?" is a Question).
 
 ### Presentation
@@ -84,5 +84,5 @@ Built:
   Topic bodies use pre-rendered KaTeX, but there is no KaTeX at runtime, so don't paste TeX.
 - `altCard(t)` renders one folded card, **collapsed by default**, directly under the article body:
   tag "Stuck?", title "Try another way in". Inside are tabs: The problem it solves | Questions (n) |
-  Reading the symbols (n) | Numbers at human scale. Each Q&A answer is hidden until its question is clicked. `wireAlt`
+  Symbols & terms (n) | Numbers at human scale. Each Q&A answer is hidden until its question is clicked. `wireAlt`
   handles the tabs.

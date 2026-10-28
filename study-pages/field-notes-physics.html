@@ -873,7 +873,7 @@ function altCard(t) {
   const qas = l => l && l.map(([q, ans]) => `<details><summary>${q}</summary><div class="ans">${ans}</div></details>`).join('');
   const tabs = [['why', 'The problem it solves', a.why],
     ['qa', `Questions <span class="cnt2">${a.qa ? a.qa.length : 0}</span>`, qas(a.qa)],
-    ['sym', `Reading the symbols <span class="cnt2">${a.sym ? a.sym.length : 0}</span>`, qas(a.sym)],
+    ['sym', `Symbols &amp; terms <span class="cnt2">${a.sym ? a.sym.length : 0}</span>`, qas(a.sym)],
     ['nums', 'Numbers at human scale', a.nums]].filter(x => x[2]);
   return `<details class="card fold alt" data-alt><summary><h3><span class="tag">Stuck?</span>Try another way in</h3></summary>
   <p class="hint">The same ideas as the article, explained differently. Use whichever helps.</p>
