@@ -1210,7 +1210,7 @@ function simRC(el) {
     axes(c, w, h, pad, 'time since the switch is thrown', 'capacitor V / ℰ');
     c.textAlign = 'right'; c.fillStyle = cssv('--muted');
     [0, .5, 1].forEach(v => { const y = pad.t + ph * (1 - v); c.fillText(v, pad.l - 6, y + 4); c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(pad.l, y); c.lineTo(w - pad.r, y); c.stroke(); });
-    c.textAlign = 'center'; for (let k = 0; k <= 5; k++) { const s = T * k / 5, [sv, su] = s >= 1 ? [String(s), 's'] : fmt(s, 's'); c.fillText(k ? sv + ' ' + su : '0', pad.l + pw * k / 5, h - pad.b + 16); }
+    for (let k = 0; k <= 5; k++) { const s = T * k / 5, [sv, su] = s >= 1 && s < 1000 ? [String(s), 's'] : fmt(s, 's'); c.textAlign = k === 5 ? 'right' : 'center'; c.fillText(k ? sv + ' ' + su : '0', pad.l + pw * k / 5 + (k === 5 ? 4 : 0), h - pad.b + 16); }
     const curve = (f, col, dash) => { c.strokeStyle = col; c.lineWidth = 2.4; c.setLineDash(dash); c.beginPath(); for (let i = 0; i <= 300; i++) { const t = T * i / 300, x = pad.l + pw * t / T, y = pad.t + ph * (1 - f(t)); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); c.setLineDash([]); };
     curve(t => 1 - Math.exp(-t / t0), cssv('--ci'), []);
     curve(t => Math.exp(-t / t0), cssv('--es'), [6, 5]);
@@ -1232,17 +1232,21 @@ function simRLC(el) {
     c.clearRect(0, 0, w, h);
     const pad = { l: 44, r: 14, t: 14, b: 36 }, pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
     const R = sR.get(), L = sL.get(), C = sC.get(), f0 = 1 / (2 * Math.PI * Math.sqrt(L * C));
-    const [a, b] = fmt(f0, 'Hz'); f0o.textContent = 'f₀ = ' + a + ' ' + b + ' · Q = ' + (Math.sqrt(L / C) / R).toPrecision(3);
+    const Q = Math.sqrt(L / C) / R, [a, b] = fmt(f0, 'Hz'); f0o.textContent = 'f₀ = ' + a + ' ' + b + ' · Q = ' + (Q >= 100 ? Math.round(Q) : Q.toPrecision(3));
     const lo = 1, hi = 5; // 10 Hz .. 100 kHz
     axes(c, w, h, pad, 'driving frequency (Hz, log scale)', 'I / I at f₀');
     c.textAlign = 'right'; c.fillStyle = cssv('--muted');
     [0, .5, 1].forEach(v => { const y = pad.t + ph * (1 - v); c.fillText(v, pad.l - 6, y + 4); c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(pad.l, y); c.lineTo(w - pad.r, y); c.stroke(); });
     c.textAlign = 'center';
     for (let d = lo; d <= hi; d++) { const x = pad.l + pw * (d - lo) / (hi - lo); c.fillText(['10', '100', '1k', '10k', '100k'][d - 1], x, h - pad.b + 16); c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, h - pad.b); c.stroke(); }
+    // even spacing plus extra points across the peak (its width is about f₀/Q), so a sharp peak still reaches 1
+    const lf0 = Math.log10(f0), lfs = [];
+    for (let i = 0; i <= 500; i++) lfs.push(lo + (hi - lo) * i / 500);
+    for (let u = -6; u <= 6; u += 0.1) { const lf = lf0 + Math.log10(Math.max(1e-6, 1 + u / (2 * Q))); if (lf > lo && lf < hi) lfs.push(lf); }
+    lfs.sort((p, q) => p - q);
     c.strokeStyle = cssv('--in'); c.lineWidth = 2.4; c.beginPath();
-    for (let i = 0; i <= 500; i++) { const lf = lo + (hi - lo) * i / 500, f = 10 ** lf, wv = 2 * Math.PI * f; const Z = Math.hypot(R, wv * L - 1 / (wv * C)); const y = pad.t + ph * (1 - R / Z), x = pad.l + pw * i / 500; i ? c.lineTo(x, y) : c.moveTo(x, y); }
+    lfs.forEach((lf, i) => { const wv = 2 * Math.PI * 10 ** lf, Z = Math.hypot(R, wv * L - 1 / (wv * C)), y = pad.t + ph * (1 - R / Z), x = pad.l + pw * (lf - lo) / (hi - lo); i ? c.lineTo(x, y) : c.moveTo(x, y); });
     c.stroke();
-    const lf0 = Math.log10(f0);
     if (lf0 >= lo && lf0 <= hi) { const x = pad.l + pw * (lf0 - lo) / (hi - lo); c.setLineDash([3, 4]); c.strokeStyle = cssv('--muted'); c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, h - pad.b); c.stroke(); c.setLineDash([]); c.fillStyle = cssv('--ink'); c.textAlign = 'left'; c.fillText('f₀', x + 5, pad.t + 12); }
   });
 }
@@ -1412,8 +1416,10 @@ function simRipple(el) {
   let avg = false; mode.onclick = () => { avg = !avg; mode.textContent = avg ? 'Show live waves' : 'Show time-average'; };
   const out = readout();
   bar.append(sl, sd, mode, out);
-  const W = 240, H = 150; const off = document.createElement('canvas'); off.width = W; off.height = H; const oc = off.getContext('2d'); const img = oc.createImageData(W, H);
-  redraw = setupCanvas(cv, H / W, (c, w, h) => {
+  let W = 240, H = 150; const off = document.createElement('canvas'), oc = off.getContext('2d'); let img = null;
+  redraw = setupCanvas(cv, 150 / 240, (c, w, h) => {
+    const q = sl.get() < 20 ? 2 : 1; // grid resolution: keeps λ ≥ 8 pixels so short waves don't alias into moiré
+    if (!img || W !== 240 * q) { W = 240 * q; H = 150 * q; off.width = W; off.height = H; img = oc.createImageData(W, H); }
     const lam = sl.get() * W / 600, d = sd.get() * W / 600, k = 2 * Math.PI / lam;
     const s1 = [W / 2 - d / 2, H * 0.12], s2 = [W / 2 + d / 2, H * 0.12];
     const dark = document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1459,7 +1465,7 @@ function simDoppler(el) {
     if (M > 1.001 && oldest > 0) { const th = Math.asin(1 / M), L = oldest * C * w * Math.sqrt(M * M - 1); c.strokeStyle = cssv('--es'); c.lineWidth = 2; c.beginPath(); c.moveTo(sx - L * Math.cos(th), sy - L * Math.sin(th)); c.lineTo(sx, sy); c.lineTo(sx - L * Math.cos(th), sy + L * Math.sin(th)); c.stroke(); }
     c.fillStyle = cssv('--es'); c.beginPath(); c.arc(sx, sy, 7, 0, 7); c.fill();
     // listeners
-    const ear = (ex, lbl) => { c.fillStyle = cssv('--ink'); c.fillRect(ex - 4, sy - 4, 8, 8); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText(lbl, ex, sy + 22); };
+    const ear = (ex, lbl) => { c.fillStyle = cssv('--ink'); c.fillRect(ex - 4, sy - 4, 8, 8); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = ex < w / 2 ? 'left' : 'right'; c.fillText(lbl, ex < w / 2 ? 2 : w - 2, sy + 22); };
     ear(w * 0.97, 'ahead'); ear(w * 0.03, 'behind');
     const fa = M < 1 ? 1 / (1 - M) : Infinity, fb = 1 / (1 + M);
     out.textContent = M < 0.999 ? `pitch heard by listener ahead: ${fa.toFixed(2)} × source pitch · behind: ${fb.toFixed(2)} ×`
@@ -1531,9 +1537,10 @@ function simGas(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el);
   let P = [], hits = 0, hitT = 0, pAvg = 0, redraw = () => {};
-  const sT = linSlider('Temperature', 50, 600, 300, 10, 'K', () => rescale());
-  const sV = linSlider('Volume', 30, 100, 100, 1, '%', () => { P.forEach(p => { if (p.x > sV.get() / 100) p.x = Math.random() * sV.get() / 100; }); });
-  const sN = linSlider('Molecules', 20, 300, 120, 10, '', () => fill());
+  const fresh = () => { pAvg = 0; hits = 0; hitT = 0; }; // the running average would otherwise lag several seconds behind a change
+  const sT = linSlider('Temperature', 50, 600, 300, 10, 'K', () => { rescale(); fresh(); });
+  const sV = linSlider('Volume', 30, 100, 100, 1, '%', () => { P.forEach(p => { if (p.x > sV.get() / 100) p.x = Math.random() * sV.get() / 100; }); fresh(); });
+  const sN = linSlider('Molecules', 20, 300, 120, 10, '', () => { fill(); fresh(); });
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sT, sV, sN, out);
   let curT = 300;
@@ -1638,9 +1645,10 @@ function simHalfLife(el) {
     // graph
     const L = gx + gs + 50, Rr = w - 12, T = h - 30, B = 16, Tmax = sh.get() * 5;
     const X = s => L + (Rr - L) * s / Tmax, Y = n => B + (T - B) * (1 - n / N0);
-    axes(c, w, h, { l: L, r: w - Rr, t: B, b: h - T }, 'time (s)', '');
+    const tight = X(sh.get()) - X(0) < 44; // too narrow for "2T½"-style labels
+    axes(c, w, h, { l: L, r: w - Rr, t: B, b: h - T }, tight ? 'time (half-lives)' : 'time (s)', '');
     c.fillStyle = cssv('--muted'); c.font = '11px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center';
-    for (let k = 0; k <= 5; k++) { c.fillText(k === 0 ? '0' : k + 'T½', X(k * sh.get()), T + 14); c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(X(k * sh.get()), B); c.lineTo(X(k * sh.get()), T); c.stroke(); }
+    for (let k = 0; k <= 5; k++) { c.fillText(k === 0 || tight ? String(k) : k + 'T½', X(k * sh.get()), T + 14); c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(X(k * sh.get()), B); c.lineTo(X(k * sh.get()), T); c.stroke(); }
     c.textAlign = 'right'; [1, .5, .25, .125].forEach(f => c.fillText(N0 * f, L - 5, Y(N0 * f) + 4)); c.textAlign = 'center';
     c.save(); c.translate(L - 34, (B + T) / 2); c.rotate(-Math.PI / 2); c.fillText('undecayed nuclei', 0, 0); c.restore();
     c.strokeStyle = cssv('--muted'); c.setLineDash([4, 4]); c.lineWidth = 1.5; c.beginPath();
@@ -1751,23 +1759,24 @@ function simSpring(el) {
 function simOrbit(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el), GM = 4 * Math.PI ** 2; // AU, yr, one solar mass
-  let px, py, vx, vy, t, trail, done, stop = null, redraw = () => {};
+  let px, py, vx, vy, t, trail, done, stop = null, redraw = () => {}, onView = () => true;
   const sv = linSlider('Launch v / v_circ', 0.5, 1.5, 1.15, 0.01, '', () => reset());
   const rb = document.createElement('button'); rb.textContent = 'Restart'; rb.onclick = () => reset();
   const sw = document.createElement('label'); sw.innerHTML = '<input type="checkbox" checked> equal-area sweeps'; sw.querySelector('input').onchange = () => redraw();
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sv, rb, sw, out);
   const elems = () => { const f = sv.get(), f2 = f * f, e = Math.abs(f2 - 1), bound = f2 < 2, a = bound ? 1 / (2 - f2) : 1 / (f2 - 2);
-    return { f, e, bound, a, T: bound ? a ** 1.5 : Infinity, peri: f >= 1 ? 1 : a * (1 - e), apo: bound ? (f >= 1 ? a * (1 + e) : 1) : Infinity }; };
+    return { f, e, bound, a, wide: bound && a > 7, T: bound ? a ** 1.5 : Infinity, peri: f >= 1 ? 1 : a * (1 - e), apo: bound ? (f >= 1 ? a * (1 + e) : 1) : Infinity }; };
   const acc = (x, y) => { const r = Math.hypot(x, y), k = -GM / (r * r * r); return [k * x, k * y]; };
   const reset = () => { px = 1; py = 0; vx = 0; vy = sv.get() * 2 * Math.PI; t = 0; trail = [[px, py, 0]]; done = false; if (!stop) stop = loop(step); redraw(); };
   const step = dt => {
-    const E = elems(), rate = E.bound ? E.T / 6 : 0.6;
-    let budget = dt * rate;
-    while (budget > 1e-12) { // velocity Verlet with step ∝ r^1.5 (small near the star)
-      const r = Math.hypot(px, py), hs = Math.min(budget, 0.0015 * r ** 1.5);
+    // one orbit per ~6 s, but no faster than 2 yr/s on screen; near-escape orbits (too big to frame) fast-forward while the planet is out of view
+    const E = elems(), rate = E.bound ? Math.min(E.T / 6, 2) : 0.6, fast = E.wide ? E.T / 2 : rate;
+    let budget = dt; // real seconds
+    while (budget > 1e-9) { // velocity Verlet with step ∝ r^1.5 (small near the star)
+      const r = Math.hypot(px, py), rt = onView(px, py) ? rate : fast, hs = Math.min(budget * rt, 0.0015 * r ** 1.5);
       let [ax, ay] = acc(px, py); vx += ax * hs / 2; vy += ay * hs / 2; px += vx * hs; py += vy * hs;
-      [ax, ay] = acc(px, py); vx += ax * hs / 2; vy += ay * hs / 2; t += hs; budget -= hs; trail.push([px, py, t]);
+      [ax, ay] = acc(px, py); vx += ax * hs / 2; vy += ay * hs / 2; t += hs; budget -= hs / rt; trail.push([px, py, t]);
     }
     if (E.bound) { let i = 0; while (trail[i][2] < t - E.T) i++; if (i) trail.splice(0, i); }
     if (!E.bound && Math.hypot(px, py) > 9) { done = true; redraw(); stop(); stop = null; return; }
@@ -1783,6 +1792,7 @@ function simOrbit(el) {
       for (let i = 0; i <= 60; i++) { const nu = nmax * i / 60, r = pp / (1 + E.e * Math.cos(nu)); x0 = Math.min(x0, r * Math.cos(nu)); x1 = Math.max(x1, r * Math.cos(nu)); y1 = Math.max(y1, r * Math.sin(nu)); }
       cx = (x0 + x1) / 2; cy = y1 / 2; hw = (x1 - x0) / 2 + 0.3; hh = y1 / 2 + 0.3; }
     const S = Math.min(w / (2 * hw), (h - 70) / (2 * hh)), X = q => w / 2 + (q - cx) * S, Y = q => h / 2 - (q - cy) * S;
+    onView = (x, y) => { const xx = X(x), yy = Y(y); return xx > -20 && xx < w + 20 && yy > -20 && yy < h + 20; };
     // AU grid ticks along the x axis
     c.strokeStyle = cssv('--line'); c.lineWidth = 1; c.beginPath(); c.moveTo(0, Y(0)); c.lineTo(w, Y(0)); c.stroke();
     c.font = '11px FN Greek,-apple-system,sans-serif'; c.fillStyle = muted; c.textAlign = 'center';
@@ -1792,16 +1802,16 @@ function simOrbit(el) {
     if (E.bound && E.a <= 40) { c.strokeStyle = muted; c.setLineDash([4, 5]); c.beginPath(); c.ellipse(X(1 - E.a), Y(0), E.a * S, bmin * S, 0, 0, 7); c.stroke(); c.setLineDash([]); }
     // equal-area wedges: star → path over successive equal time intervals
     if (sw.querySelector('input').checked && trail.length > 1) {
-      const dT = E.bound ? E.T / 12 : 0.2, cols = [cssv('--es'), cssv('--mg')];
+      const dT = E.wide ? 0.5 : E.bound ? E.T / 12 : 0.2, cols = [cssv('--es'), cssv('--mg')];
       c.globalAlpha = .22; let k = 0;
       while (k < trail.length - 1) {
         const s = Math.floor(trail[k][2] / dT); c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(trail[k][0]), Y(trail[k][1]));
         let j = k + 1; while (j < trail.length && Math.floor(trail[j][2] / dT) === s) { c.lineTo(X(trail[j][0]), Y(trail[j][1])); j++; }
         if (j < trail.length) c.lineTo(X(trail[j][0]), Y(trail[j][1]));
-        c.closePath(); c.fillStyle = cols[s % 2]; c.fill(); k = j;
+        c.closePath(); c.fillStyle = cols[s % 2]; if (!E.wide || onView(trail[k][0], trail[k][1])) c.fill(); k = j;
       }
       c.globalAlpha = 1;
-      c.fillStyle = muted; c.textAlign = 'left'; c.fillText(`each wedge: ${E.bound ? 'T/12 = ' + (E.T / 12).toPrecision(3) : dT} yr`, 8, h - 22); c.fillText('all wedges have equal area', 8, h - 8);
+      c.fillStyle = muted; c.textAlign = 'left'; c.fillText(`each wedge: ${E.bound && !E.wide ? 'T/12 = ' + (E.T / 12).toPrecision(3) : dT} yr`, 8, h - 22); c.fillText('all wedges have equal area', 8, h - 8);
     }
     c.strokeStyle = cssv('--mg'); c.lineWidth = 1.8; c.beginPath(); trail.forEach(([x, y], i) => i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y))); c.stroke();
     // apsides
@@ -1811,6 +1821,15 @@ function simOrbit(el) {
     // star + planet
     c.fillStyle = cssv('--wv'); c.beginPath(); c.arc(X(0), Y(0), 8, 0, 7); c.fill();
     c.fillStyle = cssv('--mg'); c.beginPath(); c.arc(X(px), Y(py), 5, 0, 7); c.fill();
+    if (E.bound && !onView(px, py)) { // planet out of frame: arrow at the edge pointing to it
+      const sx = X(0), sy = Y(0), dx = X(px) - sx, dy = Y(py) - sy, m = 14,
+        k = Math.min(dx > 0 ? (w - m - sx) / dx : dx < 0 ? (m - sx) / dx : Infinity, dy > 0 ? (h - 40 - sy) / dy : dy < 0 ? (24 - sy) / dy : Infinity),
+        ex = sx + dx * k, ey = sy + dy * k, an = Math.atan2(dy, dx), lft = (E.T - t % E.T);
+      c.beginPath(); c.moveTo(ex + 8 * Math.cos(an), ey + 8 * Math.sin(an));
+      c.lineTo(ex + 8 * Math.cos(an + 2.4), ey + 8 * Math.sin(an + 2.4)); c.lineTo(ex + 8 * Math.cos(an - 2.4), ey + 8 * Math.sin(an - 2.4)); c.fill();
+      c.fillStyle = ink; c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = ex < w / 2 ? 'left' : 'right';
+      c.fillText(`off-screen, ${Math.hypot(px, py).toFixed(0)} AU out · back in ${lft.toFixed(0)} yr${w < 520 ? '' : ' (fast-forwarding)'}`, ex + (ex < w / 2 ? 14 : -14), Math.min(h - 46, Math.max(16, ey + 4)));
+    }
     if (done) { c.fillStyle = ink; c.textAlign = 'center'; c.font = '600 13px FN Greek,-apple-system,sans-serif'; c.fillText('escaped — it never comes back', w / 2, 20); }
     const p3 = q => q.toPrecision(3);
     out.textContent = E.bound
@@ -1875,6 +1894,7 @@ function simBuoyancy(el) {
     out.textContent = held && !onFloor ? `being lowered on a string · ${pct}% submerged · tension T = W − B = ${fN(T)}`
       : !atRest ? `released: buoyancy exceeds weight, so it rises until B = W`
       : rb < rf ? `floats with ${pct}% submerged (= ρ_block / ρ_fluid) · W = B = ${fN(W)} · fluid level rose ${(1000 * (surf - Hf0)).toFixed(1)} mm`
+      : rb === rf ? `neutrally buoyant (ρ_block = ρ_fluid): once under, B = W at any depth, so it stays wherever it is let go · lowered to the bottom here, so N = 0`
       : `sinks and rests on the bottom · W = ${fN(W)}, B = ρ_fluid·V·g = ${fN(B)} · apparent weight = normal force N = W − B = ${fN(N)}`;
   });
   go();
@@ -1982,10 +2002,10 @@ function simSnell(el) {
     const sI = Math.sin(th1), cI = Math.cos(th1), am = beam(-sI, -cI, 1, 3); head(ox - sI * am, oy - cI * am, Math.atan2(cI, sI), 1);
     const aR = Math.max(.12, Math.sqrt(R)); beam(sI, -cI, aR, 1 + 2 * Math.sqrt(R)); head(ox + sI * am, oy - cI * am, Math.atan2(-cI, sI), aR);
     c.font = '11px FN Greek,-apple-system,sans-serif'; c.fillStyle = muted; c.textAlign = 'left';
-    const rt = `reflected ${(R * 100).toFixed(R < .1 ? 1 : 0)}%`; c.fillText(rt, Math.min(ox + sI * am * 1.5 + cI * 10, w - 6 - c.measureText(rt).width), oy - cI * am * 1.5 + sI * 10 + 10);
+    const rt = `reflected ${(R * 100).toFixed(R < .1 ? 1 : 0)}%`; c.fillText(rt, Math.min(ox + sI * am * 1.5 + cI * 10, w - 6 - c.measureText(rt).width), Math.min(oy - 8, oy - cI * am * 1.5 + sI * 10 + 10));
     if (!tir) { const aT = Math.max(.12, Math.sqrt(1 - R)), s2 = Math.sin(th2), c2 = Math.cos(th2); beam(s2, c2, aT, 1 + 2 * Math.sqrt(1 - R)); head(ox + s2 * am, oy + c2 * am, Math.atan2(c2, s2), aT);
       const tt = `transmitted ${((1 - R) * 100).toFixed(R > .9 ? 1 : 0)}%`, tx = ox + s2 * am * 1.5 + c2 * 10, tw = c.measureText(tt).width;
-      c.fillStyle = muted; c.fillText(tt, Math.min(tx, w - 6 - tw), oy + c2 * am * 1.5 - s2 * 10 - (tx > w - 6 - tw ? 12 : 0)); }
+      c.fillStyle = muted; c.fillText(tt, Math.min(tx, w - 6 - tw), Math.max(oy + 34, oy + c2 * am * 1.5 - s2 * 10 - (tx > w - 6 - tw ? 12 : 0))); }
     // angle arcs
     const arc = (r, a0, a1, lbl, col) => { c.strokeStyle = col; c.lineWidth = 1.4; c.beginPath(); c.arc(ox, oy, r, Math.min(a0, a1), Math.max(a0, a1)); c.stroke();
       // label inside the wedge when it is wide, otherwise just outside the ray (away from the normal)
