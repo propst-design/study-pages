@@ -18,3 +18,7 @@ Connect this repo in Cloudflare Pages with:
 - Build output directory: `/`
 
 Every push to `main` redeploys.
+
+## Fonts
+
+Every page embeds a small Greek-only subset of [STIX Two Text](https://github.com/stipub/stixfonts) (as "FN Greek" and, for italic Greek in equations, "FN Greek Math") so that Greek letters look the same in equations and in text on every device. STIX Two is licensed under the SIL Open Font License 1.1; see `FONT-LICENSE.txt`.

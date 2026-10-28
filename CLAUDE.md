@@ -121,6 +121,11 @@ group. Each batch is drafted separately, then checked before it goes on the page
   homes, 15–20 A breaker circuits, ~12 kV distribution, 345/500/765 kV transmission, 3600 rpm
   two-pole generators. Say "outlet", "household power", "line voltage", not "socket" or "mains".
   A short "(230 V, 50 Hz in Europe)" comparison is fine.
+- **Greek letters use one typeface and one shape.** Every page embeds "FN Greek" / "FN Greek Math"
+  (a STIX Two Text Greek subset, see the README) at the top of its `<style>`, and every font stack
+  starts with `FN Greek`. Keep that for new pages and new font declarations (including canvas
+  `ctx.font` strings and SVG `font-family` attributes). Phi is always φ: write `\varphi` in TeX,
+  never `\phi` (which renders as ϕ).
 
 ## Phone layout
 
