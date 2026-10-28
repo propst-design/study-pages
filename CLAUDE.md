@@ -121,3 +121,15 @@ group. Each batch is drafted separately, then checked before it goes on the page
   homes, 15–20 A breaker circuits, ~12 kV distribution, 345/500/765 kV transmission, 3600 rpm
   two-pole generators. Say "outlet", "household power", "line voltage", not "socket" or "mains".
   A short "(230 V, 50 Hz in Europe)" comparison is fine.
+
+## Phone layout
+
+- Display equations too wide for a 360px phone carry two copies inside the same `.katex` span:
+  `<math class="eqw">` (the original one-line version) followed by `<math class="eqn">` (the same
+  maths broken into lines with `<mtable>`, aligned on `=`). `wireEqs` shows the one-line copy
+  whenever it fits and switches to the broken copy when the box would scroll. **If you edit such
+  an equation, edit both copies** (or delete the `eqn` copy and the `class="eqw"`, and it simply
+  scrolls on phones again).
+- New wide equations should get an `eqn` copy too; check at 360px and 375px wide.
+- Tables (`table.t`) that still overflow on a phone switch to a stacked layout (one block per row,
+  cells labelled with their column heading) via the same `wireEqs` hook. No markup needed.
