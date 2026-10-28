@@ -828,7 +828,7 @@ function fmt(x, unit) {
 const subjOf = t => gById[t.group].subject;
 const SIMLIST = [['projectile', 'Projectile launcher'], ['collisions', 'Collision carts'], ['pendulum', 'Large-swing pendulum'], ['shm', 'Mass on a spring'], ['kepler', 'Orbits & equal areas'], ['buoyancy', 'Floating and sinking'],
   ['standing', 'Standing waves'], ['superposition', 'Two-source interference'], ['doppler', 'Doppler & shock waves'], ['lenses', 'Lens ray diagram'], ['tir', 'Refraction & total internal reflection'], ['doubleslit', 'Slit patterns'],
-  ['efield', 'Field lines of point charges'], ['rc', 'Capacitor charging'], ['rlc', 'Resonance curve'],
+  ['efield', 'Field lines of point charges'], ['rc', 'Capacitor charging & discharging'], ['rlc', 'RLC resonance curve'],
   ['idealgas', 'Gas in a box'], ['timedilation', 'Light clock'], ['photoelectric', 'Photoelectric effect'], ['blackbody', 'Blackbody spectrum'], ['bohr', 'Hydrogen spectrum'], ['schrodinger', 'Particle in a box'], ['decay', 'Radioactive decay'],
   ['hr', 'H-R diagram'], ['logicgates', 'Logic-gate sandbox'], ['vectors', 'Vector addition']];
 function progressLine() {
@@ -1108,7 +1108,7 @@ function logSlider(label, min, max, val, unit, onch) {
   const lmin = Math.log10(min), lmax = Math.log10(max);
   wrap.innerHTML = `<span>${label}</span><input type="range" min="0" max="1000" value="${(Math.log10(val) - lmin) / (lmax - lmin) * 1000}"><span class="val"></span>`;
   const r = wrap.querySelector('input'), out = wrap.querySelector('.val');
-  const get = () => 10 ** (lmin + (lmax - lmin) * r.value / 1000);
+  const get = () => +(10 ** (lmin + (lmax - lmin) * r.value / 1000)).toPrecision(3); // 3 figures, so the starting values read 100 µF, not 100.2 µF
   const upd = () => { const [a, b] = fmt(get(), unit); out.textContent = a + ' ' + b; onch(); };
   r.oninput = upd; wrap.get = get; setTimeout(upd); return wrap;
 }
@@ -1190,8 +1190,8 @@ function simField(el) {
 function axes(c, w, h, pad, xlab, ylab) {
   c.strokeStyle = cssv('--muted'); c.fillStyle = cssv('--muted'); c.lineWidth = 1; c.font = '12px FN Greek,-apple-system,sans-serif';
   c.beginPath(); c.moveTo(pad.l, pad.t); c.lineTo(pad.l, h - pad.b); c.lineTo(w - pad.r, h - pad.b); c.stroke();
-  c.textAlign = 'center'; c.fillText(xlab, (pad.l + w - pad.r) / 2, h - 6);
-  c.save(); c.translate(13, (pad.t + h - pad.b) / 2); c.rotate(-Math.PI / 2); c.fillText(ylab, 0, 0); c.restore();
+  c.textAlign = 'center'; fillSub(c, xlab, (pad.l + w - pad.r) / 2, h - 6);
+  c.save(); c.translate(13, (pad.t + h - pad.b) / 2); c.rotate(-Math.PI / 2); fillSub(c, ylab, 0, 0); c.restore();
 }
 
 function simRC(el) {
@@ -1207,17 +1207,19 @@ function simRC(el) {
     const t0 = sR.get() * sC.get(); const [a, b] = fmt(t0, 's'); tau.textContent = 'τ = RC = ' + a + ' ' + b;
     // time window: the next power of ten at or above 5τ, so the curve always fits and the axis reads in real units
     const T = 10 ** Math.ceil(Math.log10(5 * t0) - 1e-9);
-    axes(c, w, h, pad, 'time since the switch is thrown', 'capacitor V / ℰ');
+    axes(c, w, h, pad, 'time since the switch is thrown', 'V_C / ℰ');
     c.textAlign = 'right'; c.fillStyle = cssv('--muted');
     [0, .5, 1].forEach(v => { const y = pad.t + ph * (1 - v); c.fillText(v, pad.l - 6, y + 4); c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(pad.l, y); c.lineTo(w - pad.r, y); c.stroke(); });
     for (let k = 0; k <= 5; k++) { const s = T * k / 5, [sv, su] = s >= 1 && s < 1000 ? [String(s), 's'] : fmt(s, 's'); c.textAlign = k === 5 ? 'right' : 'center'; c.fillText(k ? sv + ' ' + su : '0', pad.l + pw * k / 5 + (k === 5 ? 4 : 0), h - pad.b + 16); }
     const curve = (f, col, dash) => { c.strokeStyle = col; c.lineWidth = 2.4; c.setLineDash(dash); c.beginPath(); for (let i = 0; i <= 300; i++) { const t = T * i / 300, x = pad.l + pw * t / T, y = pad.t + ph * (1 - f(t)); i ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); c.setLineDash([]); };
     curve(t => 1 - Math.exp(-t / t0), cssv('--ci'), []);
     curve(t => Math.exp(-t / t0), cssv('--es'), [6, 5]);
-    if (t0 <= T) { const x = pad.l + pw * t0 / T; c.strokeStyle = cssv('--muted'); c.setLineDash([2, 4]); c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, h - pad.b); c.stroke(); c.setLineDash([]); c.fillStyle = cssv('--ink'); c.fillText('τ', x + 8, pad.t + 12); }
+    if (t0 <= T) { const x = pad.l + pw * t0 / T, y63 = pad.t + ph * (1 - (1 - Math.exp(-1))); c.strokeStyle = cssv('--muted'); c.setLineDash([2, 4]); c.beginPath(); c.moveTo(x, pad.t); c.lineTo(x, h - pad.b); c.stroke(); c.setLineDash([]); c.fillStyle = cssv('--ink'); c.fillText('τ', x + 8, pad.t + 12);
+      // after one τ: 63% charged, 37% left when discharging
+      c.fillStyle = cssv('--ci'); c.beginPath(); c.arc(x, y63, 3.5, 0, 7); c.fill(); c.textAlign = 'left'; haloText(c, '63%', x + 6, y63 + 12); }
     c.textAlign = 'left'; c.font = '13px FN Greek,-apple-system,sans-serif';
-    c.fillStyle = cssv('--ci'); c.fillText('— charging', w - pad.r - 170, pad.t + ph * .55);
-    c.fillStyle = cssv('--es'); c.fillText('- - discharging', w - pad.r - 170, pad.t + ph * .55 + 18);
+    c.fillStyle = cssv('--ci'); fillSub(c, '— charging: V_C / ℰ', w - pad.r - 180, pad.t + ph * .55);
+    c.fillStyle = cssv('--es'); fillSub(c, '- - discharging: V_C / V₀', w - pad.r - 180, pad.t + ph * .55 + 18);
   });
 }
 
@@ -1257,10 +1259,24 @@ function linSlider(label, min, max, val, step, unit, onch) {
   wrap.innerHTML = `<span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"><span class="val"></span>`;
   const r = wrap.querySelector('input'), out = wrap.querySelector('.val');
   wrap.get = () => +r.value;
-  r.oninput = () => { out.textContent = (+r.value).toFixed(step < 1 ? (step < 0.1 ? 2 : 1) : 0) + ' ' + unit; onch(); };
-  out.textContent = (+val).toFixed(step < 1 ? (step < 0.1 ? 2 : 1) : 0) + ' ' + unit;
+  const show = v => out.textContent = neg((+v).toFixed(step < 1 ? (step < 0.1 ? 2 : 1) : 0)) + (unit === '°' || unit === '×' ? unit : unit ? ' ' + unit : '');
+  r.oninput = () => { show(r.value); onch(); };
+  show(val);
   return wrap;
 }
+const neg = s => String(s).replace(/^-/, '−').replace(/([\s(=])-(?=\d)/g, '$1−'); // typographic minus in numbers
+const subD = k => String(k).replace(/\d/g, d => '₀₁₂₃₄₅₆₇₈₉'[d]);
+const simTopic = () => location.hash.replace(/^#\/?/, ''); // a sim used on two topics can start from each article's example
+// fillText with subscripts: "K_max", "B_λ", "F_{B}" draw the part after _ smaller and lowered; honours textAlign
+function fillSub(c, s, x, y) {
+  const parts = s.split(/_(\{[^}]*\}|[^\s/·=)]+)/), px = parseFloat(c.font.match(/([\d.]+)px/)[1]), f0 = c.font, fs = f0.replace(/[\d.]+px/, px * 0.75 + 'px'), al = c.textAlign;
+  const W = parts.reduce((a, p, i) => { c.font = i % 2 ? fs : f0; return a + c.measureText(i % 2 ? p.replace(/[{}]/g, '') : p).width; }, 0);
+  let cx = al === 'center' ? x - W / 2 : al === 'right' || al === 'end' ? x - W : x; c.textAlign = 'left';
+  parts.forEach((p, i) => { c.font = i % 2 ? fs : f0; const t = i % 2 ? p.replace(/[{}]/g, '') : p; c.fillText(t, cx, y + (i % 2 ? px * 0.3 : 0)); cx += c.measureText(t).width; });
+  c.font = f0; c.textAlign = al;
+}
+// halo behind canvas text so labels stay readable where they cross lines
+const haloText = (c, s, x, y) => { c.save(); c.strokeStyle = cssv('--bg'); c.lineWidth = 3; c.lineJoin = 'round'; c.strokeText(s, x, y); c.restore(); c.fillText(s, x, y); };
 function loop(fn) { let id, last = performance.now(), alive = true; const f = t => { if (!alive) return; const dt = Math.min(0.05, (t - last) / 1000); last = t; fn(dt); id = requestAnimationFrame(f); }; id = requestAnimationFrame(f); const stop = () => { alive = false; cancelAnimationFrame(id); }; cleanups.push(stop); return stop; }
 const readout = () => { const s = document.createElement('span'); s.className = 'val'; s.style.minWidth = '0'; return s; };
 
@@ -1268,7 +1284,7 @@ function simProjectile(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el), G = 9.81, WX = 170, WY = 85;
   let trails = [], ball = null, redraw = () => {};
-  const sv = linSlider('Speed', 5, 40, 25, 1, 'm/s', () => redraw()), sa = linSlider('Angle', 5, 85, 45, 1, '°', () => redraw());
+  const sv = linSlider('Speed v₀', 5, 40, 25, 1, 'm/s', () => redraw()), sa = linSlider('Angle θ', 5, 85, 35, 1, '°', () => redraw()); // the article's worked example
   const go = document.createElement('button'); go.textContent = 'Launch';
   const clr = document.createElement('button'); clr.textContent = 'Clear';
   const out = readout();
@@ -1279,7 +1295,8 @@ function simProjectile(el) {
     // one scale for both axes, so the drawn launch angle and path shape are true to life
     const pad = 30, sc = Math.min((w - pad - 10) / WX, (h - pad - 10) / WY), X = x => pad + x * sc, Y = y => h - pad - y * sc;
     c.strokeStyle = cssv('--line'); c.fillStyle = cssv('--muted'); c.font = '11px FN Greek,-apple-system,sans-serif'; c.lineWidth = 1; c.textAlign = 'center';
-    for (let x = 0; x <= WX; x += 20) { c.beginPath(); c.moveTo(X(x), Y(0)); c.lineTo(X(x), Y(WY)); c.stroke(); c.fillText(x + ' m', X(x), h - 8); }
+    const lx = 20 * sc < 44 ? 40 : 20; // label every 40 m when 20 m is too narrow for "100 m"
+    for (let x = 0; x <= WX; x += 20) { c.beginPath(); c.moveTo(X(x), Y(0)); c.lineTo(X(x), Y(WY)); c.stroke(); if (!(x % lx)) c.fillText(x + ' m', X(x), h - 8); }
     c.textAlign = 'right'; for (let y = 20; y <= WY; y += 20) { c.beginPath(); c.moveTo(X(0), Y(y)); c.lineTo(X(WX), Y(y)); c.stroke(); c.fillText(y + ' m', X(0) - 3, Y(y) + 4); }
     c.strokeStyle = cssv('--muted'); c.lineWidth = 2; c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(WX), Y(0)); c.stroke();
     const p = params();
@@ -1290,7 +1307,7 @@ function simProjectile(el) {
     c.strokeStyle = cssv('--ink'); c.lineWidth = 4; c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(0) + 22 * Math.cos(p.a), Y(0) - 22 * Math.sin(p.a)); c.stroke();
     if (ball) { path(ball.q, cssv('--ci'), 2.4, [], ball.t); const x = ball.q.v * Math.cos(ball.q.a) * ball.t, y = ball.q.v * Math.sin(ball.q.a) * ball.t - G * ball.t * ball.t / 2;
       c.fillStyle = cssv('--es'); c.beginPath(); c.arc(X(x), Y(Math.max(y, 0)), 6, 0, 7); c.fill(); }
-    out.textContent = `range ${p.R.toFixed(1)} m · peak ${p.H.toFixed(1)} m · flight ${p.T.toFixed(2)} s`;
+    out.textContent = `range R = ${p.R.toFixed(1)} m · peak height H = ${p.H.toFixed(1)} m · flight time T = ${p.T.toFixed(2)} s`;
   });
   let stop = null;
   go.onclick = () => { if (stop) stop(); ball = { q: params(), t: 0 }; stop = loop(dt => { ball.t += dt * 1.5; if (ball.t >= ball.q.T) { ball.t = ball.q.T; trails.push(ball.q); if (trails.length > 5) trails.shift(); redraw(); ball = null; stop(); stop = null; return; } redraw(); }); };
@@ -1316,12 +1333,18 @@ function simCollide(el) {
     c.strokeStyle = cssv('--muted'); c.lineWidth = 2; c.beginPath(); c.moveTo(0, base); c.lineTo(w, base); c.stroke();
     const cart = (x, m, col, lbl, v) => { const s = size(m) * sx, hh = s * 0.7; c.fillStyle = col; c.fillRect(x * sx - s / 2, base - hh - 6, s, hh);
       c.fillStyle = cssv('--ink'); [-.3, .3].forEach(k => { c.beginPath(); c.arc(x * sx + k * s, base - 4, 4, 0, 7); c.fill(); });
-      c.fillStyle = '#fff'; c.font = '600 12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText(lbl, x * sx, base - hh / 2 - 2);
-      c.fillStyle = cssv('--muted'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.fillText(v.toFixed(2) + ' m/s', Math.min(w - 30, Math.max(30, x * sx)), base - hh - 14); };
-    cart(st.x1, sm1.get(), cssv('--wv'), 'm₁', st.v1); cart(st.x2, sm2.get(), cssv('--mg'), 'm₂', st.v2);
+      c.fillStyle = cssv('--bg'); c.font = '600 12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText(lbl, x * sx, base - hh / 2 - 2);
+      return [neg(v.toFixed(2)) + ' m/s', x * sx, base - hh - 14]; };
+    const l1 = cart(st.x1, sm1.get(), cssv('--wv'), 'm₁', st.v1), l2 = cart(st.x2, sm2.get(), cssv('--mg'), 'm₂', st.v2);
+    // velocity labels: kept on the canvas and pushed apart when the carts are close
+    c.fillStyle = cssv('--muted'); c.font = '12px FN Greek,-apple-system,sans-serif';
+    const lw = Math.max(c.measureText(l1[0]).width, c.measureText(l2[0]).width) + 8, mid = (l1[1] + l2[1]) / 2;
+    let x1 = l1[1], x2 = l2[1]; if (x2 - x1 < lw) { x1 = mid - lw / 2; x2 = mid + lw / 2; }
+    x2 = Math.min(w - lw / 2, x2); x1 = Math.min(x1, x2 - lw); x1 = Math.max(lw / 2, x1); x2 = Math.max(x2, x1 + lw);
+    c.fillText(l1[0], x1, l1[2]); c.fillText(l2[0], x2, l2[2]);
     const m1 = sm1.get(), m2 = sm2.get(), p = m1 * st.v1 + m2 * st.v2, K = .5 * m1 * st.v1 ** 2 + .5 * m2 * st.v2 ** 2;
-    out.textContent = st.hit ? `after collision: total momentum ${p.toFixed(2)} kg·m/s (conserved) · kinetic energy ${K.toFixed(2)} J (was ${st.K0.toFixed(2)} J, ${st.K0 > 1e-9 ? Math.max(0, (1 - K / st.K0) * 100).toFixed(0) : 0}% lost)`
-      : `before collision: total momentum ${p.toFixed(2)} kg·m/s · kinetic energy ${K.toFixed(2)} J`;
+    out.textContent = st.hit ? `after collision: total momentum ${neg(p.toFixed(2))} kg·m/s (conserved) · kinetic energy ${K.toFixed(2)} J (was ${st.K0.toFixed(2)} J, ${st.K0 > 1e-9 ? Math.max(0, (1 - K / st.K0) * 100).toFixed(0) : 0}% lost)`
+      : `before collision: total momentum ${neg(p.toFixed(2))} kg·m/s · kinetic energy ${K.toFixed(2)} J`;
   });
   let stop = null;
   go.onclick = () => { if (stop) stop(); reset(); stop = loop(dt => {
@@ -1342,7 +1365,7 @@ function simPendulum(el) {
   const cv = $('canvas', el), bar = $('.simbar', el), G = 9.81;
   let th, om, t, small, lastCross, periods, redraw = () => {};
   const reset = () => { th = sa.get() * Math.PI / 180; om = 0; t = 0; lastCross = null; periods = []; };
-  const sl = linSlider('Length', 0.2, 3, 1, 0.1, 'm', () => reset()), sa = linSlider('Release angle', 5, 170, 60, 1, '°', () => reset());
+  const sl = linSlider('Length L', 0.2, 3, 1, 0.1, 'm', () => reset()), sa = linSlider('Release angle θ₀', 5, 170, 60, 1, '°', () => reset());
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sl, sa, out);
   reset();
@@ -1359,7 +1382,7 @@ function simPendulum(el) {
     c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'left';
     c.fillStyle = cssv('--es'); c.fillText('● real pendulum (light rigid rod)', 12, 20); c.fillStyle = cssv('--muted'); c.fillText('○ small-angle model', 12, 38);
     const T0 = 2 * Math.PI * Math.sqrt(L / G), Tm = periods.length ? periods.reduce((a, b) => a + b) / periods.length : null;
-    out.textContent = `small-angle period ${T0.toFixed(3)} s · measured period ${Tm ? Tm.toFixed(3) + ' s (' + ((Tm / T0 - 1) * 100).toFixed(1) + '% longer)' : 'measuring…'}`;
+    out.textContent = `small-angle 2π√(L/g) = ${T0.toFixed(3)} s · with the (1 + θ₀²/16) correction ${(T0 * (1 + th0 * th0 / 16)).toFixed(3)} s · measured ${Tm ? Tm.toFixed(3) + ' s (' + ((Tm / T0 - 1) * 100).toFixed(1) + '% longer than small-angle)' : 'measuring…'}`;
   });
   loop(dt => {
     const n = 8, hstep = dt / n;
@@ -1379,8 +1402,8 @@ function simStanding(el) {
   const cv = $('canvas', el), bar = $('.simbar', el);
   let t = 0, redraw = () => {};
   const sn = linSlider('Harmonic n', 1, 8, 2, 1, '', () => redraw());
-  const ss = linSlider('Speed', 0.1, 2, 0.6, 0.1, '×', () => {});
-  const showT = document.createElement('label'); showT.innerHTML = '<input type="checkbox"> show the two travelling waves';
+  const ss = linSlider('Playback speed', 0.1, 2, 0.6, 0.1, '×', () => {});
+  const showT = document.createElement('label'); showT.innerHTML = '<input type="checkbox"> Show the two travelling waves';
   const out = readout();
   bar.append(sn, ss, showT, out);
   redraw = setupCanvas(cv, 0.36, (c, w, h) => {
@@ -1400,7 +1423,7 @@ function simStanding(el) {
     c.stroke();
     c.fillStyle = cssv('--ink'); for (let j = 0; j <= n; j++) { c.beginPath(); c.arc(pad + L * j / n, mid, 4, 0, 7); c.fill(); }
     c.fillRect(pad - 6, mid - A - 6, 4, 2 * A + 12); c.fillRect(w - pad + 2, mid - A - 6, 4, 2 * A + 12);
-    out.textContent = `${n + 1} nodes · ${n} antinodes · λ = 2L/${n} · f = ${n} × f₁`;
+    out.textContent = `${n + 1} nodes · ${n} antinode${n > 1 ? 's' : ''} · ` + (n > 1 ? `λ${subD(n)} = 2L/${n} · f${subD(n)} = ${n}f₁` : 'λ₁ = 2L · f₁, the fundamental');
   });
   loop(dt => { t += dt * ss.get(); redraw(); });
 }
@@ -1436,12 +1459,11 @@ function simRipple(el) {
     c.imageSmoothingEnabled = true; c.drawImage(off, 0, 0, w, h);
     c.fillStyle = cssv('--ink'); [s1, s2].forEach(s => { c.beginPath(); c.arc(s[0] * w / W, s[1] * h / H, 5, 0, 7); c.fill(); });
     c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'left';
-    const cap = avg ? 'Time-averaged intensity: blue = loud (constructive), blank = silent (destructive)' : 'Blue = crest, orange = trough';
+    const cap = avg ? (w < 600 ? 'Time-averaged: blue = loud, blank = silent' : 'Time-averaged intensity: blue = loud (constructive), blank = silent (destructive)') : 'Blue = crest, orange = trough';
     c.fillStyle = cssv('--bg'); c.globalAlpha = .85; c.fillRect(4, h - 26, c.measureText(cap).width + 12, 22); c.globalAlpha = 1;
-    c.fillStyle = cssv('--ink');
-    c.fillText(avg ? 'Time-averaged intensity: blue = loud (constructive), blank = silent (destructive)' : 'Blue = crest, orange = trough', 10, h - 10);
+    c.fillStyle = cssv('--ink'); c.fillText(cap, 10, h - 10);
     const r = sd.get() / sl.get(), nodal = 2 * Math.floor(r + 0.5);
-    out.textContent = `d/λ = ${r.toFixed(2)} · ${nodal} nodal lines (where d sin θ = (m + ½)λ)`;
+    out.textContent = `d/λ = ${r.toFixed(2)} · ${nodal} nodal lines (silent lines, where the path difference Δr = (m + ½)λ)`;
   });
   loop(dt => { t += dt * 4; redraw(); });
 }
@@ -1450,7 +1472,7 @@ function simDoppler(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el);
   let fronts = [], x = 0, acc = 0, redraw = () => {};
-  const sm = linSlider('Source speed (Mach)', 0, 1.8, 0.5, 0.05, '', () => { fronts = []; x = 0; });
+  const sm = linSlider('Mach number M', 0, 1.8, 0.5, 0.05, '', () => { fronts = []; x = 0; });
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sm, out);
   const C = 0.12; // wave speed in canvas widths per second
@@ -1468,9 +1490,10 @@ function simDoppler(el) {
     const ear = (ex, lbl) => { c.fillStyle = cssv('--ink'); c.fillRect(ex - 4, sy - 4, 8, 8); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = ex < w / 2 ? 'left' : 'right'; c.fillText(lbl, ex < w / 2 ? 2 : w - 2, sy + 22); };
     ear(w * 0.97, 'ahead'); ear(w * 0.03, 'behind');
     const fa = M < 1 ? 1 / (1 - M) : Infinity, fb = 1 / (1 + M);
-    out.textContent = M < 0.999 ? `pitch heard by listener ahead: ${fa.toFixed(2)} × source pitch · behind: ${fb.toFixed(2)} ×`
-      : M < 1.001 ? `Mach 1: the wavefronts pile up at the nose into a single shock front · listener behind hears ${fb.toFixed(2)} × source pitch`
-      : `supersonic: shock cone half-angle sin⁻¹(1/M) = ${(Math.asin(1 / M) * 180 / Math.PI).toFixed(1)}° · listener ahead hears nothing until the boom arrives · behind: ${fb.toFixed(2)} × source pitch`;
+    const vs = 'v<sub>s</sub>', bh = `behind: f′ = f·v/(v + ${vs}) = ${fb.toFixed(2)} f`;
+    out.innerHTML = (M < 0.999 ? `source at ${vs} = ${M.toFixed(2)}v · listener ahead: f′ = f·v/(v − ${vs}) = ${fa.toFixed(2)} f · ${bh}`
+      : M < 1.001 ? `M = 1: the wavefronts pile up at the nose into a single shock front · listener ${bh}`
+      : `supersonic: shock cone half-angle θ = sin⁻¹(1/M) = ${(Math.asin(1 / M) * 180 / Math.PI).toFixed(1)}° · listener ahead hears nothing until the boom arrives · ${bh}`);
   });
   loop(dt => {
     const M = sm.get(); x += M * C * dt; acc += dt;
@@ -1484,7 +1507,7 @@ function simDoppler(el) {
 function simLens(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el);
-  let redraw = () => {}, dO = 2.6, hO = 0.9; // in units of |f|
+  let redraw = () => {}, dO = 1.5, hO = 0.9; // in units of |f|; starts at the article's example, d_o = 15 cm with f = 10 cm
   const sf = document.createElement('button'); let conv = true; sf.textContent = 'Switch to diverging lens';
   sf.onclick = () => { conv = !conv; sf.textContent = conv ? 'Switch to diverging lens' : 'Switch to converging lens'; redraw(); };
   const out = readout(); out.style.flexBasis = '100%';
@@ -1499,7 +1522,7 @@ function simLens(el) {
     // axis + focal points
     c.strokeStyle = cssv('--line'); c.lineWidth = 1; c.beginPath(); c.moveTo(0, oy); c.lineTo(w, oy); c.stroke();
     c.fillStyle = cssv('--muted'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center';
-    [-1, 1, -2, 2].forEach(u => { c.beginPath(); c.arc(X(u), oy, 3, 0, 7); c.fill(); c.fillText(Math.abs(u) === 1 ? 'F' : '2F', X(u), oy + 16); });
+    const fpts = () => [-1, 1, -2, 2].forEach(u => { c.fillStyle = cssv('--muted'); c.beginPath(); c.arc(X(u), oy, 3, 0, 7); c.fill(); haloText(c, Math.abs(u) === 1 ? 'F' : '2F', X(u), oy + 16); });
     // lens
     c.strokeStyle = cssv('--mg'); c.lineWidth = 3; c.beginPath(); c.moveTo(ox, Y(1.7)); c.lineTo(ox, Y(-1.7)); c.stroke();
     const tip = (y, dir) => { c.beginPath(); c.moveTo(ox - 8, y + dir * (conv ? 8 : -8)); c.lineTo(ox, y); c.lineTo(ox + 8, y + dir * (conv ? 8 : -8)); c.stroke(); };
@@ -1519,11 +1542,12 @@ function simLens(el) {
     const s2 = hO / dO; const A2 = [ox, oy]; ray([P, A2, far(A2, -s2)], cssv('--ci'), virtual ? imgPt : null);
     // 3. toward near focal point, exits parallel
     if (Math.abs(dO - f) > 0.05) { const yl3 = hO * f / (f - dO); const A3 = [ox, Y(yl3)]; ray([P, A3, [w + 20, Y(yl3)]], cssv('--wv'), virtual ? imgPt : null); }
+    c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; fpts(); // focal-point labels on top of the rays
     arrow(-dO, hO, cssv('--ink'), []);
     if (isFinite(di) && Math.abs(di) < 40) arrow(di, hI, cssv('--in'), virtual ? [5, 4] : []);
-    const fmtd = v => (v * 10).toFixed(1) + ' cm';
-    out.textContent = !isFinite(di) || Math.abs(di) > 1e3 ? 'object at the focal point: rays come out parallel, no image forms' :
-      `with |f| = 10 cm: object ${fmtd(dO)} · image ${fmtd(Math.abs(di))} ${virtual ? 'same side (virtual)' : 'far side (real)'} · magnification ${m.toFixed(2)}× ${m < 0 ? 'inverted' : 'upright'}`;
+    const cm = v => neg((v * 10).toFixed(1)) + ' cm', f0 = conv ? '+10 cm' : '−10 cm';
+    out.innerHTML = !isFinite(di) || Math.abs(di) > 1e3 ? `f = ${f0}, d<sub>o</sub> = ${cm(dO)}: object at the focal point, rays come out parallel and no image forms` :
+      `f = ${f0} · d<sub>o</sub> = ${cm(dO)} · d<sub>i</sub> = ${di > 0 ? '+' : ''}${cm(di)} (${virtual ? 'virtual image, same side as the object' : 'real image, far side'}) · m = −d<sub>i</sub>/d<sub>o</sub> = ${neg(m.toFixed(2))} (${m < 0 ? 'inverted' : 'upright'}, ${Math.abs(m) > 1.005 ? 'larger' : Math.abs(m) < 0.995 ? 'smaller' : 'same size'})`;
   });
   let drag = false;
   cv.onpointerdown = e => { const r = cv.getBoundingClientRect(), x = e.clientX - r.left; if (Math.abs(x - (ox - dO * U)) < 24) { drag = true; cv.setPointerCapture(e.pointerId); } };
@@ -1538,9 +1562,9 @@ function simGas(el) {
   const cv = $('canvas', el), bar = $('.simbar', el);
   let P = [], hits = 0, hitT = 0, pAvg = 0, redraw = () => {};
   const fresh = () => { pAvg = 0; hits = 0; hitT = 0; }; // the running average would otherwise lag several seconds behind a change
-  const sT = linSlider('Temperature', 50, 600, 300, 10, 'K', () => { rescale(); fresh(); });
-  const sV = linSlider('Volume', 30, 100, 100, 1, '%', () => { P.forEach(p => { if (p.x > sV.get() / 100) p.x = Math.random() * sV.get() / 100; }); fresh(); });
-  const sN = linSlider('Molecules', 20, 300, 120, 10, '', () => { fill(); fresh(); });
+  const sT = linSlider('Temperature T', 50, 600, 300, 10, 'K', () => { rescale(); fresh(); });
+  const sV = linSlider('Volume V', 30, 100, 100, 1, '%', () => { P.forEach(p => { if (p.x > sV.get() / 100) p.x = Math.random() * sV.get() / 100; }); fresh(); });
+  const sN = linSlider('Molecules N', 20, 300, 120, 10, '', () => { fill(); fresh(); });
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sT, sV, sN, out);
   let curT = 300;
@@ -1588,13 +1612,13 @@ function simLightClock(el) {
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sb, out);
   const T0 = 1.6; // seconds per tick for resting clock (animation time)
-  redraw = setupCanvas(cv, 0.42, (c, w, h) => {
+  redraw = setupCanvas(cv, el.clientWidth < 520 ? 0.62 : 0.42, (c, w, h) => {
     c.clearRect(0, 0, w, h);
-    const b = sb.get(), g = 1 / Math.sqrt(1 - b * b), H = h * 0.62, top = h * 0.16, bot = top + H;
+    const b = sb.get(), g = 1 / Math.sqrt(1 - b * b), top = Math.max(32, h * 0.16), bot = h - 30, H = bot - top, narrow = w < 520;
     const half = w * 0.28; // resting clock in left panel
     c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(half + 20, 8); c.lineTo(half + 20, h - 8); c.stroke();
-    c.font = '12px FN Greek,-apple-system,sans-serif'; c.fillStyle = cssv('--muted'); c.textAlign = 'center';
-    c.fillText('clock at rest', half / 2 + 10, h - 8); c.fillText('clock moving right at v (seen from rest frame)', half + 20 + (w - half - 20) / 2, h - 8);
+    c.font = (narrow ? '11px' : '12px') + ' FN Greek,-apple-system,sans-serif'; c.fillStyle = cssv('--muted'); c.textAlign = 'center';
+    c.fillText(narrow ? 'at rest' : 'clock at rest', half / 2 + 10, h - 8); c.fillText(narrow ? 'moving right at v (rest-frame view)' : 'clock moving right at v (seen from the rest frame)', half + 20 + (w - half - 20) / 2, h - 8);
     const mirror = (x, y) => { c.fillStyle = cssv('--mg'); c.fillRect(x - 22, y - 3, 44, 6); };
     // resting clock
     const cx = half / 2 + 10, ph0 = (t / T0) % 2, y0 = ph0 < 1 ? bot - ph0 * H : top + (ph0 - 1) * H;
@@ -1624,7 +1648,7 @@ function simLightClock(el) {
     const ticks0 = Math.floor(t / (2 * T0)), ticksM = Math.floor(t / (2 * Tm));
     c.fillStyle = cssv('--ink'); c.font = '600 13px FN Greek,-apple-system,sans-serif';
     c.fillText(`ticks: ${ticks0}`, cx, 18); c.fillText(`ticks: ${ticksM}`, pL + span / 2, 18);
-    out.textContent = `γ = ${g.toFixed(3)} · the moving clock's light travels a longer diagonal at the same speed, so each tick takes ${g.toFixed(2)}× as long`;
+    out.innerHTML = `γ = ${g.toFixed(3)} · Δt = γΔt<sub>0</sub>: the moving clock's light travels a longer diagonal at the same speed c, so each tick takes ${g.toFixed(2)}× as long`;
   });
   loop(dt => { t += dt; redraw(); });
 }
@@ -1634,7 +1658,7 @@ function simHalfLife(el) {
   const cv = $('canvas', el), bar = $('.simbar', el);
   const G = 20, N0 = G * G; let alive, hist, t, redraw = () => {};
   const reset = () => { alive = new Array(N0).fill(true); hist = [[0, N0]]; t = 0; };
-  const sh = linSlider('Half-life', 1, 8, 3, 0.5, 's', () => reset());
+  const sh = linSlider('Half-life T½', 1, 8, 3, 0.5, 's', () => reset());
   const rb = document.createElement('button'); rb.textContent = 'Restart'; rb.onclick = () => reset();
   const out = readout();
   bar.append(sh, rb, out); reset();
@@ -1687,7 +1711,7 @@ function simSpring(el) {
   let x = 0, v = 0, t = 0, hist = [], E0 = 1, stop = null, redraw = () => {};
   const reset = () => { x = sA.get(); v = 0; t = 0; hist = [[0, x]]; E0 = .5 * sk.get() * x * x; run(); redraw(); };
   const sm = linSlider('m', 0.1, 5, 1, 0.1, 'kg', () => reset()), sk = linSlider('k', 1, 100, 20, 1, 'N/m', () => reset());
-  const sA = linSlider('Amplitude', 0.05, 0.4, 0.25, 0.01, 'm', () => reset()), sb = linSlider('Damping b', 0, 2, 0, 0.05, 'kg/s', () => reset());
+  const sA = linSlider('Amplitude A', 0.05, 0.4, 0.25, 0.01, 'm', () => reset()), sb = linSlider('Damping b', 0, 2, 0, 0.05, 'kg/s', () => reset());
   const out = readout(); out.style.flexBasis = '100%';
   const out2 = readout(); out2.style.flexBasis = '100%';
   bar.append(sm, sk, sA, sb, out, out2);
@@ -1722,7 +1746,7 @@ function simSpring(el) {
     for (let i = 0; i < N; i++) c.lineTo(wx + 8 + (sx1 - 8 - wx - 8) * (i + .5) / N, cy + (i % 2 ? 7 : -7));
     c.lineTo(sx1 - 8, cy); c.lineTo(sx1, cy); c.stroke();
     c.fillStyle = cssv('--mg'); c.fillRect(sx1, fy - bs, bs, bs);
-    c.fillStyle = '#fff'; c.font = '600 12px FN Greek,-apple-system,sans-serif'; c.fillText('m', bx, cy + 4);
+    c.fillStyle = cssv('--bg'); c.font = '600 12px FN Greek,-apple-system,sans-serif'; c.fillText('m', bx, cy + 4);
     c.font = '11px FN Greek,-apple-system,sans-serif';
     // ── x(t) trace
     const bw = Math.min(150, w * 0.3), L = 40, R = w - bw - 22, top = H1 + 14, bot = h - 24, mid = (top + bot) / 2, half = (bot - top) / 2 - 4;
@@ -1748,8 +1772,8 @@ function simSpring(el) {
       c.fillStyle = col; c.fillRect(xx, bot - hh, bwid, hh); c.fillStyle = muted; c.fillText(nm, xx + bwid / 2, bot + 14); });
     c.fillStyle = ink; c.textAlign = 'left'; c.fillText('energy', bL, top + 10);
     const f = (q, n = 3) => q.toPrecision(n);
-    out.textContent = `ω = √(k/m) = ${f(w0)} rad/s · T = 2π√(m/k) = ${f(T0)} s · f = ${f(1 / T0)} Hz` +
-      (b > 0 ? (gam < w0 ? ` · damped ω_d = √(ω² − (b/2m)²) = ${f(Math.sqrt(w0 * w0 - gam * gam))} rad/s, Q = ${f(w0 / (2 * gam), 2)}` : ` · b/2m = ${f(gam)} s⁻¹ ≥ ω: ${gam === w0 ? 'critically' : 'over'}damped, no oscillation`) : '');
+    out.innerHTML = `ω = √(k/m) = ${f(w0)} rad/s · T = 2π√(m/k) = ${f(T0)} s · f = ${f(1 / T0)} Hz` +
+      (b > 0 ? (gam < w0 ? ` · damped ω<sub>d</sub> = √(ω² − (b/2m)²) = ${f(Math.sqrt(w0 * w0 - gam * gam))} rad/s, Q = ${f(w0 / (2 * gam), 2)}` : ` · b/2m = ${f(gam)} s⁻¹ ≥ ω: ${gam === w0 ? 'critically' : 'over'}damped, no oscillation`) : '');
     out2.textContent = `K = ${springJ(K)} · U = ${springJ(U)} · total E = ${springJ(E)}` + (b > 0 ? ` (started at ${springJ(E0)})` : ' (constant)');
   });
   reset();
@@ -1760,9 +1784,9 @@ function simOrbit(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el), GM = 4 * Math.PI ** 2; // AU, yr, one solar mass
   let px, py, vx, vy, t, trail, done, stop = null, redraw = () => {}, onView = () => true;
-  const sv = linSlider('Launch v / v_circ', 0.5, 1.5, 1.15, 0.01, '', () => reset());
+  const sv = linSlider('Launch v/v<sub>circ</sub>', 0.5, 1.5, 1.15, 0.01, '', () => reset());
   const rb = document.createElement('button'); rb.textContent = 'Restart'; rb.onclick = () => reset();
-  const sw = document.createElement('label'); sw.innerHTML = '<input type="checkbox" checked> equal-area sweeps'; sw.querySelector('input').onchange = () => redraw();
+  const sw = document.createElement('label'); sw.innerHTML = '<input type="checkbox" checked> Equal-area sweeps'; sw.querySelector('input').onchange = () => redraw();
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sv, rb, sw, out);
   const elems = () => { const f = sv.get(), f2 = f * f, e = Math.abs(f2 - 1), bound = f2 < 2, a = bound ? 1 / (2 - f2) : 1 / (f2 - 2);
@@ -1816,7 +1840,7 @@ function simOrbit(el) {
     c.strokeStyle = cssv('--mg'); c.lineWidth = 1.8; c.beginPath(); trail.forEach(([x, y], i) => i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y))); c.stroke();
     // apsides
     c.fillStyle = muted; c.textAlign = 'center';
-    const mark = (q, lbl) => { const xx = X(q); if (xx < 4 || xx > w - 4) return; c.beginPath(); c.arc(xx, Y(0), 2.5, 0, 7); c.fill(); c.fillText(lbl, Math.min(w - 32, Math.max(32, xx)), Y(0) - 8); };
+    const mark = (q, lbl) => { const xx = X(q); if (xx < 4 || xx > w - 4) return; c.fillStyle = muted; c.beginPath(); c.arc(xx, Y(0), 2.5, 0, 7); c.fill(); haloText(c, lbl, Math.min(w - 32, Math.max(32, xx)), Y(0) - 8); };
     if (E.bound && E.e > 0.02) { mark(E.f >= 1 ? 1 : -E.peri, 'perihelion'); mark(E.f >= 1 ? -E.apo : 1, 'aphelion'); }
     // star + planet
     c.fillStyle = cssv('--wv'); c.beginPath(); c.arc(X(0), Y(0), 8, 0, 7); c.fill();
@@ -1832,9 +1856,9 @@ function simOrbit(el) {
     }
     if (done) { c.fillStyle = ink; c.textAlign = 'center'; c.font = '600 13px FN Greek,-apple-system,sans-serif'; c.fillText('escaped — it never comes back', w / 2, 20); }
     const p3 = q => q.toPrecision(3);
-    out.textContent = E.bound
-      ? `bound ellipse · period ${p3(E.T)} yr · eccentricity e = ${E.e.toFixed(3)} · perihelion ${p3(E.peri)} AU · aphelion ${p3(E.apo)} AU · semi-major axis ${p3(E.a)} AU (T² = a³)`
-      : `v ≥ √2 v_circ = escape speed: unbound ${E.e > 1.0005 ? 'hyperbola' : 'parabola'}, e = ${E.e.toFixed(3)} · perihelion ${p3(E.peri)} AU · no period`;
+    out.innerHTML = E.bound
+      ? `bound ellipse · semi-major axis a = ${p3(E.a)} AU · eccentricity e = ${E.e.toFixed(3)} · perihelion r<sub>p</sub> = ${p3(E.peri)} AU · aphelion r<sub>a</sub> = ${p3(E.apo)} AU · period T = ${p3(E.T)} yr (T² = a³)`
+      : `v ≥ v<sub>esc</sub> = √2 v<sub>circ</sub>: unbound ${E.e > 1.0005 ? 'hyperbola' : 'parabola'}, e = ${E.e.toFixed(3)} · perihelion r<sub>p</sub> = ${p3(E.peri)} AU · no period`;
   });
   reset();
 }
@@ -1844,8 +1868,9 @@ function simBuoyancy(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el), g = 9.81, s = 0.1, V = s ** 3, Hf0 = 0.2, Ht = 0.3, Wt = 0.34, Atank = Wt * Wt;
   let zb = Hf0 + 0.05, held = true, stop = null, redraw = () => {};
-  const sb = linSlider('Block ρ', 100, 3000, 600, 10, 'kg/m³', () => go()), sf = linSlider('Fluid ρ', 500, 14000, 1000, 25, 'kg/m³', () => { mark(); go(); });
-  const presets = [['oil', 800], ['water', 1000], ['seawater', 1025], ['mercury', 13600]].map(([nm, r]) => { const b = document.createElement('button'); b.textContent = nm; b.onclick = () => { const i = sf.querySelector('input'); i.value = r; i.oninput(); }; b.r = r; return b; });
+  // starts as the article's iceberg: ice (917 kg/m³) in seawater floats 89% submerged
+  const sb = linSlider('Block ρ<sub>o</sub>', 100, 3000, 917, 1, 'kg/m³', () => go()), sf = linSlider('Fluid ρ<sub>f</sub>', 500, 14000, 1025, 25, 'kg/m³', () => { mark(); go(); });
+  const presets = [['Oil', 800], ['Water', 1000], ['Seawater', 1025], ['Mercury', 13600]].map(([nm, r]) => { const b = document.createElement('button'); b.textContent = nm; b.onclick = () => { const i = sf.querySelector('input'); i.value = r; i.oninput(); }; b.r = r; return b; });
   const mark = () => presets.forEach(b => b.style.borderColor = b.r === sf.get() ? 'var(--accent)' : '');
   const again = document.createElement('button'); again.textContent = 'Lower again'; again.onclick = () => { zb = Hf0 + 0.05; held = true; go(); };
   const out = readout(); out.style.flexBasis = '100%';
@@ -1876,26 +1901,29 @@ function simBuoyancy(el) {
     c.globalAlpha = rf > 5000 ? .5 : .3; c.fillStyle = fc; c.fillRect(tx, Z(surf), Wt * S, surf * S); c.globalAlpha = 1;
     c.strokeStyle = fc; c.lineWidth = 1.5; c.beginPath(); c.moveTo(tx, Z(surf)); c.lineTo(tx + Wt * S, Z(surf)); c.stroke();
     c.strokeStyle = muted; c.lineWidth = 2.5; c.beginPath(); c.moveTo(tx, Z(Ht)); c.lineTo(tx, fy); c.lineTo(tx + Wt * S, fy); c.lineTo(tx + Wt * S, Z(Ht)); c.stroke();
-    c.fillStyle = muted; c.textAlign = 'left'; c.fillText('10 cm cube', bx + s * S + 6, Z(zb + s) + 10);
+    // size label beside the cube, or inside it when the tank wall is in the way (phones)
+    if (tx + Wt * S - bx - s * S - 10 > c.measureText('10 cm cube').width) { c.fillStyle = muted; c.textAlign = 'left'; c.fillText('10 cm cube', bx + s * S + 6, Z(zb + s) + 10); }
+    else { c.fillStyle = cssv('--bg'); c.textAlign = 'center'; c.fillText('10 cm', bx + s * S / 2, Z(zb + s) + 13); }
     // free-body diagram (arrow length ∝ force; full scale = weight of a 3000 kg/m³ block)
     const fx = tw + (w - tw) / 2, fyc = h * 0.5, Lm = h * 0.33, k = Lm / Math.max(W, B, N + T, 2), bh = 8; // arrows ∝ force, largest one full length
     c.fillStyle = ink; c.textAlign = 'center'; c.font = '600 12px FN Greek,-apple-system,sans-serif'; c.fillText('forces on the block', fx, 14);
     c.font = '11px FN Greek,-apple-system,sans-serif';
     c.fillStyle = cssv('--es'); c.fillRect(fx - bh, fyc - bh, 2 * bh, 2 * bh);
-    const lbl = (txt, x, y, al, col) => { c.fillStyle = col; c.textAlign = al; c.fillText(txt, x, y); };
+    const lbl = (txt, x, y, al, col) => { c.fillStyle = col; c.textAlign = al; fillSub(c, txt, x, y); };
     const fN = q => q.toPrecision(3) + ' N';
     vectorsArrow(c, fx, fyc + bh, fx, fyc + bh + W * k, ink, 2.4, 9); lbl('W ' + fN(W), fx + 6, fyc + bh + W * k - 2, 'left', ink);
-    if (B > 1e-6) { vectorsArrow(c, fx - 5, fyc - bh, fx - 5, fyc - bh - B * k, cssv('--mg'), 2.4, 9); lbl('B ' + fN(B), fx - 11, fyc - bh - B * k + 9, 'right', cssv('--mg')); }
+    if (B > 1e-6) { vectorsArrow(c, fx - 5, fyc - bh, fx - 5, fyc - bh - B * k, cssv('--mg'), 2.4, 9); lbl('F_B ' + fN(B), fx - 11, fyc - bh - B * k + 9, 'right', cssv('--mg')); }
     const up2 = N > 1e-6 ? ['N', N, cssv('--ci')] : T > 1e-6 ? ['T', T, cssv('--wv')] : null;
     if (up2) { vectorsArrow(c, fx + 5, fyc - bh, fx + 5, fyc - bh - up2[1] * k, up2[2], 2.4, 9); lbl(up2[0] + ' ' + fN(up2[1]), fx + 11, fyc - bh - up2[1] * k + 9, 'left', up2[2]); }
     c.fillStyle = muted; c.textAlign = 'center';
     c.fillText(atRest || held ? 'net force 0' : 'net force ' + fN(net) + ' up', fx, h - 8);
     const pct = (100 * d / s).toFixed(0);
-    out.textContent = held && !onFloor ? `being lowered on a string · ${pct}% submerged · tension T = W − B = ${fN(T)}`
-      : !atRest ? `released: buoyancy exceeds weight, so it rises until B = W`
-      : rb < rf ? `floats with ${pct}% submerged (= ρ_block / ρ_fluid) · W = B = ${fN(W)} · fluid level rose ${(1000 * (surf - Hf0)).toFixed(1)} mm`
-      : rb === rf ? `neutrally buoyant (ρ_block = ρ_fluid): once under, B = W at any depth, so it stays wherever it is let go · lowered to the bottom here, so N = 0`
-      : `sinks and rests on the bottom · W = ${fN(W)}, B = ρ_fluid·V·g = ${fN(B)} · apparent weight = normal force N = W − B = ${fN(N)}`;
+    const FB = 'F<sub>B</sub>', ro = 'ρ<sub>o</sub>', rf_ = 'ρ<sub>f</sub>';
+    out.innerHTML = held && !onFloor ? `being lowered on a string · ${pct}% submerged · tension T = W − ${FB} = ${fN(T)}`
+      : !atRest ? `released: ${FB} exceeds W, so it rises until ${FB} = W`
+      : rb < rf ? `floats with ${pct}% submerged (V<sub>sub</sub>/V = ${ro}/${rf_}) · W = ${FB} = ${fN(W)} · fluid level rose ${(1000 * (surf - Hf0)).toFixed(1)} mm`
+      : rb === rf ? `neutrally buoyant (${ro} = ${rf_}): once under, ${FB} = W at any depth, so it stays wherever it is let go · lowered to the bottom here, so N = 0`
+      : `sinks and rests on the bottom · W = ${fN(W)}, ${FB} = ${rf_}Vg = ${fN(B)} · apparent weight W<sub>app</sub> = W − ${FB} = ${fN(N)} (the normal force N from the bottom)`;
   });
   go();
 }
@@ -1906,15 +1934,15 @@ function simVectors(el) {
   const cv = $('canvas', el), bar = $('.simbar', el);
   const P = { A: [3, 1], B: [1, 2.5] };
   let U = 30, ox = 0, oy = 0, redraw = () => {};
-  const diff = document.createElement('label'); diff.innerHTML = '<input type="checkbox"> show A − B'; diff.querySelector('input').onchange = () => redraw();
-  const comp = document.createElement('label'); comp.innerHTML = '<input type="checkbox"> components'; comp.querySelector('input').onchange = () => redraw();
+  const diff = document.createElement('label'); diff.innerHTML = '<input type="checkbox"> Show A − B'; diff.querySelector('input').onchange = () => redraw();
+  const comp = document.createElement('label'); comp.innerHTML = '<input type="checkbox"> Show components'; comp.querySelector('input').onchange = () => redraw();
   const rs = document.createElement('button'); rs.textContent = 'Reset'; rs.onclick = () => { P.A = [3, 1]; P.B = [1, 2.5]; redraw(); };
   const hint = document.createElement('span'); hint.className = 'hint'; hint.style.margin = '0'; hint.textContent = 'Drag the tips of A and B.';
   const o1 = readout(), o2 = readout(), o3 = readout(); [o1, o2, o3].forEach(o => o.style.flexBasis = '100%');
   bar.append(diff, comp, rs, hint, o1, o2, o3);
-  const mag = v => Math.hypot(v[0], v[1]), ang = v => (Math.atan2(v[1], v[0]) * 180 / Math.PI).toFixed(1) + '°', f1 = q => (Math.abs(q) < 0.05 ? 0 : q).toFixed(1).replace('-', '−'), f2 = q => (Math.abs(q) < 0.005 ? 0 : q).toFixed(2).replace('-', '−');
+  const mag = v => Math.hypot(v[0], v[1]), ang = v => neg((Math.atan2(v[1], v[0]) * 180 / Math.PI).toFixed(1)) + '°', f1 = q => (Math.abs(q) < 0.05 ? 0 : q).toFixed(1).replace('-', '−'), f2 = q => (Math.abs(q) < 0.005 ? 0 : q).toFixed(2).replace('-', '−');
   const vs = (n, v) => `${n} = (${f1(v[0])}, ${f1(v[1])})  |${n}| = ${f2(mag(v))} at ${ang(v)}`;
-  redraw = setupCanvas(cv, 0.6, (c, w, h) => {
+  redraw = setupCanvas(cv, el.clientWidth < 520 ? 0.85 : 0.6, (c, w, h) => {
     c.clearRect(0, 0, w, h);
     U = h / 10; ox = w / 2; oy = h / 2;
     const X = q => ox + q * U, Y = q => oy - q * U, nx = Math.floor(w / 2 / U), line = cssv('--line'), muted = cssv('--muted');
@@ -1947,7 +1975,8 @@ function simVectors(el) {
     o1.textContent = vs('A', A) + '  ·  ' + vs('B', B);
     o2.textContent = vs('A+B', S) + (showD ? '  ·  ' + vs('A−B', D) : '');
     const dot = A[0] * B[0] + A[1] * B[1], cr = A[0] * B[1] - A[1] * B[0];
-    o3.textContent = `A·B = AxBx + AyBy = ${f2(dot)} · (A×B)z = AxBy − AyBx = ${f2(cr)} · angle from A to B ${(-da * 180 / Math.PI).toFixed(1)}°`;
+    const q = (a, b) => `A<sub>${a}</sub>B<sub>${b}</sub>`;
+    o3.innerHTML = `A·B = ${q('x', 'x')} + ${q('y', 'y')} = ${f2(dot)} · (A×B)<sub>z</sub> = ${q('x', 'y')} − ${q('y', 'x')} = ${f2(cr)} · angle from A to B ${neg((-da * 180 / Math.PI).toFixed(1))}°`;
   });
   let drag = null;
   const pt = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left - ox) / U, (oy - (e.clientY - r.top)) / U]; };
@@ -1978,8 +2007,12 @@ function simSnell(el) {
   const m1 = snellMedium('n₁ (top)', 1.00, () => redraw()), m2 = snellMedium('n₂ (bottom)', 1.50, () => redraw());
   const swap = document.createElement('button'); swap.textContent = 'Swap media';
   swap.onclick = () => { const a = m1.get(), b = m2.get(), i1 = m1.querySelector('input'), i2 = m2.querySelector('input'); i1.value = b; i2.value = a; i1.oninput(); i2.oninput(); };
+  const hint = document.createElement('span'); hint.className = 'hint'; hint.style.margin = '0'; hint.textContent = 'Or drag in the top half to aim the incoming ray.';
   const out = readout(); out.style.flexBasis = '100%';
-  bar.append(sa, m1, m2, swap, out);
+  bar.append(sa, m1, m2, swap, hint, out);
+  // each article's own example: air to water at 40° (Refraction); glass to air just under the critical angle (TIR)
+  const t0 = simTopic(); if (t0 === 'refraction' || t0 === 'tir') { const set = (w, v) => { const i = w.querySelector('input'); i.value = v; i.oninput(); };
+    if (t0 === 'refraction') set(m2, 1.33); else { set(m1, 1.50); set(m2, 1.00); } }
   redraw = setupCanvas(cv, el.clientWidth < 520 ? 0.72 : 0.56, (c, w, h) => {
     c.clearRect(0, 0, w, h);
     ox = w / 2; oy = h / 2;
@@ -1995,7 +2028,7 @@ function simSnell(el) {
     c.fillText(`n₁ = ${n1.toFixed(2)} ${m1.name()}`, 10, oy - 8); c.fillText(`n₂ = ${n2.toFixed(2)} ${m2.name()}`, 10, oy + 18);
     // critical angle
     if (n1 > n2) { const tc = Math.asin(n2 / n1), r0 = Math.min(oy, w / 2) * 0.9; c.strokeStyle = muted; c.setLineDash([2, 4]); c.beginPath(); c.moveTo(ox, oy); c.lineTo(ox - Math.sin(tc) * r0, oy - Math.cos(tc) * r0); c.stroke(); c.setLineDash([]);
-      c.fillStyle = muted; c.textAlign = 'right'; c.fillText('θc', ox - Math.sin(tc) * r0 - 3, oy - Math.cos(tc) * r0 + 4); }
+      c.fillStyle = muted; c.textAlign = 'right'; fillSub(c, 'θ_c', ox - Math.sin(tc) * r0 - 3, oy - Math.cos(tc) * r0 + 4); }
     const beam = (dx, dy, a, lw) => { const L = Lr, am = Math.min(oy, w / 2) * 0.55; c.globalAlpha = a;
       c.strokeStyle = ray; c.lineWidth = lw; c.beginPath(); c.moveTo(ox, oy); c.lineTo(ox + dx * L, oy + dy * L); c.stroke(); c.globalAlpha = 1; return am; };
     const head = (x, y, ang, a) => { c.globalAlpha = a; c.fillStyle = ray; c.save(); c.translate(x, y); c.rotate(ang); c.beginPath(); c.moveTo(6, 0); c.lineTo(-6, -5); c.lineTo(-6, 5); c.closePath(); c.fill(); c.restore(); c.globalAlpha = 1; };
@@ -2016,8 +2049,8 @@ function simSnell(el) {
     if (!tir && th2 > 0.02) arc(34, dn, dn - th2, 'θ₂ ' + (th2 * 180 / Math.PI).toFixed(1) + '°', ink);
     c.font = '600 13px FN Greek,-apple-system,sans-serif'; c.fillStyle = ink; c.textAlign = 'right';
     if (tir) c.fillText('total internal reflection', w - 10, oy + 40);
-    const crit = n1 > n2 ? ` · critical angle θc = sin⁻¹(n₂/n₁) = ${(Math.asin(n2 / n1) * 180 / Math.PI).toFixed(1)}°` : ' · no critical angle (n₁ ≤ n₂)';
-    out.textContent = tir ? `θ₁ = ${d1} > θc: (n₁/n₂)·sin θ₁ = ${sin2.toFixed(3)} > 1, so no refracted ray — 100% reflected${crit}`
+    const crit = n1 > n2 ? ` · critical angle θ<sub>c</sub> = sin⁻¹(n₂/n₁) = ${(Math.asin(n2 / n1) * 180 / Math.PI).toFixed(1)}°` : ' · no critical angle (n₁ ≤ n₂)';
+    out.innerHTML = tir ? `θ₁ = ${d1} > θ<sub>c</sub>: (n₁/n₂)·sin θ₁ = ${sin2.toFixed(3)} > 1, so no refracted ray — 100% reflected${crit}`
       : `n₁ sin θ₁ = n₂ sin θ₂ → θ₂ = ${(th2 * 180 / Math.PI).toFixed(1)}° · reflected ${(R * 100).toFixed(1)}% (Fresnel, unpolarised)${crit}`;
   });
   let drag = false;
@@ -2125,9 +2158,10 @@ function simSlits(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el);
   let redraw = () => {};
-  const sl = linSlider('Wavelength λ', 380, 750, 550, 5, 'nm', () => redraw()), sN = linSlider('Slits N', 1, 6, 2, 1, '', () => redraw());
+  // starts at the Double Slit example (633 nm red laser, d = 0.25 mm, L = 2.0 m); the Diffraction page starts with one slit
+  const sl = linSlider('Wavelength λ', 380, 750, 633, 1, 'nm', () => redraw()), sN = linSlider('Slits N', 1, 6, simTopic() === 'diffraction' ? 1 : 2, 1, '', () => redraw());
   const sd = linSlider('Separation d', 0.05, 1, 0.25, 0.01, 'mm', () => redraw()), sa = linSlider('Slit width a', 0.01, 0.2, 0.04, 0.01, 'mm', () => redraw());
-  const sL = linSlider('Distance L', 0.5, 5, 1, 0.1, 'm', () => redraw());
+  const sL = linSlider('Distance L', 0.5, 5, 2, 0.1, 'm', () => redraw());
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sl, sN, sd, sa, sL, out);
   redraw = setupCanvas(cv, slitsAspect(el, 0.5, 0.85), (c, w, h) => {
@@ -2215,8 +2249,8 @@ function simPhoto(el) {
     c.font = '12px FN Greek,-apple-system,sans-serif'; c.fillText('frequency f (10¹⁵ Hz)', (gp.l + gp.r) / 2, gp.b + 30);
     c.textAlign = 'right'; c.font = '11px FN Greek,-apple-system,sans-serif';
     [0, 5, 10].forEach(v => { c.fillText(v, gp.l - 6, GY(v) + 4); if (v) { c.strokeStyle = cssv('--line'); c.beginPath(); c.moveTo(gp.l + 1, GY(v)); c.lineTo(gp.r, GY(v)); c.stroke(); } });
-    c.save(); c.translate(gp.l - 30, (gp.t + gp.b) / 2); c.rotate(-Math.PI / 2); c.textAlign = 'center'; c.font = '12px FN Greek,-apple-system,sans-serif'; c.fillText('K_max (eV)', 0, 0); c.restore();
-    c.textAlign = 'left'; c.fillStyle = cssv('--ink'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.fillText('K_max = hf − φ  (slope = h)', gp.l + 8, gp.t - 10);
+    c.save(); c.translate(gp.l - 30, (gp.t + gp.b) / 2); c.rotate(-Math.PI / 2); c.textAlign = 'center'; c.font = '12px FN Greek,-apple-system,sans-serif'; fillSub(c, 'K_max (eV)', 0, 0); c.restore();
+    c.textAlign = 'left'; c.fillStyle = cssv('--ink'); c.font = '12px FN Greek,-apple-system,sans-serif'; fillSub(c, 'K_max = hf − φ  (slope = h)', gp.l + 8, gp.t - 10);
     METALS.forEach(([, p], i) => { if (i == sel.value) return; c.strokeStyle = cssv('--line'); c.lineWidth = 1.5; c.beginPath(); c.moveTo(GX(p / HEV / 1e15), gp.b); c.lineTo(GX(FM), GY(HEV * FM * 1e15 - p)); c.stroke(); });
     const f0 = phi / HEV / 1e15;
     c.strokeStyle = cssv('--muted'); c.lineWidth = 2.4; c.beginPath(); c.moveTo(GX(0), gp.b - 1); c.lineTo(GX(f0), gp.b - 1); c.stroke();
@@ -2225,8 +2259,8 @@ function simPhoto(el) {
     c.fillStyle = cssv('--ink'); c.textAlign = 'left'; c.fillText('f₀', GX(f0) + 4, gp.t + 14);
     c.fillStyle = cssv('--es'); c.beginPath(); c.arc(GX(f / 1e15), GY(Math.max(0, K)), 5, 0, 7); c.fill();
     const [fa, fb] = fmt(f, 'Hz');
-    out.textContent = `photon f = ${fa} ${fb}, E = hf = ${E.toFixed(2)} eV · threshold f₀ = φ/h (λ₀ = ${Math.round(HC / phi)} nm) · ` +
-      (K > 0 ? `K_max = hf − φ = ${K.toFixed(2)} eV · stopping voltage ${K.toFixed(2)} V` : 'hf < φ: no photoelectrons, whatever the intensity');
+    out.innerHTML = `photon f = ${fa} ${fb}, E = hf = ${E.toFixed(2)} eV · threshold f₀ = φ/h = ${fmt(phi / HEV, 'Hz').join(' ')} (λ₀ = ${Math.round(HC / phi)} nm) · ` +
+      (K > 0 ? `K<sub>max</sub> = hf − φ = ${K.toFixed(2)} eV · stopping potential V<sub>s</sub> = ${K.toFixed(2)} V` : 'hf &lt; φ: no photoelectrons, whatever the intensity');
   });
   sel.onchange = () => redraw();
   loop(dt => {
@@ -2295,8 +2329,8 @@ function simBlackbody(el) {
     // Wien peak
     const xp = X(lp); c.setLineDash([3, 4]); c.strokeStyle = cssv('--muted'); c.lineWidth = 1; c.beginPath(); c.moveTo(xp, yb); c.lineTo(xp, Yv(bpk)); c.stroke(); c.setLineDash([]);
     c.fillStyle = cssv('--ink'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center';
-    const lt = `λmax = ${lp >= 1000 ? slitsP(lp / 1000) + ' µm' : Math.round(lp) + ' nm'}`, ltw = c.measureText(lt).width;
-    c.fillText(lt, Math.min(w - pad.r - ltw / 2, Math.max(pad.l + ltw / 2 + 4, xp)), Yv(bpk) - 8);
+    const lv = lp >= 1000 ? slitsP(lp / 1000) + ' µm' : Math.round(lp) + ' nm', lt = 'λ_max = ' + lv, ltw = c.measureText('λmax = ' + lv).width;
+    fillSub(c, lt, Math.min(w - pad.r - ltw / 2, Math.max(pad.l + ltw / 2 + 4, xp)), Yv(bpk) - 8);
     // legend on the side away from the peak
     const right = xp < pad.l + pw / 2, lx = right ? w - pad.r - 132 : pad.l + 12, ly = pad.t + (w < 600 ? ph * .3 : 16);
     c.fillStyle = cssv('--bg'); c.globalAlpha = .85; c.fillRect(lx - 6, ly - 14, 132, 58); c.globalAlpha = 1;
@@ -2307,7 +2341,7 @@ function simBlackbody(el) {
     const glow = T >= 800;
     sw.style.background = glow ? slitsRGB(colour(T)) : 'transparent'; swl.firstChild.textContent = glow ? 'Glow colour' : 'Glow colour: none visible';
     sw.style.display = glow ? 'inline-block' : 'none';
-    out.textContent = `Wien: λmax = b/T = ${lt.slice(7)} (${vis}) · Stefan–Boltzmann: power per area σT⁴ = ${pa} ${pb}/m² (${sci(+((T / 5772) ** 4).toPrecision(3))} × the Sun's surface)`;
+    out.innerHTML = `Wien: λ<sub>max</sub> = b/T = ${lv} (${vis}) · Stefan–Boltzmann: power per area σT⁴ = ${pa} ${pb}/m² (${sci(+((T / 5772) ** 4).toPrecision(3))} × the Sun's surface)`;
   });
 }
 
@@ -2317,7 +2351,7 @@ function simBox(el) {
   const cv = $('canvas', el), bar = $('.simbar', el);
   const HP = 6.62607e-34, EV = 1.602177e-19, ME = 9.10938e-31, MP = 1.672622e-27, TD = 3; // TD: displayed slosh period (s)
   let proton = false, two = false, t = 0, stop = null, redraw = () => {};
-  const sn = linSlider('Level n', 1, 8, 1, 1, '', () => redraw()), sL = linSlider('Box length L', 0.1, 2, 1, 0.05, 'nm', () => redraw());
+  const sn = linSlider('Level n', 1, 8, 1, 1, '', () => redraw()), sL = linSlider('Box length L', 0.1, 2, 0.5, 0.05, 'nm', () => redraw()); // the article's example box
   const bm = slitsBtn('Particle: electron', () => { proton = !proton; bm.textContent = 'Particle: ' + (proton ? 'proton' : 'electron'); redraw(); });
   const bs = slitsBtn('Superpose n = 1 and 2', () => {
     two = !two; t = 0; bs.textContent = two ? 'Back to a single level' : 'Superpose n = 1 and 2'; sn.style.opacity = two ? .45 : 1;
@@ -2389,10 +2423,14 @@ function logicGate(c, type, x, y, W, H) { // draws a gate symbol; returns the ou
 function simLogic(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el);
+  // Boolean formulas as the article writes them; {…} is the part under a NOT bar
   const GATES = { AND: [(a, b) => a & b, 'Q = A · B', 'output is 1 only when both inputs are 1'], OR: [(a, b) => a | b, 'Q = A + B', 'output is 1 when at least one input is 1'],
-    NOT: [a => 1 - a, 'Q = NOT A', 'the output is the opposite of the input (B is not used)'], NAND: [(a, b) => 1 - (a & b), 'Q = NOT (A · B)', 'AND then NOT: 0 only when both inputs are 1'],
-    NOR: [(a, b) => 1 - (a | b), 'Q = NOT (A + B)', 'OR then NOT: 1 only when both inputs are 0'], XOR: [(a, b) => a ^ b, 'Q = A ⊕ B', 'exclusive OR: 1 when the inputs differ'],
-    XNOR: [(a, b) => 1 - (a ^ b), 'Q = NOT (A ⊕ B)', '1 when the inputs are the same'] };
+    NOT: [a => 1 - a, 'Q = {A}', 'the output is the opposite of the input (B is not used)'], NAND: [(a, b) => 1 - (a & b), 'Q = {A · B}', 'AND then NOT: 0 only when both inputs are 1'],
+    NOR: [(a, b) => 1 - (a | b), 'Q = {A + B}', 'OR then NOT: 1 only when both inputs are 0'], XOR: [(a, b) => a ^ b, 'Q = A ⊕ B', 'exclusive OR: 1 when the inputs differ'],
+    XNOR: [(a, b) => 1 - (a ^ b), 'Q = {A ⊕ B}', '1 when the inputs are the same'] };
+  const barHTML = f => f.replace(/\{(.*?)\}/, '<span style="text-decoration:overline">$1</span>');
+  const barText = (c, f, x, y) => { const [pre, mid = ''] = f.split(/[{}]/), w0 = c.measureText(pre).width, w1 = c.measureText(mid).width, x0 = x - (w0 + w1) / 2;
+    c.textAlign = 'left'; c.fillText(pre + mid, x0, y); if (mid) { c.strokeStyle = c.fillStyle; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x0 + w0, y - 12); c.lineTo(x0 + w0 + w1, y - 12); c.stroke(); } c.textAlign = 'center'; };
   let A = 1, B = 0, gate = 'AND', hits = [], redraw = () => {};
   const btns = [...Object.keys(GATES), 'Half adder'].map(g => slitsBtn(g, () => { gate = g; mark(); redraw(); }));
   const mark = () => btns.forEach(b => { const on = b.textContent === gate; b.style.borderColor = on ? cssv('--accent') : ''; b.style.fontWeight = on ? '600' : ''; });
@@ -2411,7 +2449,7 @@ function simLogic(el) {
       if (!dis) hits.push({ x: sx - 4, y: y - SW.h / 2 - 4, w: SW.w + 8, h: SW.h + 8, fn: set }); };
     const led = (x, y, v, lbl) => { c.save(); if (v) { c.shadowColor = ON; c.shadowBlur = 16; } c.beginPath(); c.arc(x, y, 13, 0, 7); c.fillStyle = v ? ON : cssv('--soft'); c.fill(); c.restore();
       c.strokeStyle = cssv('--line'); c.lineWidth = 1.5; c.beginPath(); c.arc(x, y, 13, 0, 7); c.stroke();
-      c.fillStyle = cssv('--ink'); c.font = '600 13px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText(`${lbl} = ${v}`, x, y + 31); };
+      c.fillStyle = cssv('--ink'); c.font = '600 13px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; fillSub(c, `${lbl} = ${v}`, x, y + 31); };
     const sxo = sx + SW.w, lx = C.x + C.w - 28;
     if (!ha) {
       const f = GATES[gate][0], q = notg ? f(A) : f(A, B), gh = Math.min(C.h * .3, 84), gw = gh * 1.2, gx = C.x + C.w * .52 - gw / 2, gy = C.y + C.h / 2 - gh / 2;
@@ -2421,8 +2459,8 @@ function simLogic(el) {
       const ox = logicGate(c, gate, gx, gy, gw, gh);
       wire([[ox, gy + gh / 2], [lx - 13, gy + gh / 2]], q); led(lx, gy + gh / 2, q, 'Q');
       c.fillStyle = cssv('--muted'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText(gate, gx + gw / 2, gy + gh + 18);
-      c.fillStyle = cssv('--ink'); c.font = '13px FN Greek,-apple-system,sans-serif'; c.fillText(GATES[gate][1], gx + gw / 2, gy + gh + 38);
-      out.textContent = `${gate}: ${GATES[gate][1]} — ${GATES[gate][2]}. Tap the switches or a truth-table row.`;
+      c.fillStyle = cssv('--ink'); c.font = '13px FN Greek,-apple-system,sans-serif'; barText(c, GATES[gate][1], gx + gw / 2, gy + gh + 38);
+      out.innerHTML = `${gate}: ${barHTML(GATES[gate][1])} — ${GATES[gate][2]}. Tap the switches or a truth-table row.`;
     } else {
       const S = A ^ B, K = A & B, gh = Math.min(C.h * .26, 64), gw = gh * 1.2, gx = C.x + C.w * .56 - gw / 2, g1 = C.y + C.h * .25 - gh / 2, g2 = C.y + C.h * .75 - gh / 2;
       const xa = sxo + 20, xb = sxo + 40, a1 = g1 + gh * .28, b1 = g1 + gh * .72, a2 = g2 + gh * .28, b2 = g2 + gh * .72; yA = a1; yB = b2;
@@ -2431,17 +2469,17 @@ function simLogic(el) {
       dot(xa, yA, A); dot(xb, yB, B);
       const o1 = logicGate(c, 'XOR', gx, g1, gw, gh), o2 = logicGate(c, 'AND', gx, g2, gw, gh);
       wire([[o1, g1 + gh / 2], [lx - 13, g1 + gh / 2]], S); wire([[o2, g2 + gh / 2], [lx - 13, g2 + gh / 2]], K);
-      led(lx, g1 + gh / 2, S, 'S'); led(lx, g2 + gh / 2, K, 'C');
+      led(lx, g1 + gh / 2, S, 'S'); led(lx, g2 + gh / 2, K, 'C_out');
       c.fillStyle = cssv('--muted'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText('XOR', gx + gw / 2, g1 + gh + 15); c.fillText('AND', gx + gw / 2, g2 + gh + 15);
-      out.textContent = `half adder: sum S = A ⊕ B, carry C = A · B. Here ${A} + ${B} = ${A + B}, written in binary as CS = ${K}${S}.`;
+      out.innerHTML = `half adder: sum S = A ⊕ B, carry C<sub>out</sub> = A · B. Here ${A} + ${B} = ${A + B}, written in binary as C<sub>out</sub>S = ${K}${S}.`;
     }
     sw('A', A, yA, false, () => A ^= 1); sw('B', B, yB, notg, () => B ^= 1);
     // truth table
-    const cols = ha ? ['A', 'B', 'S', 'C'] : notg ? ['A', 'Q'] : ['A', 'B', 'Q'], rows = notg ? [[0], [1]] : [[0, 0], [0, 1], [1, 0], [1, 1]];
+    const cols = ha ? ['A', 'B', 'S', 'C_out'] : notg ? ['A', 'Q'] : ['A', 'B', 'Q'], rows = notg ? [[0], [1]] : [[0, 0], [0, 1], [1, 0], [1, 1]];
     const tw = Math.min(T.w, cols.length * 56), rh = Math.min(30, T.h / (rows.length + 1)), tx = T.x + (T.w - tw) / 2, ty = T.y + (T.h - rh * (rows.length + 1)) / 2, cw = tw / cols.length;
     const val = r => ha ? [r[0] ^ r[1], r[0] & r[1]] : notg ? [1 - r[0]] : [GATES[gate][0](r[0], r[1])];
     c.font = '600 13px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillStyle = cssv('--muted');
-    cols.forEach((k, j) => c.fillText(k, tx + cw * (j + .5), ty + rh / 2 + 5));
+    cols.forEach((k, j) => fillSub(c, k, tx + cw * (j + .5), ty + rh / 2 + 5));
     c.strokeStyle = cssv('--line'); c.lineWidth = 1; c.beginPath(); c.moveTo(tx, ty + rh); c.lineTo(tx + tw, ty + rh); const nin = notg ? 1 : 2; c.moveTo(tx + cw * nin, ty + 4); c.lineTo(tx + cw * nin, ty + rh * (rows.length + 1) - 4); c.stroke();
     rows.forEach((r, i) => { const y = ty + rh * (i + 1), cur = notg ? r[0] === A : r[0] === A && r[1] === B, vals = [...r, ...val(r)];
       if (cur) { c.beginPath(); c.roundRect(tx + 1, y + 2, tw - 2, rh - 4, 6); c.fillStyle = cssv('--soft'); c.fill(); c.strokeStyle = cssv('--accent'); c.lineWidth = 1.5; c.stroke(); }
@@ -2465,10 +2503,10 @@ function simLevels(el) {
   [...ub, ...lb].forEach(b => b.style.padding = '5px 10px');
   const mark = () => { ub.forEach((b, i) => { const on = [2, 3, 4, 5, 6, Infinity][i] === up; b.style.borderColor = on ? cssv('--accent') : ''; b.style.fontWeight = on ? '600' : ''; });
     lb.forEach((b, i) => { const on = i + 1 === lo; b.style.borderColor = on ? cssv('--accent') : ''; b.style.fontWeight = on ? '600' : ''; }); };
-  const grp = (t, bs) => { const s = document.createElement('span'); s.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px'; const l = document.createElement('span'); l.textContent = t; l.style.marginRight = '4px'; s.append(l, ...bs); return s; };
+  const grp = (t, bs) => { const s = document.createElement('span'); s.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px'; const l = document.createElement('span'); l.innerHTML = t; l.style.marginRight = '4px'; s.append(l, ...bs); return s; };
   const out = readout(); out.style.flexBasis = '100%';
-  bar.append(grp('Upper n', ub), grp('Lower n', lb), out); mark();
-  const cname = l => l < 450 ? 'violet' : l < 495 ? 'blue' : l < 570 ? 'green' : l < 590 ? 'yellow' : l < 620 ? 'orange' : 'red';
+  bar.append(grp('Upper n<sub>i</sub>', ub), grp('Lower n<sub>f</sub>', lb), out); mark();
+  const cname = l => l < 450 ? 'violet' : l < 480 ? 'blue' : l < 500 ? 'blue-green' : l < 570 ? 'green' : l < 590 ? 'yellow' : l < 620 ? 'orange' : 'red';
   redraw = setupCanvas(cv, slitsAspect(el, 0.56, 1.0), (c, w, h) => {
     c.clearRect(0, 0, w, h);
     const stripH = 28, sy = h - stripH - 22, top = 8, yb = sy - 40, y0 = top + 44, Y = E => y0 + (yb - y0) * (-E / 13.6);
@@ -2476,14 +2514,14 @@ function simLevels(el) {
     G = { Y, lx1 };
     // continuum
     c.fillStyle = cssv('--soft'); c.fillRect(lx0 - 4, top, lx1 - lx0 + 8, y0 - top);
-    c.fillStyle = cssv('--muted'); c.font = '11px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText('continuum (ionised)', (lx0 + lx1) / 2, top + 18);
+    c.fillStyle = cssv('--muted'); c.font = '11px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center'; c.fillText(w < 600 ? 'continuum' : 'continuum (ionised)', (lx0 + lx1) / 2 + (w < 600 ? 8 : 0), top + 18);
     // levels with labels pushed apart where they crowd
     let prev = Infinity;
     LEV.forEach(n => { const y = Y(En(n)), ly = Math.min(y, prev - 13); prev = ly; const on = n === up || n === lo;
       c.strokeStyle = on ? cssv('--ink') : cssv('--muted'); c.lineWidth = on ? 2.6 : 1.3; c.setLineDash(n === Infinity ? [4, 3] : []); c.beginPath(); c.moveTo(lx0, y); c.lineTo(lx1, y); c.stroke(); c.setLineDash([]);
       if (ly < y - 1) { c.strokeStyle = cssv('--line'); c.lineWidth = 1; c.beginPath(); c.moveTo(lx0 - 6, ly - 4); c.lineTo(lx0, y); c.stroke(); }
       c.fillStyle = on ? cssv('--ink') : cssv('--muted'); c.font = (on ? '600 ' : '') + '11px FN Greek,-apple-system,sans-serif'; c.textAlign = 'right';
-      c.fillText(`n=${nm(n)}  ${n === Infinity ? '0' : En(n).toFixed(2)} eV`, lx0 - 8, ly); });
+      c.fillText(`n=${nm(n)}  ${n === Infinity ? '0' : neg(En(n).toFixed(2))} eV`, lx0 - 8, ly); });
     // transition arrow and photon
     const ya = Y(En(up)), yl = Y(En(lo)), xa = lx0 + (lx1 - lx0) * .42, dE = En(up) - En(lo), lam = HC / dE;
     c.strokeStyle = cssv('--es'); c.fillStyle = cssv('--es'); c.lineWidth = 2.4; c.beginPath(); c.moveTo(xa, ya); c.lineTo(xa, yl - 9); c.stroke();
@@ -2497,14 +2535,14 @@ function simLevels(el) {
     c.font = '12px FN Greek,-apple-system,sans-serif'; c.fillStyle = cssv('--muted'); c.fillText(`${SERIES[lo - 1]} · ${reg}`, pe, py + 22);
     // Balmer emission spectrum
     const SX = l => 14 + (w - 28) * (l - 380) / 370;
-    c.fillStyle = cssv('--muted'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'left'; c.fillText('Balmer emission lines (visible light from hydrogen)', 14, sy - 8);
+    c.fillStyle = cssv('--muted'); c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = 'left'; c.fillText('Balmer emission lines (visible light from hydrogen)', 14, sy - 13);
     c.fillStyle = '#000'; c.fillRect(14, sy, w - 28, stripH);
     [3, 4, 5, 6].forEach(n => { const l = HC / (En(n) - En(2)); c.fillStyle = slitsRGB(slitsWaveRGB(l, false)); c.fillRect(SX(l) - 1.5, sy, 3, stripH);
       if (lo === 2 && up === n) { c.fillStyle = cssv('--ink'); c.beginPath(); c.moveTo(SX(l), sy - 1); c.lineTo(SX(l) - 6, sy - 10); c.lineTo(SX(l) + 6, sy - 10); c.fill(); } });
     c.fillStyle = cssv('--muted'); c.font = '11px FN Greek,-apple-system,sans-serif'; c.textAlign = 'center';
     [400, 500, 600, 700].forEach(l => c.fillText(l + ' nm', SX(l), sy + stripH + 14));
     const greek = lo === 2 && up <= 6 ? ` (H${'αβγδ'[up - 3]})` : '';
-    out.textContent = `n = ${nm(up)} → ${lo}, ${SERIES[lo - 1]} series: ΔE = 13.6 (1/${lo}² − ${up === Infinity ? '0' : '1/' + up + '²'}) = ${dE.toFixed(2)} eV · λ = hc/ΔE = ${lam >= 1000 ? slitsP(lam / 1000) + ' µm' : lam.toFixed(1) + ' nm'} — ${vis ? 'visible, ' + reg + greek : reg}${up === Infinity ? ' (series limit)' : ''} · tap the diagram: next tap sets the ${pickUp ? 'upper' : 'lower'} level`;
+    out.textContent = `n = ${nm(up)} → ${lo}, ${SERIES[lo - 1]} series: ΔE = 13.6 eV × (1/${lo}² − ${up === Infinity ? '0' : '1/' + up + '²'}) = ${dE.toFixed(2)} eV · λ = hc/ΔE = ${lam >= 1000 ? slitsP(lam / 1000) + ' µm' : lam.toFixed(1) + ' nm'} — ${vis ? 'visible, ' + reg + greek : reg}${up === Infinity ? ' (series limit)' : ''} · tap the diagram: next tap sets the ${pickUp ? 'upper' : 'lower'} level`;
   });
   cv.onpointerdown = e => { if (!G) return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; if (x > G.lx1 + 20) return;
     let best = null, bd = 14; LEV.forEach(n => { const d = Math.abs(G.Y(En(n)) - y); if (d < bd) { bd = d; best = n; } });
