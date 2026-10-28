@@ -113,3 +113,11 @@ group. Each batch is drafted separately, then checked before it goes on the page
 | 12 | Compact Objects, Cosmology, Semiconductors | 7 |
 | 13 | Analog Circuits, Digital Logic | 7 |
 | 14 | Units & Numbers, Algebra & Graphs, Vectors, Calculus | 10 |
+
+## Units & conventions
+
+- **AC power is American.** Any reference to household power or the grid uses the US system:
+  120 V rms at 60 Hz (peak ≈ 170 V, ω ≈ 377 rad/s, full-wave ripple 120 Hz), 120/240 V split-phase
+  homes, 15–20 A breaker circuits, ~12 kV distribution, 345/500/765 kV transmission, 3600 rpm
+  two-pole generators. Say "outlet", "household power", "line voltage", not "socket" or "mains".
+  A short "(230 V, 50 Hz in Europe)" comparison is fine.
