@@ -1751,23 +1751,24 @@ function simSpring(el) {
 function simOrbit(el) {
   el.innerHTML = '<canvas></canvas><div class="simbar"></div>';
   const cv = $('canvas', el), bar = $('.simbar', el), GM = 4 * Math.PI ** 2; // AU, yr, one solar mass
-  let px, py, vx, vy, t, trail, done, stop = null, redraw = () => {};
+  let px, py, vx, vy, t, trail, done, stop = null, redraw = () => {}, onView = () => true;
   const sv = linSlider('Launch v / v_circ', 0.5, 1.5, 1.15, 0.01, '', () => reset());
   const rb = document.createElement('button'); rb.textContent = 'Restart'; rb.onclick = () => reset();
   const sw = document.createElement('label'); sw.innerHTML = '<input type="checkbox" checked> equal-area sweeps'; sw.querySelector('input').onchange = () => redraw();
   const out = readout(); out.style.flexBasis = '100%';
   bar.append(sv, rb, sw, out);
   const elems = () => { const f = sv.get(), f2 = f * f, e = Math.abs(f2 - 1), bound = f2 < 2, a = bound ? 1 / (2 - f2) : 1 / (f2 - 2);
-    return { f, e, bound, a, T: bound ? a ** 1.5 : Infinity, peri: f >= 1 ? 1 : a * (1 - e), apo: bound ? (f >= 1 ? a * (1 + e) : 1) : Infinity }; };
+    return { f, e, bound, a, wide: bound && a > 7, T: bound ? a ** 1.5 : Infinity, peri: f >= 1 ? 1 : a * (1 - e), apo: bound ? (f >= 1 ? a * (1 + e) : 1) : Infinity }; };
   const acc = (x, y) => { const r = Math.hypot(x, y), k = -GM / (r * r * r); return [k * x, k * y]; };
   const reset = () => { px = 1; py = 0; vx = 0; vy = sv.get() * 2 * Math.PI; t = 0; trail = [[px, py, 0]]; done = false; if (!stop) stop = loop(step); redraw(); };
   const step = dt => {
-    const E = elems(), rate = E.bound ? E.T / 6 : 0.6;
-    let budget = dt * rate;
-    while (budget > 1e-12) { // velocity Verlet with step ∝ r^1.5 (small near the star)
-      const r = Math.hypot(px, py), hs = Math.min(budget, 0.0015 * r ** 1.5);
+    // one orbit per ~6 s, but no faster than 2 yr/s on screen; near-escape orbits (too big to frame) fast-forward while the planet is out of view
+    const E = elems(), rate = E.bound ? Math.min(E.T / 6, 2) : 0.6, fast = E.wide ? E.T / 2 : rate;
+    let budget = dt; // real seconds
+    while (budget > 1e-9) { // velocity Verlet with step ∝ r^1.5 (small near the star)
+      const r = Math.hypot(px, py), rt = onView(px, py) ? rate : fast, hs = Math.min(budget * rt, 0.0015 * r ** 1.5);
       let [ax, ay] = acc(px, py); vx += ax * hs / 2; vy += ay * hs / 2; px += vx * hs; py += vy * hs;
-      [ax, ay] = acc(px, py); vx += ax * hs / 2; vy += ay * hs / 2; t += hs; budget -= hs; trail.push([px, py, t]);
+      [ax, ay] = acc(px, py); vx += ax * hs / 2; vy += ay * hs / 2; t += hs; budget -= hs / rt; trail.push([px, py, t]);
     }
     if (E.bound) { let i = 0; while (trail[i][2] < t - E.T) i++; if (i) trail.splice(0, i); }
     if (!E.bound && Math.hypot(px, py) > 9) { done = true; redraw(); stop(); stop = null; return; }
@@ -1783,6 +1784,7 @@ function simOrbit(el) {
       for (let i = 0; i <= 60; i++) { const nu = nmax * i / 60, r = pp / (1 + E.e * Math.cos(nu)); x0 = Math.min(x0, r * Math.cos(nu)); x1 = Math.max(x1, r * Math.cos(nu)); y1 = Math.max(y1, r * Math.sin(nu)); }
       cx = (x0 + x1) / 2; cy = y1 / 2; hw = (x1 - x0) / 2 + 0.3; hh = y1 / 2 + 0.3; }
     const S = Math.min(w / (2 * hw), (h - 70) / (2 * hh)), X = q => w / 2 + (q - cx) * S, Y = q => h / 2 - (q - cy) * S;
+    onView = (x, y) => { const xx = X(x), yy = Y(y); return xx > -20 && xx < w + 20 && yy > -20 && yy < h + 20; };
     // AU grid ticks along the x axis
     c.strokeStyle = cssv('--line'); c.lineWidth = 1; c.beginPath(); c.moveTo(0, Y(0)); c.lineTo(w, Y(0)); c.stroke();
     c.font = '11px FN Greek,-apple-system,sans-serif'; c.fillStyle = muted; c.textAlign = 'center';
@@ -1792,16 +1794,16 @@ function simOrbit(el) {
     if (E.bound && E.a <= 40) { c.strokeStyle = muted; c.setLineDash([4, 5]); c.beginPath(); c.ellipse(X(1 - E.a), Y(0), E.a * S, bmin * S, 0, 0, 7); c.stroke(); c.setLineDash([]); }
     // equal-area wedges: star → path over successive equal time intervals
     if (sw.querySelector('input').checked && trail.length > 1) {
-      const dT = E.bound ? E.T / 12 : 0.2, cols = [cssv('--es'), cssv('--mg')];
+      const dT = E.wide ? 0.5 : E.bound ? E.T / 12 : 0.2, cols = [cssv('--es'), cssv('--mg')];
       c.globalAlpha = .22; let k = 0;
       while (k < trail.length - 1) {
         const s = Math.floor(trail[k][2] / dT); c.beginPath(); c.moveTo(X(0), Y(0)); c.lineTo(X(trail[k][0]), Y(trail[k][1]));
         let j = k + 1; while (j < trail.length && Math.floor(trail[j][2] / dT) === s) { c.lineTo(X(trail[j][0]), Y(trail[j][1])); j++; }
         if (j < trail.length) c.lineTo(X(trail[j][0]), Y(trail[j][1]));
-        c.closePath(); c.fillStyle = cols[s % 2]; c.fill(); k = j;
+        c.closePath(); c.fillStyle = cols[s % 2]; if (!E.wide || onView(trail[k][0], trail[k][1])) c.fill(); k = j;
       }
       c.globalAlpha = 1;
-      c.fillStyle = muted; c.textAlign = 'left'; c.fillText(`each wedge: ${E.bound ? 'T/12 = ' + (E.T / 12).toPrecision(3) : dT} yr`, 8, h - 22); c.fillText('all wedges have equal area', 8, h - 8);
+      c.fillStyle = muted; c.textAlign = 'left'; c.fillText(`each wedge: ${E.bound && !E.wide ? 'T/12 = ' + (E.T / 12).toPrecision(3) : dT} yr`, 8, h - 22); c.fillText('all wedges have equal area', 8, h - 8);
     }
     c.strokeStyle = cssv('--mg'); c.lineWidth = 1.8; c.beginPath(); trail.forEach(([x, y], i) => i ? c.lineTo(X(x), Y(y)) : c.moveTo(X(x), Y(y))); c.stroke();
     // apsides
@@ -1811,6 +1813,15 @@ function simOrbit(el) {
     // star + planet
     c.fillStyle = cssv('--wv'); c.beginPath(); c.arc(X(0), Y(0), 8, 0, 7); c.fill();
     c.fillStyle = cssv('--mg'); c.beginPath(); c.arc(X(px), Y(py), 5, 0, 7); c.fill();
+    if (E.bound && !onView(px, py)) { // planet out of frame: arrow at the edge pointing to it
+      const sx = X(0), sy = Y(0), dx = X(px) - sx, dy = Y(py) - sy, m = 14,
+        k = Math.min(dx > 0 ? (w - m - sx) / dx : dx < 0 ? (m - sx) / dx : Infinity, dy > 0 ? (h - 40 - sy) / dy : dy < 0 ? (24 - sy) / dy : Infinity),
+        ex = sx + dx * k, ey = sy + dy * k, an = Math.atan2(dy, dx), lft = (E.T - t % E.T);
+      c.beginPath(); c.moveTo(ex + 8 * Math.cos(an), ey + 8 * Math.sin(an));
+      c.lineTo(ex + 8 * Math.cos(an + 2.4), ey + 8 * Math.sin(an + 2.4)); c.lineTo(ex + 8 * Math.cos(an - 2.4), ey + 8 * Math.sin(an - 2.4)); c.fill();
+      c.fillStyle = ink; c.font = '12px FN Greek,-apple-system,sans-serif'; c.textAlign = ex < w / 2 ? 'left' : 'right';
+      c.fillText(`off-screen, ${Math.hypot(px, py).toFixed(0)} AU out · back in ${lft.toFixed(0)} yr${w < 520 ? '' : ' (fast-forwarding)'}`, ex + (ex < w / 2 ? 14 : -14), Math.min(h - 46, Math.max(16, ey + 4)));
+    }
     if (done) { c.fillStyle = ink; c.textAlign = 'center'; c.font = '600 13px FN Greek,-apple-system,sans-serif'; c.fillText('escaped — it never comes back', w / 2, 20); }
     const p3 = q => q.toPrecision(3);
     out.textContent = E.bound
