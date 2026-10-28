@@ -954,7 +954,7 @@ K.fmtVolt=v=>{const a=Math.abs(v);return (a>=100?v.toFixed(1):a>=10?v.toFixed(2)
 /** meter error model: fixed bias ±2% plus drift */
 /** meter error model: a fixed calibration error of up to ±2% for the whole item, plus a little reading-to-reading jitter (last-digit flicker) */
 K.ohmDrift=()=>{const b=rnd(-0.02,0.02);return v=>!isFinite(v)?v:(v*(1+b+rnd(-0.0015,0.0015))+(v<5?rnd(0,0.02):0));};
-K.voltDrift=()=>{const b=rnd(-0.02,0.02);return v=>v*(1+b+rnd(-0.001,0.001))+rnd(-0.003,0.003);};
+K.voltDrift=ac=>{const b=rnd(-0.02,0.02);return v=>{const r=v*(1+b+rnd(-0.001,0.001))+rnd(-0.003,0.003);return ac?Math.abs(r):r;};};// an AC meter shows magnitudes, so its zero flicker never goes negative
 /** student-facing scoring rules for a probe-lab activity */
 K.scoreHow=(o={})=>{const N=o.count||10,P=o.points||10,f=o.free;
   if(f==null)return `<p><b>Scoring:</b> ${N} items, ${P} points each for a correct answer and 0 for a wrong one. Measurements are free, so take as many readings as you need. Your score is the percentage of the ${N*P} possible points.</p>`;
@@ -1000,7 +1000,7 @@ K.lab=function(root,s,spec){
     const it=spec.build(k);CC._last=it;
     const st={};(it.controls||[]).forEach(c=>st[c.id]=c.value);
     let pts=P,moves=0,graded=false;const pr={red:it.redFixed||null,black:it.blackFixed||null,active:it.redFixed?'black':'red'};
-    const drift=it.unit==='volt'?K.voltDrift():K.ohmDrift();
+    const drift=it.unit==='volt'?K.voltDrift(/AC/.test(it.meterLabel||spec.meterLabel||'')):K.ohmDrift();
     const fmt=it.unit==='volt'?K.fmtVolt:K.fmtOhm;
     const log=[];
     $('#kn',w).textContent=`${spec.itemWord||'Item'} ${k+1} of ${N}`;
@@ -1120,7 +1120,7 @@ K.bench=function(root,s,spec){
   let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
     const b=spec.newBoard();CC._last=b;const st={power:spec.powerControl?'ON':'OFF',part:null,broken:false,checked:false};
-    const drift=spec.unit==='volt'?K.voltDrift():K.ohmDrift();const fmt=spec.unit==='volt'?K.fmtVolt:K.fmtOhm;
+    const drift=spec.unit==='volt'?K.voltDrift(/AC/.test(spec.meterLabel||'')):K.ohmDrift();const fmt=spec.unit==='volt'?K.fmtVolt:K.fmtOhm;
     $('#bn',w).textContent=`PC board ${boards+1}`;
     const body=$('#bbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title)}</h2><div class="board-wrap" id="bsc"></div>
@@ -1221,7 +1221,7 @@ ts3:`<p>This PC board has a switch, a relay, a diode, a resistor and an inductor
 <h3>Testing each part</h3>
 <p><b>Switch</b>: near 0 Ω when ON, ∞ when OFF.</p>
 <p><b>Relay</b>: the coil and the contacts are tested separately. The coil should read close to its rated resistance. With the relay not energized (it can't be energized during an ohmmeter test), <b>normally open</b> contacts read ∞ and <b>normally closed</b> contacts read near 0 Ω. Contacts that read the opposite way are defective.</p>
-<p><b>Diode</b>: a diode conducts in one direction only, from anode to cathode. The banded end is the cathode. A silicon diode conducts only when its anode is about 0.6 to 0.7 V more positive than its cathode. On the ordinary Ohms setting the meter's test voltage is too low to turn the diode on, so a good diode reads ∞ both ways. The <b>Diode Test</b> setting uses a higher test voltage. A good diode then conducts when the meter's <b>+</b> lead is on the anode and <b>−</b> is on the cathode, and reads ∞ the other way. A shorted diode reads near 0 Ω both ways. An open diode reads ∞ both ways.</p>
+<p><b>Diode</b>: a diode conducts in one direction only, from anode to cathode. The banded end is the cathode. A silicon diode conducts only when its anode is about 0.6 to 0.7 V more positive than its cathode. On this meter's ordinary Ohms setting the test voltage is too low to turn the diode on, so a good diode reads ∞ both ways. The <b>Diode Test</b> setting uses a higher test voltage. A good diode then conducts when the meter's <b>+</b> lead is on the anode and <b>−</b> is on the cathode, and reads ∞ the other way. A shorted diode reads near 0 Ω both ways. An open diode reads ∞ both ways.</p>
 <p>The resistance of a conducting diode isn't a fixed value. It depends on the current: a few hundred ohms at a few milliamps, falling to a fraction of an ohm at several amps. This simulated meter shows that forward resistance in Diode Test mode. Many real meters show the forward voltage instead (about 0.5 to 0.7 V for a good silicon diode).</p>
 <p><b>Resistor</b>: within ±10% of its marked value.</p>
 <p><b>Inductor</b>: an inductor is a coil of insulated wire, and an ohmmeter reads the resistance of that wire. That can be a fraction of an ohm or thousands of ohms, depending on the number of turns and the wire size. Here it should be close to the listed value. ∞ means the winding is open.</p>
@@ -1319,6 +1319,9 @@ const tr=(pts)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="n
 const pad=(x,y)=>`<circle cx="${x}" cy="${y}" r="6" fill="#f7e9d8" stroke="#c9a27a"/>`;
 const swBody=(x,y,on)=>`<rect x="${x}" y="${y}" width="96" height="44" rx="4" fill="#b5402b" stroke="#6a2216"/><rect x="${x+38}" y="${y-18}" width="20" height="20" rx="3" fill="#555"/><rect x="${on?x+8:x+50}" y="${y+6}" width="38" height="18" rx="3" fill="#7a2416"/><text x="${x+24}" y="${y+19}" font-size="11" font-weight="800" fill="${on?'#fff':'#f0b0a0'}" text-anchor="middle">ON</text><text x="${x+72}" y="${y+19}" font-size="11" font-weight="800" fill="${on?'#f0b0a0':'#fff'}" text-anchor="middle">OFF</text>`;
 const PL=(x,y,t)=>D.text(x,y,t,{size:15,fill:'#fff',w:800});
+/* color bands for a marked E12 value with ±10% tolerance (silver), so a drawn resistor matches its listed value */
+const BANDC=['#111','#6d4c41','#c62828','#ef6c00','#fbc02d','#2e7d32','#1565c0','#7b1fa2','#8d8d8d','#f5f5f5'];
+const bandsFor=R=>{let e=Math.floor(Math.log10(R))-1,d=Math.round(R/Math.pow(10,e));if(d>=100){e++;d=Math.round(d/10);}if(d<10){e--;d*=10;}return [BANDC[Math.floor(d/10)],BANDC[d%10],e===-1?'#c9a227':e===-2?'#c0c0c0':BANDC[e],'#c0c0c0'];};
 const TS1_OPTS=['F1, Fuse Blown','L1, Lamp Defective','R1, Resistor Below Tolerance','R1, Resistor Above Tolerance','R1, Resistor Open','SW1, Switch Always Open','SW1, Switch Always Closed','Trace 2 Open','Trace 3 Open','No Defect'];
 const TS1_WHY=['Every path through the fuse (A–F with SW1 ON, B–F, C–F) reads ∞, but B–E and C–E are normal. The fuse is the only part those paths share.',
   'Every path to pad D reads ∞, but the same paths to pad E are normal. Only the lamp lies between E and D.',
@@ -1331,13 +1334,13 @@ const TS1_WHY=['Every path through the fuse (A–F with SW1 ON, B–F, C–F) re
   'Every path from pad B reads ∞, while A–F (SW1 ON) and C–F are normal.',
   'Every reading is normal: the switch works in both positions, the lamp is about 10 Ω, the fuse reads a fraction of an ohm and R1 is within ±10%.'];
 const P1={A:[40,150],B:[40,210],C:[40,270],D:[500,85],E:[500,150],F:[500,210]};
-function board1Svg(st){
+function board1Svg(st,Rm=1000){
   const on=st.sw==='ON';
   let g=tr([P1.A,[200,150]])+tr([[296,150],[500,150]])+tr([[296,150],[296,270]])+tr([P1.B,[296,210]])+tr([[296,210],[340,210]])+tr([[440,210],P1.F])+tr([P1.C,[90,270]])+tr([[200,270],[296,270]])+tr([[440,85],P1.D])+tr([[400,150],[400,110]]);
   g+=pad(200,150)+pad(296,150)+pad(90,270)+pad(200,270)+pad(340,210)+pad(440,210)+pad(400,150)+pad(440,85)+pad(296,210)+pad(296,270);
   g+=`<line x1="200" y1="150" x2="200" y2="114" stroke="#bbb" stroke-width="3"/><line x1="296" y1="150" x2="296" y2="114" stroke="#bbb" stroke-width="3"/>`+swBody(200,70,on)+D.text(250,58,'SW1',{fill:'#fff',size:12});
   g+=`<line x1="400" y1="110" x2="410" y2="70" stroke="#bbb" stroke-width="2"/><line x1="440" y1="85" x2="425" y2="70" stroke="#bbb" stroke-width="2"/><path d="M405,72 a16,20 0 1 1 26,0 l-4,10 h-18z" fill="#fffbe3" stroke="#bbb"/>`+D.text(370,64,'Lamp L1',{fill:'#fff',size:12});
-  g+=D.part('F',[340,210],[440,210],'F1',{labelFill:'#fff'})+D.part('Rc',[90,270],[200,270],'R1',{labelFill:'#fff',labelAbove:true});
+  g+=D.part('F',[340,210],[440,210],'F1',{labelFill:'#fff'})+D.part('Rc',[90,270],[200,270],'R1',{labelFill:'#fff',labelAbove:true,bands:bandsFor(Rm)});
   g+=D.text(120,140,'Trace 1',{fill:'#fff',size:12})+D.text(350,140,'Trace 2',{fill:'#fff',size:12})+D.text(150,200,'Trace 3',{fill:'#fff',size:12});
   ['A','B','C'].forEach(k=>g+=PL(P1[k][0]-2,P1[k][1]-14,k));['D','E','F'].forEach(k=>g+=PL(P1[k][0]+2,P1[k][1]-14,k));
   return PCB(540,300,g);
@@ -1357,7 +1360,7 @@ function board1Item(force){
     const rows=[['A','F'],['A','E'],['A','D']].map(([a,b])=>`<tr><td>${a}–${b}</td><td>${fo(meas(a,b,on))}</td><td>${fo(meas(a,b,off))}</td></tr>`).join('')+
       [['B','F'],['B','E'],['B','D'],['C','F'],['C','E'],['C','D']].map(([a,b])=>`<tr><td>${a}–${b}</td><td colspan="2">${fo(meas(a,b,on))}</td></tr>`).join('');
     return ['>Readings for this board (no meter error shown):',`><table class="t small"><thead><tr><th>Probes</th><th>SW1 ON</th><th>SW1 OFF</th></tr></thead><tbody>${rows}</tbody></table>`,tolLine(Rm,meas('C','E',on)),`><b>${esc(f)}</b>: ${TS1_WHY[ans]}`];};
-  return {svg:board1Svg,pads,unit:'ohm',options:TS1_OPTS,answer:ans,controls:[{id:'sw',label:'SW1',options:['ON','OFF'],value:pick(['ON','OFF'])}],work,
+  return {svg:st=>board1Svg(st,Rm),pads,unit:'ohm',options:TS1_OPTS,answer:ans,controls:[{id:'sw',label:'SW1',options:['ON','OFF'],value:pick(['ON','OFF'])}],work,
     measure:meas,hint:'The red probe goes on pad A, B or C and the black probe on pad D, E or F. Tap a pad to move that probe. Use the ON and OFF buttons to operate the switch.',
     params:`<table class="t"><tr><td>R1 resistor</td><td><b>${CC.fmt(Rm)} Ω ± 10%</b></td></tr><tr><td>L1 lamp (cold)</td><td><b>10 Ω</b></td></tr><tr><td>F1 fuse</td><td>a fraction of an ohm</td></tr><tr><td>Traces</td><td>near 0 Ω</td></tr></table>`};
 }
@@ -1380,7 +1383,7 @@ function board3Svg(st){
   g+=[[170,150],[266,150],[90,210],[200,210],[90,270],[200,270],[340,270],[440,270],[360,90],[440,90],[360,150],[440,150],[300,210],[300,270]].map(p=>pad(p[0],p[1])).join('');
   g+=`<line x1="170" y1="150" x2="170" y2="114" stroke="#bbb" stroke-width="3"/><line x1="266" y1="150" x2="266" y2="114" stroke="#bbb" stroke-width="3"/>`+swBody(170,70,on)+D.text(218,58,'Switch',{fill:'#fff',size:12});
   g+=`<rect x="352" y="78" width="96" height="84" rx="6" fill="#1e1e1e" stroke="#000"/><path d="M372,98 h10 a4,4 0 0 1 8,0 a4,4 0 0 1 8,0 a4,4 0 0 1 8,0 a4,4 0 0 1 8,0 h10" fill="none" stroke="#ddd" stroke-width="1.5"/>`+D.text(400,124,'RELAY',{fill:'#eee',size:11})+`<path d="M372,145 h22 M406,145 h22 M394,139 v12 M406,139 v12 ${st.nc?'M390,153 L410,137':''}" fill="none" stroke="#ddd" stroke-width="1.5"/>`;
-  g+=D.part('D',[90,210],[200,210],'DIODE',{labelFill:'#fff',labelAbove:true,bandLeft:true})+D.part('Rc',[90,270],[200,270],'RESISTOR',{labelFill:'#fff'})+D.part('L',[340,270],[440,270],'INDUCTOR',{labelFill:'#fff'});
+  g+=D.part('D',[90,210],[200,210],'DIODE',{labelFill:'#fff',labelAbove:true,bandLeft:true})+D.part('Rc',[90,270],[200,270],'RESISTOR',{labelFill:'#fff',bands:bandsFor(st.Rm||1000)})+D.part('L',[340,270],[440,270],'INDUCTOR',{labelFill:'#fff'});
   ['A','B','C'].forEach(k=>g+=PL(P3[k][0]-2,P3[k][1]-14,k));['D','E','F'].forEach(k=>g+=PL(P3[k][0]+2,P3[k][1]-14,k));
   return PCB(540,310,g);
 }
@@ -1406,7 +1409,7 @@ function board3Item(force){
     if(isFinite(cf)&&!f.includes('Inductor'))steps.push(`R_1=R_{C\\text{-}F}-R_{L1}=${fmt(cf)}\\,\\Omega-${fmt(ind)}\\,\\Omega=${fmt(cf-ind)}\\,\\Omega`,`>A good R1 is between ${fmt(0.9*Rm)} Ω and ${fmt(1.1*Rm)} Ω (${fmt(Rm)} Ω ± 10%).`);
     else if(isFinite(cd)&&!f.includes('Coil'))steps.push(`R_1=R_{C\\text{-}D}-R_{coil}=${fmt(cd)}\\,\\Omega-${fmt(coil)}\\,\\Omega=${fmt(cd-coil)}\\,\\Omega`,`>A good R1 is between ${fmt(0.9*Rm)} Ω and ${fmt(1.1*Rm)} Ω (${fmt(Rm)} Ω ± 10%).`);
     steps.push(`><b>${esc(f)}</b>: ${TS3_WHY[ans]}`);return steps;};
-  return {svg:st=>board3Svg(Object.assign({nc},st)),pads,unit:'ohm',options:TS3_OPTS,answer:ans,work,
+  return {svg:st=>board3Svg(Object.assign({nc,Rm},st)),pads,unit:'ohm',options:TS3_OPTS,answer:ans,work,
     controls:[{id:'sw',label:'Switch',options:['ON','OFF'],value:pick(['ON','OFF'])},{id:'mode',label:'Meter',options:['Ohms','Diode Test'],value:'Ohms'},{id:'pol',label:'Switch polarity',options:['+ on red','+ on black'],value:'+ on red'}],
     measure,
     hint:'The red probe goes on pad A, B or C and the black probe on pad D, E or F. Use the Diode Test setting and the polarity switch to test the diode. The banded end of the diode is the cathode.',
@@ -1428,7 +1431,7 @@ function benchBoard(){
     g+=`<rect x="220" y="50" width="300" height="230" rx="8" fill="#1d7a3a" stroke="#0e4a22" stroke-width="3"/>`;
     g+=D.wire([[140,75],[200,75],[200,70],[240,70]],st.power==='ON'?'#e53935':'#777')+D.wire([[140,165],[180,165],[180,250],[240,250]],st.power==='ON'?'#222':'#777');
     g+=tr([[240,70],[300,70]])+tr([[440,70],[490,70],[490,130],[440,130]])+tr([[300,130],[255,130],[255,190],[300,190]])+tr([[440,190],[490,190],[490,250],[440,250]])+tr([[300,250],[240,250]])+pad(240,70)+pad(240,250);
-    parts.forEach((p,i)=>{g+=pad(300,ys[i])+pad(440,ys[i])+D.part(p.t,[300,ys[i]],[440,ys[i]],p.label,{labelFill:'#fff'});});
+    parts.forEach((p,i)=>{g+=pad(300,ys[i])+pad(440,ys[i])+D.part(p.t,[300,ys[i]],[440,ys[i]],p.label,{labelFill:'#fff',bands:p.t==='Rc'?bandsFor(p.id==='R1'?R1:R2):undefined});});
     g+=D.text(80,230,st.power==='ON'?'Power ON':'Power OFF',{fill:st.power==='ON'?'#e53935':'var(--ink2)',size:13});
     return D.svg(540,300,g);};
   return {svg,parts:parts.map((p,i)=>({id:p.id,label:p.label,x:285,y:ys[i]-22,w:170,h:44})),options:['F1','R1','R2','L1'],answer:ans,
