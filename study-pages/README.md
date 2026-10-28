@@ -29,6 +29,12 @@ root configures it: everything in `study-pages/` is served from the site root.
 - Pushes to other branches build a preview. Cloudflare runs `npx wrangler preview` for these, which
   needs the `previews` block in `wrangler.jsonc`.
 
+## Looks
+
+Field Notes and the hub page have four looks, picked in the Field Notes sidebar or under the hub's heading and remembered in this browser (`localStorage` key `fn-look`): **Blueprint** (the default; dark navy grid paper), **Oscilloscope** (phosphor green on black), **Swiss** (white, big type, one orange accent) and **Classic** (the original design, which keeps its light/dark toggle). `<html data-look="…">` selects one; each look redefines the colour and font tokens (`--bg`, `--ink`, `--accent`, `--f-head`, `--f-body`, `--f-mono`, …) and adds a few signature rules, so new CSS should use the tokens rather than fixed colours or fonts. The Circuits Challenge pages still use their own design.
+
 ## Fonts
 
 Every page embeds a small Greek-only subset of [STIX Two Text](https://github.com/stipub/stixfonts) (as "FN Greek" and, for italic Greek in equations, "FN Greek Math") so that Greek letters look the same in equations and in text on every device. STIX Two is licensed under the SIL Open Font License 1.1; see `FONT-LICENSE.txt`.
+
+The looks use Space Grotesk, IBM Plex Sans and Plex Mono, JetBrains Mono, Inter and Inter Tight, self-hosted as Latin-subset WOFF2 files in `fonts/` (from Google Fonts; all under the SIL Open Font License 1.1) and precached by the service worker for offline use.
