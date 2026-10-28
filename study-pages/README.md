@@ -19,6 +19,22 @@ The site can be installed as an app on phones and computers ("Add to Home Screen
 
 The service worker only runs over http(s), not when a page is opened straight from disk.
 
+## Sync across browsers (username + PIN)
+
+Optional. Each page still saves to `localStorage` as before; signing in also copies the synced keys to the server, so
+progress follows the reader to other browsers and devices. **It is deliberately not secure** (a 4–8 digit PIN, no
+email, no recovery), and the sign-in dialog says so.
+
+- `account.js` (loaded by `index.html`, Field Notes and every Challenge): the sign-in dialog and the merge. Synced
+  keys: `fn-progress` (per topic, newer `last` wins), `cc:<program>:grades` (union of records, newest 500) and
+  `cc:student` (last change wins). Deletions are kept as tombstones so an old copy elsewhere can't bring them back.
+  Pages call `Acct.touch(key)` after writing a synced key and redraw on the `acct-sync` event.
+- `../worker/index.js`: the API (`/api/login`, `/api/data`, `/api/logout`, `/api/delete`) on a D1 database bound as
+  `DB`. Five wrong PINs lock an account for 15 minutes. The database is created by the first deploy and the worker
+  creates its own tables, so there is nothing to set up by hand. Browse or delete accounts under
+  Storage & Databases → D1 → study-pages-db in the Cloudflare dashboard.
+- Pages opened straight from disk don't show the sync button and work as before.
+
 ## Deploying on Cloudflare
 
 The site is deployed by Cloudflare Workers Builds (project `study-pages`, live at

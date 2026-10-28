@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="account.js"></script>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/icon-180.png"><meta name="apple-mobile-web-app-title" content="Study Pages">
 <meta name="color-scheme" content="light dark">
 <title>AC Circuits Challenge</title>
@@ -280,8 +281,8 @@ const Cx=CC.Cx={
 /* ---------- storage (best effort) ---------- */
 const store={
   get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
-  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}},
-  del(k){try{localStorage.removeItem(k);}catch(e){}}
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){return false;}if(window.Acct)Acct.touch(k);return true;},
+  del(k){try{localStorage.removeItem(k);}catch(e){}if(window.Acct)Acct.touch(k);}
 };
 CC.store=store;
 
@@ -534,6 +535,9 @@ App.init=function(cfg){
   App.refreshWho();
   window.addEventListener('hashchange',App.route);
   App.route();
+  // another browser's grades or student name arrived (account.js): redraw, unless an exercise is running
+  addEventListener('acct-sync',e=>{const ch=e.detail.changed;if(!ch.includes(App.key('grades'))&&!ch.includes('cc:student'))return;
+    App.refreshWho();if(!App.running&&!/^#\/?(cert|validity)/.test(location.hash))App.route();});
 };
 App.refreshWho=function(){const s=App.student();$('#who span').textContent=s?s.name:'Sign in';};
 App.askStudent=function(force){
@@ -575,9 +579,10 @@ App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEa
 App.home=function(v){
   const c=App.cfg;
   v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
-    <div class="utils noprint"><a class="btn sm" href="#/manual">${IC.book.replace('<svg','<svg width="18" height="18"')} Manual</a><a class="btn sm" href="#/grades">Grade file</a><a class="btn sm" href="#/validity">Check validity</a><a class="btn sm" href="#/options">Options</a></div></div>
+    <div class="utils noprint"><a class="btn sm" href="#/manual">${IC.book.replace('<svg','<svg width="18" height="18"')} Manual</a><a class="btn sm" href="#/grades">Grade file</a><a class="btn sm" href="#/validity">Check validity</a><a class="btn sm" href="#/options">Options</a><span data-acct></span></div></div>
     <div id="heroSlot"></div></section>`));
   if(c.hero)c.hero($('#heroSlot',v));
+  if(window.Acct)Acct.mount($('[data-acct]',v));
   c.groups.forEach(g=>{
     v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
     const m=el('<div class="menu"></div>');
@@ -617,7 +622,7 @@ class Session{
     const st=App.student();
     const time=CC.fmtTime(this.elapsed());
     const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const rec={mid:this.m.id,title:this.m.title,score,time,date,name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    const rec={mid:this.m.id,title:this.m.title,score,time,date,ts:d.getTime(),name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
     if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
     App.last=rec;
     const pass=App.cfg.pass||80;
@@ -659,18 +664,18 @@ App.validityView=function(v){
 App.grades=function(v){
   const g=store.get(App.key('grades'),[]);
   const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
-  v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored only in this browser on this device.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
+  v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored in this browser${window.Acct&&Acct.user()?' and synced to the account <b>'+esc(Acct.user())+'</b>':'. Use <b>Sync across browsers</b> on the main menu to keep them in step on other browsers and devices'}.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
   <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
   $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
-  $('#gclr',v).onclick=async()=>{if(await CC.confirm('Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
+  $('#gclr',v).onclick=async()=>{if(await CC.confirm(window.Acct&&Acct.user()?'Delete every grade stored for this program, here and in the sync account?':'Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
 };
 App.manual=function(v){
   v.appendChild(el(`<div><h1>Manual</h1><div class="card intro-text">${App.cfg.manual||''}
   <h2>Using this offline edition</h2>
   <p>This page is a self-contained web version of the original Windows program. It needs no internet connection and runs in any modern browser on phones, tablets, Chromebooks, Macs and PCs. Copy the file to any device and open it.</p>
   ${App.cfg.numericAnswers===false?'':`<p>${App.cfg.tolNote||'Numeric answers are accepted within the tolerance stated on each exercise\'s intro page, so normal rounding is fine.'} Type plain numbers in the unit shown next to each answer box (for example <span class="kbd">4.7</span> in a box marked mA). In a box with a plain unit such as V, Ω or A you may also use an engineering suffix such as <span class="kbd">4.7k</span> or <span class="kbd">22m</span>.</p>`}
-  <p>Your name, ID and grade file are stored in this browser only. Use <b>Grade file</b> on the main menu to print or download them.</p></div></div>`));
+  <p>Your name, ID and grade file are stored in this browser. Use <b>Grade file</b> on the main menu to print or download them. To carry them to other browsers and devices, use <b>Sync across browsers</b> on the main menu and sign in with a username and PIN (this needs the online site, not a copied file).</p></div></div>`));
 };
 App.options=function(v){
   const o=App.opts();
