@@ -1237,7 +1237,7 @@ ts1:`<p>In this activity you move only the red probe. The black probe stays on t
 ac:`<p>This circuit has three heater elements (R1, R2 and R3) in series with a toggle switch, powered from a 120 V AC line (household line voltage). Set the meter to AC volts. The black probe stays on the neutral (white) conductor, and you move the red probe to the test points on the conduit. The colored wires run through the conduit to the test points, so a hidden short between two of them is possible.</p>
 <table class="t small"><thead><tr><th>Test point</th><th>Wire</th><th>Connected to</th></tr></thead><tbody>
 <tr><td>TP1</td><td>orange</td><td>hot side of the switch (the supply)</td></tr>
-<tr><td>TP3</td><td>green</td><td>load side of S1, top of R1</td></tr>
+<tr><td>TP3</td><td>red</td><td>load side of S1, top of R1</td></tr>
 <tr><td>TP4</td><td>purple</td><td>between R1 and R2</td></tr>
 <tr><td>TP2</td><td>blue</td><td>between R2 and R3</td></tr>
 <tr><td>TP5</td><td>bare copper</td><td>equipment ground, which reads about 0 V to neutral</td></tr></tbody></table>
@@ -1250,9 +1250,9 @@ ac:`<p>This circuit has three heater elements (R1, R2 and R3) in series with a t
 <p><b>No source voltage:</b> every test point reads 0 V, including TP1.</p>
 <p><b>S1 open (stuck off):</b> TP1 normal. TP3, TP4 and TP2 read 0 V whether S1 is ON or OFF.</p>
 <p><b>S1 shorted (stuck on):</b> normal voltages whether S1 is ON or OFF. The circuit can't be turned off, so test with S1 OFF!</p>
-<p><b>Green-to-purple short:</b> bypasses R1. TP3 and TP4 read full voltage, and R2 and R3 divide it: ${m('V_{TP2}=V_S\\frac{R_3}{R_2+R_3}')}.</p>
+<p><b>Red-to-purple short:</b> bypasses R1. TP3 and TP4 read full voltage, and R2 and R3 divide it: ${m('V_{TP2}=V_S\\frac{R_3}{R_2+R_3}')}.</p>
 <p><b>Purple-to-blue short:</b> bypasses R2. TP3 reads full voltage, and TP4 and TP2 read the same: ${m('V_{TP4}=V_{TP2}=V_S\\frac{R_3}{R_1+R_3}')}.</p>
-<p><b>Green-to-blue short:</b> bypasses R1 and R2. TP3, TP4 and TP2 all read full voltage, and only R3 carries current.</p>
+<p><b>Red-to-blue short:</b> bypasses R1 and R2. TP3, TP4 and TP2 all read full voltage, and only R3 carries current.</p>
 <p><b>Tip:</b> a divider calculation is just "this resistor's share": divide the resistance by the total resistance in the path, then multiply by the source voltage. Use the TP1 reading as ${m('V_S')}. The line voltage varies by about ±5%.</p>`,
 sp:`<p>This activity asks you to find shorted modules, open modules, a blown fuse or a weak battery in the circuit shown. Each module is a resistor (6 Ω) in parallel with a capacitor in one package. Modules fail open (open resistor) or shorted (shorted capacitor). The black probe stays on Battery −.</p>
 <p><b>The circuit:</b> M2 and M4 are in series, and that pair is in parallel with M3. The parallel group is in series with M1. With DC, the capacitors carry no current and have no effect.</p>
@@ -1368,9 +1368,9 @@ function modules3Item(force){
 }
 
 /* ---------------- AC heater circuit with conduit (TS3/4) ---------------- */
-// test points in conduit order: TP1 orange (hot), TP3 green (top of R1), TP4 purple (R1–R2), TP2 blue (R2–R3), TP5 bare copper (ground)
+// test points in conduit order: TP1 orange (hot), TP3 red (top of R1), TP4 purple (R1–R2), TP2 blue (R2–R3), TP5 bare copper (ground)
 const ACP={TP1:[480,70],TP3:[480,115],TP4:[480,160],TP2:[480,205],TP5:[480,250],N:[300,282]};
-const AC_OPTS=['R1 load open','R2 load open','No source voltage','S1 switch open','S1 switch shorted','Green to purple short','Purple to blue short','Green to blue short','Normal operation'];
+const AC_OPTS=['R1 load open','R2 load open','No source voltage','S1 switch open','S1 switch shorted','Red to purple short','Purple to blue short','Red to blue short','Normal operation'];
 function acSvg(st){
   const on=st.sw==='ON';
   let g=`<rect x="20" y="40" width="80" height="90" rx="8" fill="#e9e4dc"/><circle cx="60" cy="72" r="16" fill="none" stroke="#333" stroke-width="2"/><path d="M50,72 q5,-11 10,0 t10,0" fill="none" stroke="#333" stroke-width="2"/>`+D.text(60,112,'120 VAC',{fill:'#333',size:11});
@@ -1382,7 +1382,7 @@ function acSvg(st){
   g+=D.wire([[hx,262],[hx,282],[100,282],[100,120]],'#f2f2f2','White',[180,276,'#bbb']);
   g+=`<rect x="370" y="52" width="40" height="216" rx="14" fill="#8d9298" stroke="#555"/>`;
   g+=D.wire([[90,50],[90,30],[340,30],[340,70],ACP.TP1],'#ff8a1f','Orange',[440,62])
-    +D.wire([[hx,70],[300,70],[300,115],ACP.TP3],'#3cc24e','Green',[440,107])
+    +D.wire([[hx,70],[300,70],[300,115],ACP.TP3],'#e53935','Red',[440,107])
     +D.wire([[hx,140],[320,140],[320,160],ACP.TP4],'#c13fd1','Purple',[440,152])
     +D.wire([[hx,210],[330,210],[330,205],ACP.TP2],'#2f86ff','Blue',[440,197])
     +D.wire([[410,250],ACP.TP5],'#c8762f','Bare copper',[445,242]);
@@ -1406,26 +1406,26 @@ function acItem(force){
   const net=st=>{const on=st.sw==='ON';const sw=f==='S1 switch shorted'?0.01:(f==='S1 switch open'?Infinity:(on?0.01:Infinity));
     const E=[V('H','N0',Vs),R('N0','N',0.02),R('H','S',sw),R('S','P',f==='R1 load open'?Infinity:r1),R('P','Bl',f==='R2 load open'?Infinity:r2),R('Bl','N',r3),R('G','N',0.05),
       R('H','TP1',0.01),R('S','TP3',0.01),R('P','TP4',0.01),R('Bl','TP2',0.01),R('G','TP5',0.01)];
-    if(f==='Green to purple short')E.push(R('S','P',0.02));if(f==='Purple to blue short')E.push(R('P','Bl',0.02));if(f==='Green to blue short')E.push(R('S','Bl',0.02));
+    if(f==='Red to purple short')E.push(R('S','P',0.02));if(f==='Purple to blue short')E.push(R('P','Bl',0.02));if(f==='Red to blue short')E.push(R('S','Bl',0.02));
     return E;};
   const meas=(a,b,st)=>Math.abs(K.volts(net(st),a,b));
   const work=()=>{const on={sw:'ON'},off={sw:'OFF'};const vs=meas('TP1','N',on);
     const s=[NOERR,rtab(['Red probe on','S1 ON','S1 OFF'],['TP1','TP3','TP4','TP2','TP5'].map(k=>[k,fv(meas(k,'N',on)),fv(meas(k,'N',off))]))];
     const F=x=>fmt(x,3);
     if(f==='Normal operation'||f==='S1 switch shorted')s.push(`V_{TP2}=V_S\\frac{R_3}{R_1+R_2+R_3}=${F(vs)}\\,\\text{V}\\times\\frac{${fmt(r3)}}{${fmt(r1)}+${fmt(r2)}+${fmt(r3)}}=${F(vs*r3/(r1+r2+r3))}\\,\\text{V}`,`V_{TP4}=V_S\\frac{R_2+R_3}{R_1+R_2+R_3}=${F(vs)}\\,\\text{V}\\times\\frac{${fmt(r2+r3)}}{${fmt(r1+r2+r3)}}=${F(vs*(r2+r3)/(r1+r2+r3))}\\,\\text{V}`);
-    if(f==='Green to purple short')s.push(`V_{TP2}=V_S\\frac{R_3}{R_2+R_3}=${F(vs)}\\,\\text{V}\\times\\frac{${fmt(r3)}}{${fmt(r2)}+${fmt(r3)}}=${F(vs*r3/(r2+r3))}\\,\\text{V}`);
+    if(f==='Red to purple short')s.push(`V_{TP2}=V_S\\frac{R_3}{R_2+R_3}=${F(vs)}\\,\\text{V}\\times\\frac{${fmt(r3)}}{${fmt(r2)}+${fmt(r3)}}=${F(vs*r3/(r2+r3))}\\,\\text{V}`);
     if(f==='Purple to blue short')s.push(`V_{TP4}=V_{TP2}=V_S\\frac{R_3}{R_1+R_3}=${F(vs)}\\,\\text{V}\\times\\frac{${fmt(r3)}}{${fmt(r1)}+${fmt(r3)}}=${F(vs*r3/(r1+r3))}\\,\\text{V}`);
     s.push(`><b>${esc(f)}</b>: ${AC_WHY[ans]}`);return s;};
   return {svg:acSvg,pads:['TP1','TP2','TP3','TP4','TP5'].map(k=>({id:k,x:ACP[k][0],y:ACP[k][1],label:k})).concat([{id:'N',x:ACP.N[0],y:ACP.N[1],label:'Neutral'}]),blackFixed:'N',unit:'volt',meterLabel:'AC voltmeter',work,
     controls:[{id:'sw',label:'Toggle switch S1',options:['ON','OFF'],value:'ON'}],options:AC_OPTS,answer:ans,measure:meas,
     hint:'Tap TP1, TP2, TP3, TP4 or TP5 to move the red probe. The black probe stays on the neutral (white) conductor. Operating the switch is free.',
-    params:tbl([['AC source voltage','120 V ± 5%, 60 Hz'],['R1 heater load',fmt(r1)+' Ω'],['R2 heater load',fmt(r2)+' Ω'],['R3 heater load',fmt(r3)+' Ω'],['TP1','orange: hot side of S1'],['TP3','green: load side of S1 (top of R1)'],['TP4','purple: between R1 and R2'],['TP2','blue: between R2 and R3'],['TP5','bare copper: conduit / earth ground']])+`<div class="diagram mt">${acSchem()}</div>`};
+    params:tbl([['AC source voltage','120 V ± 5%, 60 Hz'],['R1 heater load',fmt(r1)+' Ω'],['R2 heater load',fmt(r2)+' Ω'],['R3 heater load',fmt(r3)+' Ω'],['TP1','orange: hot side of S1'],['TP3','red: load side of S1 (top of R1)'],['TP4','purple: between R1 and R2'],['TP2','blue: between R2 and R3'],['TP5','bare copper: conduit / earth ground']])+`<div class="diagram mt">${acSchem()}</div>`};
 }
 function acSchem(){
   const S=CC.svg;const t=(x,y,str,o='start')=>`<text x="${x}" y="${y}" font-size="11" stroke="none" fill="currentColor" text-anchor="${o}">${str}</text>`;
   let g=S.line([[40,30],[40,95]])+S.vSym('ac',40,125,'120 VAC',{side:'left'})+S.line([[40,155],[40,235],[230,235],[230,225]])+S.line([[40,30],[120,30]])+S.hSym('SW',150,30,'S1')+S.line([[180,30],[230,30],[230,45]]);
   g+=S.vSym('R',230,75,'R1')+S.vSym('R',230,135,'R2')+S.vSym('R',230,195,'R3');
-  g+=S.dot(90,30)+t(90,18,'TP1','middle')+S.dot(230,40)+t(252,44,'TP3 (green)')+S.dot(230,105)+t(252,109,'TP4 (purple)')+S.dot(230,165)+t(252,169,'TP2 (blue)')+t(135,250,'neutral (black probe)','middle');
+  g+=S.dot(90,30)+t(90,18,'TP1','middle')+S.dot(230,40)+t(252,44,'TP3 (red)')+S.dot(230,105)+t(252,109,'TP4 (purple)')+S.dot(230,165)+t(252,169,'TP2 (blue)')+t(135,250,'neutral (black probe)','middle');
   return S.wrap(400,262,`<g transform="translate(56,0)">${g}</g>`);
 }
 /* ---------------- series-parallel (TS5/6) ---------------- */

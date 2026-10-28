@@ -1467,10 +1467,12 @@ function ffStateItem(type){
   // Both S and R active is only asked for active-low parts (7474/7476), whose data sheets define the result: Q = Q̄ = 1.
   const r=Math.random();let S=idle,R=idle;if(r<0.12&&o.srLow){S=active;R=active;}else if(r<0.25)S=active;else if(r<0.38)R=active;
   const st={S,R,D:ri(0,1),J:ri(0,1),K:ri(0,1),Q:ri(0,1)};
+  // an active S or R acts at once, so the outputs shown before the clock edge already obey it
+  const both=S===active&&R===active;if(both||S===active)st.Q=1;else if(R===active)st.Q=0;
   const goodEdge=Math.random()<0.75;const rising=o.negEdge?!goodEdge:goodEdge;
   st.Cp=rising?1:0;const res=DK.ffNext(o,st,rising?0:1);
   const ansIdx=res.invalid?2:res.Q?0:1;
-  const v={S,R,Q:st.Q,NQ:1-st.Q};if(type==='D')v.D=st.D;else{v.J=st.J;v.K=st.K;}
+  const v={S,R,Q:st.Q,NQ:both?1:1-st.Q};if(type==='D')v.D=st.D;else{v.J=st.J;v.K=st.K;}
   const fig=DK.ffSVG({type,srLow:o.srLow,negEdge:o.negEdge,v});
   const opts=shuffle([0,1,2,3]);
   const lvl=o.srLow?'low':'high';const Sa=S===active,Ra=R===active;const edgeOK=o.negEdge?!rising:rising;
@@ -1481,7 +1483,7 @@ function ffStateItem(type){
   else if(!edgeOK)why=`S and R are inactive, so the clock is in control — but this clock is ${o.negEdge?'negative-edge (bubble on Cp)':'positive-edge (no bubble on Cp)'} triggered and the transition shown is ${rising?'low to high':'high to low'}. That is the wrong edge, so nothing changes: Q stays ${st.Q}.`;
   else if(type==='D')why=`S and R are inactive and Cp makes its active (${o.negEdge?'high-to-low':'low-to-high'}) transition, so Q takes the value of D: Q = ${st.D}.`;
   else why=`S and R are inactive and Cp makes its active (${o.negEdge?'high-to-low':'low-to-high'}) transition. J = ${st.J}, K = ${st.K}: ${st.J&&st.K?`toggle, so Q goes from ${st.Q} to ${1-st.Q}`:st.J?'set, so Q = 1':st.K?'reset, so Q = 0':`no change, so Q stays ${st.Q}`}.`;
-  return {title:'',prompt:`<p><b>The ${type==='D'?'D':'JK'} flip-flop below has the input states shown and Q is presently ${st.Q}. The clock input, Cp, goes from ${rising?'low to high (0 → 1)':'high to low (1 → 0)'}. What are the output states after the clock transition?</b></p><div class="diagram">${fig}</div><p class="small muted">S and R are active ${o.srLow?'low (small circles)':'high'}; the clock is ${o.negEdge?'negative-edge':'positive-edge'} triggered.</p>`,
+  return {title:'',prompt:`<p><b>The ${type==='D'?'D':'JK'} flip-flop below has the input states shown and ${both?`Q and ${MCH('\\overline{Q}')} are presently both 1`:`Q is presently ${st.Q}`}. The clock input, Cp, goes from ${rising?'low to high (0 → 1)':'high to low (1 → 0)'}. What are the output states after the clock transition?</b></p><div class="diagram">${fig}</div><p class="small muted">S and R are active ${o.srLow?'low (small circles)':'high'}; the clock is ${o.negEdge?'negative-edge':'positive-edge'} triggered.</p>`,
     fields:[{key:'q',label:'Output states',choices:opts.map(i=>FF4[i]),answer:opts.indexOf(ansIdx)}],
     explain:`<p class="small"><b>Correct answer:</b> ${FF4[ansIdx]}</p><p class="small">${why}</p><p class="small muted">Order of checks: (1) Are S or R active? They win. (2) Did Cp make its active edge? If not, nothing changes. (3) Only then apply ${type==='D'?'D':'J and K'}.</p>`};
 }
