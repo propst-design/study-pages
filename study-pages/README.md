@@ -21,13 +21,13 @@ The service worker only runs over http(s), not when a page is opened straight fr
 
 ## Deploying on Cloudflare
 
-The site is deployed by Cloudflare Workers Builds (project `study-pages`), connected to this repo.
-Every push to `main` redeploys the live site. Pushes to other branches upload a preview version.
-In the Worker's Settings → Builds there are two tabs with their own deploy command:
+The site is deployed by Cloudflare Workers Builds (project `study-pages`, live at
+https://study-pages.jacobt666.workers.dev), connected to this repo. `wrangler.jsonc` at the repo
+root configures it: everything in `study-pages/` is served from the site root.
 
-- **Production:** `npx wrangler deploy` (puts each push to `main` live).
-- **Previews Base:** `npx wrangler versions upload`. Do not use `npx wrangler preview`: it fails
-  without a `previews` block in a Wrangler config, and the repo has no Wrangler config.
+- Every push to `main` redeploys the live site (Production deploy command: `npx wrangler deploy`).
+- Pushes to other branches build a preview. Cloudflare runs `npx wrangler preview` for these, which
+  needs the `previews` block in `wrangler.jsonc`.
 
 ## Fonts
 
