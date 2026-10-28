@@ -957,6 +957,24 @@ table.tt tr.hl td{background:var(--warn-bg);font-weight:800}
 .prob .math-big,.card .math-big{-webkit-overflow-scrolling:touch}
 .sum-table{font-family:var(--mono);font-size:1.1rem;text-align:right;display:inline-block;line-height:1.6;background:var(--surface2);border-radius:10px;padding:8px 16px}
 .sum-table .rule{border-top:2px solid var(--ink)}
+table.km{border-collapse:collapse;margin:6px auto;font-family:var(--mono)}
+table.km th{font-weight:700;color:var(--ink2);padding:2px 6px;font-size:.85rem}
+table.km th.km-c{font-size:.72rem;white-space:nowrap}
+table.km td{border:1px solid var(--line);width:46px;height:42px;padding:0;text-align:center;background:var(--surface);position:relative}
+table.km td.g{background:var(--warn-bg)}
+table.km td.wrong{outline:3px solid var(--bad);outline-offset:-3px}
+table.km .km-n{position:absolute;top:1px;left:3px;font-size:.62rem;color:var(--ink2);line-height:1}
+.km-cell{display:block;width:100%;height:42px;border:0;background:transparent;cursor:pointer;font-family:var(--mono);font-weight:800;font-size:1.1rem;color:var(--ink2);opacity:.4}
+.km-cell[data-v="1"]{color:#d63b2f;opacity:1}
+.km-cell:disabled{cursor:default}
+.km-cell:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.km-fix{font-size:.7rem;color:var(--bad);margin-left:2px}
+.km-groups{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.km-groups figure{margin:0;background:var(--surface2);border-radius:10px;padding:8px;text-align:center}
+.km-groups figcaption{text-align:left;margin-top:4px}
+.km-ttw{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+table.km-tt{margin:0}table.km-tt th,table.km-tt td{padding:2px 8px}
+.km-prev{min-height:1.8em;margin-top:4px}
 `;
 const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 
@@ -1344,6 +1362,130 @@ function simpProblem(){
   }
 }
 
+/* ======================= Karnaugh maps ======================= */
+const GRAY=[0,1,3,2];
+// 3 variables: 2 rows (A) × 4 columns (BC); 4 variables: 4 rows (AB) × 4 columns (CD). Rows and columns run in Gray-code order.
+const kmGeo=n=>n===3?{rows:[0,1],rv:'A',cv:'BC',rb:1}:{rows:GRAY,rv:'AB',cv:'CD',rb:2};
+const kmCell=(n,r,c)=>(kmGeo(n).rows[r]<<2)|GRAY[c];
+function kmTable(n,cell,cls=''){
+  const g=kmGeo(n);
+  return `<table class="km ${cls}"><tr><th class="km-c">${g.rv}\\${g.cv}</th>${GRAY.map(c=>`<th>${DK.bin(c,2)}</th>`).join('')}</tr>${g.rows.map((rv,r)=>`<tr><th>${DK.bin(rv,g.rb)}</th>${GRAY.map((_,c)=>cell(kmCell(n,r,c))).join('')}</tr>`).join('')}</table>`;
+}
+// static map: minterm number in the corner, shaded cells for one group
+const kmStatic=(n,f,shade)=>kmTable(n,m=>`<td class="${shade&&shade[m]?'g':''}"><span class="km-n">${m}</span><b class="lv lv${f[m]}">${f[m]}</b></td>`);
+// exact minimum sum of products: fewest terms, then fewest letters (branch and bound over the prime implicants)
+function kmMin(f,vars){
+  const n=vars.length;const terms=[];
+  const rec=(i,cur)=>{if(i===n){terms.push(cur.slice());return;}rec(i+1,cur);for(const neg of [false,true]){cur.push({v:vars[i],neg});rec(i+1,cur);cur.pop();}};
+  rec(0,[]);
+  const imps=terms.map(t=>({t,c:DK.truth([t],vars)})).filter(x=>x.c.every((b,r)=>!b||f[r]));
+  const primes=imps.filter(a=>!imps.some(b=>b.t.length<a.t.length&&a.c.every((x,r)=>!x||b.c[r])));
+  const ones=f.map((b,r)=>b?r:-1).filter(r=>r>=0);
+  let best=[],bc=1e9;
+  const go=sel=>{const cost=sel.length*100+DK.lits(sel.map(x=>x.t));if(cost>=bc)return;
+    const r=ones.find(r=>!sel.some(x=>x.c[r]));
+    if(r===undefined){bc=cost;best=sel.slice();return;}
+    primes.forEach(p=>{if(p.c[r])go(sel.concat([p]));});};
+  if(ones.length)go([]);
+  return best.map(x=>x.t).sort((a,b)=>DK.truth([a],vars).indexOf(1)-DK.truth([b],vars).indexOf(1));
+}
+function kmFunc(n){
+  const vars=['A','B','C','D'].slice(0,n);
+  for(;;){
+    const e=[];const nt=ri(2,n===3?3:4);
+    for(let i=0;i<nt;i++){const nl=pick(n===3?[1,2,2,3]:[1,2,2,3,3]);e.push(shuffle(vars).slice(0,nl).sort().map(v=>({v,neg:Math.random()<0.5})));}
+    const f=DK.truth(e,vars);const ones=f.reduce((a,b)=>a+b,0);
+    if(ones<2||ones>(1<<n)-2)continue;
+    const min=kmMin(f,vars);
+    if(min.length<2||min.length>4||DK.lits(min)<3)continue;
+    return {n,vars,f,min};
+  }
+}
+// typed answers: A' (or ~A, !A) is NOT A, letters side by side are AND, + is OR
+function kmParse(s,vars){
+  s=String(s).toUpperCase().replace(/\s+/g,'').replace(/[’‘`′]/g,"'");
+  if(!s)return null;if(s==='1')return [[]];if(s==='0')return [];
+  const out=[];
+  for(const t of s.split('+')){
+    if(!t)return null;const lits=[];let i=0;
+    while(i<t.length){
+      if('·*.'.includes(t[i])){i++;continue;}
+      let neg=false;while(t[i]==='~'||t[i]==='!'){neg=!neg;i++;}
+      if(!vars.includes(t[i]))return null;const v=t[i++];
+      while(t[i]==="'"){neg=!neg;i++;}
+      lits.push({v,neg});}
+    if(!lits.length)return null;out.push(lits);}
+  return out;
+}
+function kmGroupText(p,t){
+  const cover=DK.truth([t],p.vars);const cells=cover.map((b,m)=>b?m:-1).filter(m=>m>=0);
+  const g=kmGeo(p.n);const pos=cells.map(m=>{const r=g.rows.indexOf(m>>2),c=GRAY.indexOf(m&3);return [r,c];});
+  const cs=new Set(pos.map(x=>x[1])),rs=new Set(pos.map(x=>x[0]));
+  const wrapC=cs.has(0)&&cs.has(3)&&cs.size<4,wrapR=p.n===4&&rs.has(0)&&rs.has(3)&&rs.size<4;
+  const wrap=wrapC&&wrapR?' It wraps around all four corners.':wrapC?' It wraps around the left and right edges.':wrapR?' It wraps around the top and bottom edges.':'';
+  const said=p.vars.map(v=>{const l=t.find(x=>x.v===v);return l?`${v} is always ${l.neg?0:1} (${MCH(l.neg?`\\overline{${v}}`:v)})`:`${v} changes, so it drops out`;});
+  return `${cells.length===1?'A single cell':`A group of ${cells.length} cells`} (${cells.map(m=>'m'+m).join(', ')}).${wrap} Inside it ${said.join('; ')}. Term: ${MCH(DK.termTex(t))}.`;
+}
+function kmWork(p){
+  const ones=p.f.map((b,m)=>b?m:-1).filter(m=>m>=0);
+  return `<details class="work"><summary>Show worked solution</summary>
+    <p class="small"><b>Step 1 — fill the map.</b> Each cell stands for one row of the truth table; the small number is the row (minterm) number. X = 1 in rows ${ones.join(', ')}. The rows and columns run 00, 01, 11, 10, so cells next to each other, including across the outside edges, differ in exactly one variable.</p>
+    ${kmStatic(p.n,p.f)}
+    <p class="small"><b>Step 2 — group the 1s.</b> Use the largest groups of 1, 2, 4 or 8 cells you can, and as few groups as possible. Groups may overlap.</p>
+    <div class="km-groups">${p.min.map(t=>`<figure>${kmStatic(p.n,p.f,DK.truth([t],p.vars))}<figcaption class="small">${kmGroupText(p,t)}</figcaption></figure>`).join('')}</div>
+    <p class="small"><b>Step 3 — add the terms.</b></p>${CC.M('X='+DK.sopTex(p.min))}
+    <p class="small muted">If you found different groups that give the same number of terms and letters, that answer is just as simple and is marked right.</p></details>`;
+}
+function kmTruth(p){
+  const N=1<<p.n,half=p.n===4?8:N;const tbl=(a,b)=>`<table class="tt km-tt"><tr>${p.vars.map(v=>`<th>${v}</th>`).join('')}<th>X</th></tr>${Array.from({length:b-a},(_,k)=>a+k).map(r=>`<tr>${p.vars.map((_,i)=>`<td>${(r>>(p.n-1-i))&1}</td>`).join('')}<td><b class="lv lv${p.f[r]}">${p.f[r]}</b></td></tr>`).join('')}</table>`;
+  return `<div class="km-ttw">${tbl(0,half)}${half<N?tbl(half,N):''}</div>`;
+}
+function kmapSet(root,s){
+  const probs=[3,3,3,3,4,4,4,4,4,4].map(kmFunc);CC._last=probs;
+  let i=0,score=0;
+  const w=CC.el(`<div><div class="statusbar"><span class="pill" id="kn"></span><span class="pill" id="ks">Score: 0</span><span class="pill" id="kt">0:00</span><span class="pill small">Map 5 points · expression 5 points</span></div><div class="progress"><i id="kb" style="width:0"></i></div><div id="kbody" class="mt"></div></div>`);
+  root.appendChild(w);
+  s.every(()=>{CC.$('#kt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  const show=()=>{
+    const p=probs[i];const vals=Array(1<<p.n).fill(0);
+    CC.$('#kn',w).textContent=`Problem ${i+1} of ${probs.length}`;CC.$('#kb',w).style.width=(i/probs.length*100)+'%';
+    const body=CC.$('#kbody',w);body.innerHTML='';
+    const card=CC.el(`<div class="card"><div class="cols2"><div><h2 style="margin-top:0">${p.n}-variable Karnaugh map</h2><p class="small muted">The truth table of X is shown below. Copy each 1 into the map, then group the 1s.</p>${kmTruth(p)}</div>
+      <div><div class="field"><label>Karnaugh map of X <span class="muted">(tap a cell to put a 1 in it; tap again to clear it)</span></label>${kmTable(p.n,m=>`<td><button class="km-cell" data-m="${m}" data-v="0" aria-label="map cell for row ${DK.bin(m,p.n)}">0</button></td>`,'km-ask')}</div>
+      <div class="field"><label for="kx">Simplest sum of products <span class="muted">(type A' for ${MCH('\\overline{A}')})</span></label><input id="kx" class="ask" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="for example AB' + C'D"><div class="small km-prev" id="kp" aria-live="polite"></div></div>
+      <div id="kfb"></div><div class="row end mt"><button class="btn primary" id="kg">Grade answers</button></div></div></div></div>`);
+    body.appendChild(card);
+    let graded=false;
+    CC.$$('.km-cell',card).forEach(b=>b.onclick=()=>{if(graded)return;const m=+b.dataset.m;vals[m]^=1;b.dataset.v=b.textContent=String(vals[m]);});
+    const inp=CC.$('#kx',card),prev=CC.$('#kp',card);
+    const upd=()=>{const e=kmParse(inp.value,p.vars);prev.innerHTML=!inp.value.trim()?'':e?CC.m('X='+DK.sopTex(e)):`<span class="muted">Use only ${p.vars.join(', ')}, ' and +.</span>`;};
+    inp.addEventListener('input',upd);inp.addEventListener('keydown',e=>{if(e.key==='Enter')CC.$('#kg',card).click();});
+    CC.$('#kg',card).onclick=async()=>{
+      const btn=CC.$('#kg',card);
+      if(graded){i++;if(i>=probs.length)return end();return show();}
+      const e=kmParse(inp.value,p.vars);
+      if(!e&&!(await CC.confirm(inp.value.trim()?'The expression can’t be read and will be graded as wrong. Grade now?':'The expression is blank and will be graded as wrong. Grade now?','Grade')))return;
+      graded=true;
+      const mapOK=vals.every((v,m)=>v===p.f[m]);
+      CC.$$('.km-cell',card).forEach(b=>{const m=+b.dataset.m;b.disabled=true;if(vals[m]!==p.f[m]){b.parentNode.classList.add('wrong');b.insertAdjacentHTML('beforeend',`<span class="km-fix">→${p.f[m]}</span>`);}});
+      const same=e&&DK.truth(e,p.vars).join('')===p.f.join('');
+      const simplest=same&&e.length===p.min.length&&DK.lits(e)===DK.lits(p.min);
+      inp.readOnly=true;inp.classList.add(simplest?'ok':'bad');
+      const got=(mapOK?5:0)+(simplest?5:0);score+=got;CC.$('#ks',w).textContent=`Score: ${score}`;
+      const exprMsg=simplest?'The expression is right.':same?`Your expression is equivalent but not the simplest: it has ${e.length} term${e.length>1?'s':''} and ${DK.lits(e)} letters, and the simplest has ${p.min.length} and ${DK.lits(p.min)}.`:e?'Your expression gives a different truth table.':'The expression is missing or can’t be read.';
+      CC.$('#kfb',card).innerHTML=`<p class="verdict ${got===10?'ok':'bad'}">${got===10?'Correct!':got?'Partly right':'Incorrect'} — ${got} of 10 points</p><p class="small">${mapOK?'The map is right.':'The map has errors: wrong cells are outlined in red and show the right value.'} ${exprMsg}${simplest?'':` A simplest answer is ${MCH('X='+DK.sopTex(p.min))}.`}</p>${kmWork(p)}`;
+      btn.textContent=i+1<probs.length?'Next problem':'Finish';btn.focus();
+    };
+  };
+  const end=()=>{CC.$('#kb',w).style.width='100%';s.finish(score,`${score} of 100 points.`);
+    const again=CC.el('<div class="card mt center"><p>Exercise finished.</p><div class="row" style="justify-content:center"><a class="btn" href="#/">Main menu</a><button class="btn primary">New problem set</button></div></div>');CC.$('button',again).onclick=()=>s.restart();CC.$('#kbody',w).appendChild(again);};
+  show();
+}
+function kmIntro(){// worked example: the four corners plus a pair
+  const p={n:4,vars:['A','B','C','D']};p.f=DK.truth([[L('B',1),L('D',1)],[L('B'),L('C'),L('D')]],p.vars);p.min=kmMin(p.f,p.vars);
+  return `<h3>Example</h3><div class="km-groups"><figure>${kmStatic(4,p.f)}<figcaption class="small">The map. The small numbers are the truth-table rows (minterms).</figcaption></figure>${p.min.map(t=>`<figure>${kmStatic(4,p.f,DK.truth([t],p.vars))}<figcaption class="small">${kmGroupText(p,t)}</figcaption></figure>`).join('')}</div><div class="formula mt">${M('X='+DK.sopTex(p.min))}</div>`;
+}
+
 /* ======================= Number conversions ======================= */
 const numField=(label,value,show)=>({key:'a',label,text:true,value,show:show||value,check:v=>DK.normNum(v)===DK.normNum(value)});
 const codeField=(label,value)=>({key:'a',label,text:true,value,show:value,check:v=>DK.normCode(v)===value});
@@ -1645,7 +1787,7 @@ const colValueTable=(digits,base,names)=>{const n=digits.length;let tot=0;const 
 const MCHOW=n=>`<p><b>Scoring:</b> ${n} multiple-choice items, 5 points each, graded one at a time. Each item has exactly one correct answer. After you grade an item the correct answer is highlighted, usually with a short explanation. Items and answer order are shuffled on every run.</p>`;
 CC.App.init({
   id:'digital',title:'Digital Challenge',tagline:'Interactive digital electronics · offline edition',
-  blurb:'Practice logic gates, truth tables, Boolean simplification, number systems, binary arithmetic, logic ICs, flip-flops, counters and breadboarding. Values are chosen at random, so every run is different.',
+  blurb:'Practice logic gates, truth tables, Boolean simplification, Karnaugh maps, number systems, binary arithmetic, logic ICs, flip-flops, counters and breadboarding. Values are chosen at random, so every run is different.',
   footer:'Based on Digital Challenge V5.0 © 2005 ETCAI Products. Offline HTML edition.',
   pass:80,hero:slot=>latchWidget(slot),
   manual:`<h2>About this program</h2>${TX.purpose}<h2>Using the program</h2>${TX.howto}`,
@@ -1672,6 +1814,9 @@ CC.App.init({
       {id:'simp',title:'Simplification',icon:'gate',sub:'10 Boolean reductions',intro:CC.introPage({text:`<p>A logic circuit is often more complicated than it needs to be: some terms are redundant and never change the output. A simpler but equivalent expression needs fewer gates, costs less and is faster. Boolean algebra and Karnaugh maps are the two most common simplification methods. Here is a Boolean algebra example:</p>`,
         extra:`<div class="formula">${M('X=ABC+AB\\overline{C}+\\overline{A}\\,\\overline{B}\\,\\overline{C}+\\overline{A}B\\overline{C}')}${M('X=AB(C+\\overline{C})+\\overline{A}\\,\\overline{C}(B+\\overline{B})')}${M('X=AB(1)+\\overline{A}\\,\\overline{C}(1)')}${M('X=AB+\\overline{A}\\,\\overline{C}')}</div><h3>Useful identities</h3><div class="formulas mt"><div class="formula">${M('A+\\overline{A}=1')}</div><div class="formula">${M('A\\cdot1=A')}</div><div class="formula">${M('A+A=A')}</div><div class="formula">${M('A+AB=A')}</div><div class="formula">${M('A+\\overline{A}B=A+B')}</div></div><p class="small muted">A sure-fire check: two expressions are equivalent only if they have exactly the same truth table. Simplest means the fewest product terms, then the fewest letters.</p>`,
         how:'<p>Ten expressions, one at a time. Choose the simplest expression that is equivalent to the one shown. Exactly one choice is equivalent; the others differ in at least one row of the truth table. <b>Scoring:</b> 10 points per correct choice (100 points total). After each item a worked solution shows the truth table rows and the grouping.</p>'}),run:(el,s)=>CC.problemSet(el,s,{count:10,gen:simpProblem})},
+      {id:'kmap',title:'Karnaugh Maps',icon:'gate',sub:'10 maps: fill, group, simplify',intro:CC.introPage({text:`<p>A Karnaugh map (K-map) is a truth table redrawn as a grid, so that simplifying becomes a matter of spotting groups. Each cell stands for one row of the truth table. A 3-variable map has 2 rows (A) and 4 columns (BC); a 4-variable map has 4 rows (AB) and 4 columns (CD).</p><p>The rows and columns are labelled <b>00, 01, 11, 10</b>, not in counting order. In this order (a Gray code) only one variable changes from one label to the next, and also from the last label back round to the first. So any two cells side by side differ in exactly one variable, and so do cells at opposite ends of a row or column: the map wraps around at its edges.</p><p><b>To simplify:</b></p><ol><li>Copy each 1 from the truth table into its cell. Leave the other cells 0.</li><li>Circle the 1s in rectangular groups of 1, 2, 4, 8 or 16 cells. Make each group as large as possible and use as few groups as possible. Groups may overlap and may wrap around the edges, and every 1 must be in at least one group.</li><li>Read one product term from each group. A variable that is 1 in every cell of the group appears as a plain letter, one that is 0 in every cell appears with a bar, and one that changes inside the group drops out.</li><li>Add (OR) the terms.</li></ol><p>A group of 2 removes one variable, a group of 4 removes two, a group of 8 removes three. That is the same as using ${MCH('A+\\overline{A}=1')} in Boolean algebra, done by eye.</p>`,
+        extra:kmIntro(),
+        how:'<p>Ten problems, one at a time: four 3-variable maps, then six 4-variable maps. For each one, copy the truth table into the map (tap a cell to put a 1 in it, tap again to clear it), then type the simplest sum-of-products expression and choose <b>Grade answers</b>.</p><p><b>Typing expressions:</b> write a bar as an apostrophe after the letter, so <span class="kbd">AB\'+C\'D</span> means '+MCH('A\\overline{B}+\\overline{C}D')+'. Spaces don’t matter. A preview under the box shows how your answer reads.</p><p><b>Scoring:</b> 5 points for a correct map and 5 for a simplest expression: 10 points per problem, 100 in all. An expression is marked right if it has the same truth table and as few terms and letters as possible, so any equally simple grouping counts. After each problem the correct map and a worked solution show every group.</p>'}),run:kmapSet},
     ]},
     {title:'Number systems',items:[
       {id:'conv1',title:'Number Conversions One',icon:'num',sub:'binary ⇄ octal ⇄ hex',intro:CC.introPage({text:`<p>Digital circuits work only in binary, and binary numbers get long: 8, 16 or 32 digits are common. To make them easier to read, write and talk about, people write them in octal (base 8) or hexadecimal (base 16, “hex”). Because 8 = 2<sup>3</sup> and 16 = 2<sup>4</sup>, each octal digit stands for exactly three bits and each hex digit for exactly four bits.</p><p><b>Binary to octal:</b> starting at the right-hand (least significant) end, split the bits into groups of three, then replace each group with one octal digit. <b>Binary to hex:</b> the same, with groups of four. To go back, replace each octal or hex digit with its 3-bit or 4-bit group.</p><p><b>Common mistake:</b> grouping from the left. Always start at the right; only the leftmost group may be short, and you pad it with leading zeros.</p>`,
