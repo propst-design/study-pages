@@ -2,12 +2,14 @@
 // Pages: network first, so a new deploy shows up on the next visit; the cached copy is used offline or
 // when the network takes more than 4 s. Everything else (icons, fonts): cache first.
 // Bump VERSION when adding or renaming a page so the precache list is fetched again.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'study-pages-' + VERSION;
 const PAGES = ['./', 'index.html', 'field-notes-physics.html', 'circuits.html',
   'AC_Circuits_Challenge.html', 'Basic_Circuits_Challenge.html', 'DC_Circuits_Challenge.html', 'Digital_Challenge.html',
   'Ohmmeter_Challenge.html', 'Op_Amp_Challenge.html', 'Power_Supply_Challenge.html', 'Solid_State_Challenge.html',
-  'Voltmeter_Challenge.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png'];
+  'Voltmeter_Challenge.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png',
+  'fonts/space-grotesk.woff2', 'fonts/plex-sans.woff2', 'fonts/plex-mono-400.woff2', 'fonts/plex-mono-500.woff2',
+  'fonts/jetbrains-mono.woff2', 'fonts/inter.woff2', 'fonts/inter-tight.woff2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PAGES)).then(() => self.skipWaiting()));

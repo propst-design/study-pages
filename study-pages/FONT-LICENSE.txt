@@ -1,3 +1,6 @@
+The STIX Two Greek subset embedded in every page, and the WOFF2 files in fonts/ (Space Grotesk, IBM Plex Sans, IBM Plex Mono,
+JetBrains Mono, Inter, Inter Tight), are each licensed under the SIL Open Font License, Version 1.1, reproduced below.
+
 Copyright 2001-2021 The STIX Fonts Project Authors (https://github.com/stipub/stixfonts) STIXTwoText-Italic[wght].ttf: Copyright 2001-2021 The STIX Fonts Project Authors (https://github.com/stipub/stixfonts)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

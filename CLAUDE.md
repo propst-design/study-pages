@@ -127,6 +127,15 @@ group. Each batch is drafted separately, then checked before it goes on the page
   `ctx.font` strings and SVG `font-family` attributes). Phi is always φ: write `\varphi` in TeX,
   never `\phi` (which renders as ϕ).
 
+## Looks
+
+- Field Notes and `index.html` have four looks (Blueprint default, Oscilloscope, Swiss, Classic) via
+  `<html data-look>`; see the README. Style new things with the tokens (`var(--ink)`, `var(--f-head)` …),
+  never fixed colours or font names, and check new pages or components in all four looks. The font
+  tokens all start with `FN Greek`, which keeps the Greek-font rule above.
+- `fixOverlines` (run from `route`) redraws KaTeX `\overline` as a top border, because Chrome can't
+  stretch the ‾ accent and shows a short dash instead.
+
 ## Phone layout
 
 - Display equations too wide for a 360px phone carry two copies inside the same `.katex` span:
