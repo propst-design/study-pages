@@ -982,12 +982,12 @@ PS.explain=function(c){
   const t=c.type,f=c.fault;const v=x=>fmt(x,3);
   const dc=id=>mean(c.wave(id)),ac=id=>acrms(c.wave(id)),rp=id=>pp(c.wave(id));
   const vp=c.vsec*Math.SQRT2,drop=t==='bridge'?1.4:0.7,fr=t==='half'?60:120;
-  const norm=`>In a working supply: secondary ${c.vsec} V rms${t==='full'?' each half':''} (${v(vp)} V peak), C1 charged to about ${v(vp-drop)} V peak with ${fr} Hz ripple, and DC OUT at +${c.vreg} V.`;
+  const norm=`>In a working supply: secondary ${c.vsec} V rms${t==='full'?' each half':''} (${v(vp)} V peak), C1 charged to about ${v(vp-drop)} V peak with ${fr} Hz ripple, and DC OUT at +${c.vreg} V.${t==='bridge'?` Measured to ground, S1 and S2 each read only about ${v(ac('S1'))} V AC, because the bridge clamps each end of the winding near ground on alternate half cycles.`:''}`;
   const bus=`C1 + reads ${v(dc('C1p'))} V DC with ${v(rp('C1p'))} V peak-to-peak ripple`;
   const L={
     'Switch':[`>The switch input (left lead) has the 120 V line voltage, but the right lead reads ${v(ac('SWb'))} V AC. The full line voltage appears across the switch, which a closed switch can't have, so S1 is open.`,'>Everything after the switch, including DC OUT, is dead.'],
     'Fuse':[`>The left end of the fuse has 120 V AC but the right end reads ${v(ac('F1b'))} V AC. A good fuse has no voltage across it, so F1 is open (blown).`],
-    'Transformer primary':[`>Line voltage reaches P1 (about 120 V AC), but the secondary (S1) reads ${v(ac('S1'))} V AC.`,'>That points to the transformer. The ohmmeter shows OL across the primary and a fraction of an ohm across the secondary: the primary winding is open.'],
+    'Transformer primary':[`>Line voltage reaches P1 (about 120 V AC), but the secondary (S1) reads ${v(ac('S1'))} V AC.`,'>That points to the transformer. The ohmmeter shows OL across the primary and about an ohm across the secondary: the primary winding is open.'],
     'Transformer secondary':[`>Line voltage reaches P1 (about 120 V AC), but the secondary (S1) reads ${v(ac('S1'))} V AC.`,'>That points to the transformer. The ohmmeter shows normal resistance on the primary but OL on the secondary: the secondary winding is open.'],
     'Capacitor C1':[`>${bus}. Without the filter capacitor the voltage drops to zero every half cycle (${fr} Hz pulses); the scope shows bare rectified half sines instead of a nearly flat line.`,`>The regulator drops out in the valleys, so DC OUT averages only ${v(dc('OUT'))} V instead of ${c.vreg} V. C1 is open.`],
     'Resistor R1':['>Every voltage looks normal: the bleeder resistor carries only a few milliamps, so losing it barely changes the ripple.','>When a supply works but you still have to find a fault, check the parts voltages can’t reveal. The ohmmeter reads OL on R1: the bleeder resistor is open (C1 would then stay charged after power-off, a safety hazard).'],
@@ -1075,7 +1075,7 @@ PS.scope=function(wave,st){
     const pts=wave.map((v,i)=>{let y=Hd/2-((v-m)/vd+st.pos)*div;y=Math.max(-2,Math.min(Hd+2,y));return (i/(N-1)*Wd).toFixed(1)+','+y.toFixed(1);}).join(' ');
     g+=`<polyline points="${pts}" fill="none" stroke="#7CFF9B" stroke-width="2.2"/>`;}
   const gl=st.gain<1?st.gain+' V':st.gain+' V';
-  g+=`<text x="6" y="14" font-size="11" fill="#9fd8ad" font-family="FN Greek,monospace">${gl}/div ${st.ac?'AC':'DC'}</text><text x="${Wd-6}" y="14" font-size="11" fill="#9fd8ad" text-anchor="end" font-family="FN Greek,monospace">5 mS/div</text>`;
+  g+=`<text x="6" y="14" font-size="11" fill="#9fd8ad" font-family="FN Greek,monospace">${gl}/div ${st.ac?'AC':'DC'}</text><text x="${Wd-6}" y="14" font-size="11" fill="#9fd8ad" text-anchor="end" font-family="FN Greek,monospace">5 ms/div</text>`;
   g+=`<text x="4" y="${Hd/2-st.pos*div+4}" font-size="12" fill="#ffd54f">▶</text>`;
   return `<svg viewBox="0 0 ${Wd} ${Hd}" role="img" aria-label="oscilloscope screen">${g}</svg>`;
 };
@@ -1203,7 +1203,7 @@ CC.App.init({
     {title:'Troubleshooting with oscilloscope',items:[mk('hws','half','scope'),mk('fws','full','scope'),mk('brs','bridge','scope')]},
     {title:'Troubleshooting with voltmeter',items:[mk('hwv','half','dmm'),mk('fwv','full','dmm'),mk('brv','bridge','dmm')]},
     {title:'Practice',items:[{id:'prac',title:'Measurement Practice with No Circuit Faults',icon:'meter',sub:'half-wave, full-wave or bridge; voltmeter or scope',graded:false,
-      intro:CC.introPage({text:'<p>Practice measurements on working supplies before you troubleshoot. Choose half-wave, full-wave or bridge and the voltmeter or oscilloscope at the top of the page; each choice builds a new supply with new values. Nothing is scored, so measure as much as you like and compare your readings with the formulas below.</p>'+theory('bridge')}),
+      intro:CC.introPage({text:'<p>Practice measurements on working supplies before you troubleshoot. Choose half-wave, full-wave or bridge and the voltmeter or oscilloscope at the top of the page; each choice builds a new supply with new values. Nothing is scored, so measure as much as you like and compare your readings with the formulas below. They are written for the bridge; for half-wave and full-wave supplies use one diode drop (0.7 V), and use 60 Hz ripple for half-wave.</p>'+theory('bridge')}),
       run:(el,s)=>P.run(el,s,{type:'bridge',inst:'scope',practice:true})}]}
   ]
 });
