@@ -1,8 +1,8 @@
 // Offline support for the installed app (PWA).
 // Pages: network first, so a new deploy shows up on the next visit; the cached copy is used offline or
-// when the network takes more than 4 s. Everything else (icons, fonts): cache first.
+// when the network takes more than 4 s; if a newer copy then arrives, the page shows a "New version" bar. Everything else (icons, fonts): cache first.
 // Bump VERSION when adding or renaming a page so the precache list is fetched again.
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = 'study-pages-' + VERSION;
 const PAGES = ['./', 'index.html', 'field-notes-physics.html', 'circuits.html',
   'AC_Circuits_Challenge.html', 'Basic_Circuits_Challenge.html', 'DC_Circuits_Challenge.html', 'Digital_Challenge.html',
@@ -25,9 +25,16 @@ self.addEventListener('fetch', e => {
   const page = req.mode === 'navigate' || (url.origin === location.origin && /\.html$|\/$/.test(url.pathname));
   if (page) {
     const net = fetch(req).then(r => { if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); } return r; });
-    e.waitUntil(net.then(() => {}, () => {}));
     const cached = caches.match(req, { ignoreSearch: true });
-    const slow = new Promise(res => setTimeout(res, 4000)).then(() => cached);
+    let shown = null; // the cached copy, if the network was too slow and we showed that instead
+    const slow = new Promise(res => setTimeout(res, 4000)).then(() => cached).then(r => (shown = r));
+    // when a newer page arrives after the old copy was shown, tell the page so it can offer a reload
+    const tag = r => r.headers.get('etag') || r.headers.get('last-modified') || r.headers.get('content-length');
+    e.waitUntil(net.then(async r => {
+      if (!shown || !r.ok || tag(shown) === tag(r)) return;
+      const c = await self.clients.get(e.resultingClientId || e.clientId);
+      if (c) c.postMessage('updated');
+    }, () => {}));
     e.respondWith(Promise.race([net, slow.then(r => r || net)]).catch(() => cached.then(r => r || Response.error())));
     return;
   }

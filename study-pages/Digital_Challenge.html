@@ -1727,6 +1727,13 @@ CC.App.init({
 });
 })();
 </script>
-<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) addEventListener('load', () => navigator.serviceWorker.register('sw.js'));</script>
+<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  // the service worker says a newer copy of this page arrived after the saved one was shown: offer a reload
+  navigator.serviceWorker.onmessage = e => { if (e.data !== 'updated' || document.getElementById('swup')) return;
+    const b = document.createElement('div'); b.id = 'swup'; b.setAttribute('role', 'status');
+    b.style.cssText = 'position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:9999;display:flex;gap:12px;align-items:center;padding:8px 8px 8px 16px;border-radius:10px;background:#111;color:#fff;font:15px system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.35);white-space:nowrap';
+    b.innerHTML = 'New version available<button style="min-height:40px;padding:0 14px;border:0;border-radius:7px;background:#fff;color:#111;font:600 14px system-ui,sans-serif;cursor:pointer">Reload</button>';
+    b.querySelector('button').onclick = () => location.reload(); document.body.append(b); };
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js')); }</script>
 </body>
 </html>
