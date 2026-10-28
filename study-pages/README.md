@@ -25,7 +25,9 @@ The site is deployed by Cloudflare Workers Builds (project `study-pages`, live a
 https://study-pages.jacobt666.workers.dev), connected to this repo. `wrangler.jsonc` at the repo
 root configures it: everything in `study-pages/` is served from the site root.
 
-- Every push to `main` redeploys the live site (Production deploy command: `npx wrangler deploy`).
+- Every push to `main` redeploys the live site. This needs, under study-pages → Settings → Builds: Production
+  branch `main` and deploy command `npx wrangler deploy`. (With `npx wrangler versions upload` instead, each build
+  only uploads a version, which then has to be promoted by hand under Deployments.)
 - Pushes to other branches build a preview. Cloudflare runs `npx wrangler preview` for these, which
   needs the `previews` block in `wrangler.jsonc`.
 
