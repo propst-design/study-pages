@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/icon-180.png"><meta name="apple-mobile-web-app-title" content="Study Pages">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23b4582a%27/%3E%3C/svg%3E">
 <title>Jacob's Study Pages</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -90,5 +91,6 @@ a.tile{display:grid;gap:4px;text-decoration:none;color:inherit;background:var(--
 
   <p class="foot">Circuits Challenges are based on the ETCAI Products Challenge series. Every page has a "Study home" button to get back here.</p>
 </div>
+<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) addEventListener('load', () => navigator.serviceWorker.register('sw.js'));</script>
 </body>
 </html>
