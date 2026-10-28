@@ -8,11 +8,14 @@ different angle. Long-term aim: every topic gets these.
 
 Status: still trialling on a few topics before settling the rules. Trials so far:
 Semiconductors & Doping (`semiconductors`), Entropy & the Second Law (`secondlaw`),
-Faraday's Law (`faraday`). All three are on the page.
+Faraday's Law (`faraday`), Special Relativity & Time Dilation (`timedilation`),
+Exponents & Logarithms (`logs`). All five are on the page.
 
 ### Structure (decided)
 
-1. **Find the spine first.** List the article's 4–6 key ideas, in the article's order.
+1. **Find the spine first.** List the article's 4–6 key ideas, in the article's order. If a long
+   article has more, merge small ones into a neighbour (Logs: "logs need pure numbers" folded into
+   the decibels idea).
 2. **Every full angle walks the whole spine**, in that order. Angles differ in *how* they explain,
    not in *which* parts they cover. (Reason: a reader stuck on any one idea should be helped by
    every angle, not just the one that happens to cover it.)
@@ -26,7 +29,10 @@ Faraday's Law (`faraday`). All three are on the page.
 Full angles (must cover the whole spine):
 
 - **Problem it solves.** Start from why anyone cares and what goes wrong without it, then explain
-  the idea as the answer to that problem.
+  the idea as the answer to that problem. The problem can be practical (Faraday: batteries can't
+  power a city) or a contradiction physics had to resolve (Relativity: light's speed was the same
+  for everyone, which shouldn't be possible). It also works for maths topics (Logs: things that
+  change by a fraction, and quantities spanning huge ranges).
 - **Questions you're stuck on (Q&A).** Plain questions a confused reader actually asks, at least
   one per spine idea, each answered in two or three sentences. Add extra questions for the obvious
   confusions too; a long Q&A is fine (Entropy's had 8 and Jacob wanted to keep it). Fits almost
@@ -58,7 +64,10 @@ Add-on (partial coverage is fine):
    (integrals, d/dt, Σ, ∝, cos θ, subscripts like n_i, etc.) gets a plain-words answer somewhere
    in the **Reading the symbols** list (kept separate from the concept Q&A), e.g. "What does dΦ/dt
    mean if I don't do calculus?" Include units and jargon terms the article uses without defining
-   (eV, kelvin, "normal to the loop").
+   (eV, kelvin, "normal to the loop", "frame", "event").
+   **Where a question goes:** "What does this mark/word say, how do I read it?" goes in Reading the
+   symbols. "Why is it like that?" goes in Questions, even if it is about notation (e.g. "Why does
+   anything to the power 0 equal 1?" is a Question).
 
 ### Presentation
 
