@@ -86,3 +86,33 @@ Built:
   tag "Stuck?", title "Try another way in". Inside are tabs: The problem it solves | Questions (n) |
   Symbols & terms (n) | Numbers at human scale. Each Q&A answer is hidden until its question is clicked. `wireAlt`
   handles the tabs.
+
+### Rollout plan (in progress)
+
+Rules are settled; rolling out to the remaining 131 topics in 14 batches, grouped by subject
+group. Each batch is drafted separately, then checked before it goes on the page:
+
+1. Automatic check: right shape, Problem-it-solves 150–430 words, at least 4 questions and 2
+   symbols/terms, balanced HTML, no TeX, internal links point at real topics.
+2. Arithmetic: every number in the numbers add-on (and any in the other tabs) recomputed.
+3. Render check in a browser: every topic in the batch opens its card and every tab, no errors.
+4. Spot-read for accuracy and for the rules above (full spine, local comparisons, notation).
+
+| Batch | Groups | Topics |
+|---|---|---|
+| 1 | Motion, Forces | 8 |
+| 2 | Energy & Momentum, Rotation | 11 |
+| 3 | Oscillations & Gravity, Fluids & Materials | 9 |
+| 4 | Wave Basics, Sound | 9 |
+| 5 | Rays & Optics | 9 |
+| 6 | Wave Optics, Electrostatics | 12 |
+| 7 | Circuits, Magnetism | 12 |
+| 8 | Induction & AC, Fields & Waves | 8 |
+| 9 | Heat & Temperature, Thermodynamics, Relativity | 10 |
+| 10 | Quantum & Atoms | 10 |
+| 11 | Nuclear Physics, Particle Physics, Stars | 9 |
+| 12 | Compact Objects, Cosmology, Semiconductors | 7 |
+| 13 | Analog Circuits, Digital Logic | 7 |
+| 14 | Units & Numbers, Algebra & Graphs, Vectors, Calculus | 10 |
+
+When all batches are on the page, merge to `main`.
