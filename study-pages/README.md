@@ -15,7 +15,7 @@ The site can be installed as an app on phones and computers ("Add to Home Screen
 
 - `manifest.webmanifest`: app name, icons, start page
 - `icons/`: app icons (`icon.svg` is the source; the PNGs are rendered from it)
-- `sw.js`: service worker. It caches every page on first visit. Pages load from the network first, so a new deploy shows up on the next visit, and fall back to the cached copy offline (or after 4 s on a bad connection). **When adding or renaming a page, add it to `PAGES` in `sw.js`, bump `VERSION`, and add the manifest link and service-worker script that every page has.**
+- `sw.js`: service worker. It caches every page on first visit. Pages load from the network first, so a new deploy shows up on the next visit, and fall back to the cached copy offline (or after 4 s on a bad connection). If a newer copy arrives after the cached one was shown, the page shows a "New version available · Reload" bar. **When adding or renaming a page, add it to `PAGES` in `sw.js`, bump `VERSION`, and add the manifest link and service-worker script that every page has.**
 
 The service worker only runs over http(s), not when a page is opened straight from disk.
 
