@@ -33,6 +33,9 @@ email, no recovery), and the sign-in dialog says so.
   `DB`. Five wrong PINs lock an account for 15 minutes. The database is created by the first deploy and the worker
   creates its own tables, so there is nothing to set up by hand. Browse or delete accounts under
   Storage & Databases → D1 → study-pages-db in the Cloudflare dashboard.
+- On the Challenges the top-bar "Sign in" chip is the sync sign-in (online) and the student box (from a copied
+  file). Signing in sets the student name to the username when the browser has none; the ID code is optional and
+  only needed for certificates (Options → Change certificate name / ID).
 - Pages opened straight from disk don't show the sync button and work as before.
 
 ## Deploying on Cloudflare

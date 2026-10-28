@@ -9,8 +9,12 @@
    Deletions (unmarking a topic, clearing a grade file) are found by comparing with the copy from the last
    sync and kept as tombstones, so another browser's old copy can't bring them back.
 
+   Signing in also sets the Challenge student name to the username if this browser has none yet (the ID code
+   for certificates stays optional), so one sign-in covers both.
+
    Pages call Acct.touch(key) after writing a key, Acct.mount(el) to show the account button, and listen for
-   the 'acct-sync' event (detail.changed = keys this browser just received) to redraw. */
+   the 'acct-sync' event (detail.changed = keys this browser just received) and 'acct-change' (signed in or out)
+   to redraw. Acct.open() shows the dialog and resolves with the username (or null) when it closes. */
 (() => {
   const API = '/api/', META = 'fn-acct';
   const online = /^https?:$/.test(location.protocol);
@@ -107,7 +111,7 @@
         } while (again);
         setState('ok');
       } catch (e) {
-        if (e.status === 401) { meta = {}; saveMeta(); setState('off', 'You were signed out. Sign in again to keep syncing.'); }
+        if (e.status === 401) { meta = {}; saveMeta(); setState('off', 'You were signed out. Sign in again to keep syncing.'); changed(); }
         else setState('error', e.status ? e.message : 'Offline. Changes will sync when the connection is back.');
       } finally { busy = null; }
     })();
@@ -165,11 +169,13 @@ dialog.acct .muted{opacity:.75;font-size:13px}`;
   const WARN = `<div class="warn"><b>Not a secure account.</b> This is a small study site. The PIN only keeps casual people out, so
     don't reuse a username or PIN you use anywhere that matters. Only study progress, grade files and your Challenge
     student name/ID are stored.</div>`;
+  const changed = () => dispatchEvent(new CustomEvent('acct-change', { detail: { user: meta.user || null } }));
   function open() {
     reload();
     const d = document.createElement('dialog'); d.className = 'acct';
-    const done = () => { d.close(); d.remove(); paint(); };
-    d.addEventListener('close', () => d.remove());
+    let res; const closed = new Promise(r => { res = r; });
+    const done = () => d.close();
+    d.addEventListener('close', () => { d.remove(); paint(); res(meta.user || null); });
     const show = html => { d.innerHTML = html; const f = d.querySelector('input'); if (f) f.focus(); };
     const fail = m => { const e = d.querySelector('.err'); if (e) e.textContent = m; };
     const busyBtns = on => d.querySelectorAll('button').forEach(b => { b.disabled = on; });
@@ -188,7 +194,11 @@ dialog.acct .muted{opacity:.75;font-size:13px}`;
         try {
           const r = await call('POST', 'login', { user, pin, create });
           meta = { user: r.user, token: r.token, base: {}, mt: (lsGet(META) || {}).mt || {} }; saveMeta(); err = '';
-          await sync(); signedIn(create ? 'Account created. This browser\'s progress is now saved to it.' : '');
+          await sync();
+          let named = '';
+          if (lsGet('cc:student') === undefined) { lsSet('cc:student', { name: r.user, id: '' }); touch('cc:student'); named = ' Your Challenge student name is now ' + r.user + '; change it or add an ID code under Options in any Challenge.'; }
+          changed();
+          signedIn((create ? 'Account created. This browser\'s progress is now saved to it.' : '') + named);
         } catch (e) { busyBtns(false); fail(e.status ? e.message : 'Can\'t reach the server. Check the connection.'); }
       };
       d.querySelector('form').onsubmit = e => { e.preventDefault(); go(false); };
@@ -198,7 +208,7 @@ dialog.acct .muted{opacity:.75;font-size:13px}`;
     function signedIn(msg = '') {
       const status = state === 'error' ? esc(err) : meta.at ? 'Last synced ' + ago(meta.at) + '.' : '';
       show(`<h3>Signed in as ${esc(meta.user)}</h3><p>Progress on this browser syncs automatically. ${status}</p>
-        ${msg ? `<p><b>${esc(msg)}</b></p>` : ''}
+        ${msg ? `<p>${esc(msg)}</p>` : ''}
         <label class="chk"><input type="checkbox" id="acclr" checked> When signing out, remove my progress from this browser (it stays in the account)</label>
         <p class="err"></p>
         <div class="row"><button type="button" data-a="del" class="link">Delete account…</button><button type="button" data-a="out">Sign out</button><button type="button" data-a="sync">Sync now</button><button type="button" data-a="close" class="pri">Done</button></div>`);
@@ -211,7 +221,7 @@ dialog.acct .muted{opacity:.75;font-size:13px}`;
         try { await call('POST', 'logout'); } catch (e) {}
         if (clear) Object.keys(meta.base || {}).forEach(k => lsSet(k, undefined));
         const keys = Object.keys(meta.base || {});
-        meta = {}; saveMeta(); setState('off');
+        meta = {}; saveMeta(); setState('off'); changed();
         if (clear && keys.length) dispatchEvent(new CustomEvent('acct-sync', { detail: { changed: keys } }));
         signedOut('');
       };
@@ -222,16 +232,17 @@ dialog.acct .muted{opacity:.75;font-size:13px}`;
         d.querySelector('[data-a=back]').onclick = () => signedIn();
         d.querySelector('form').onsubmit = async e => {
           e.preventDefault(); busyBtns(true);
-          try { await call('POST', 'delete', { pin: d.querySelector('#acp').value }); meta = {}; saveMeta(); setState('off'); signedOut(''); }
+          try { await call('POST', 'delete', { pin: d.querySelector('#acp').value }); meta = {}; saveMeta(); setState('off'); changed(); signedOut(''); }
           catch (x) { busyBtns(false); fail(x.status ? x.message : 'Can\'t reach the server.'); }
         };
       };
     }
     document.body.append(d); d.showModal();
     if (meta.token) signedIn(); else signedOut();
+    return closed;
   }
 
-  window.Acct = { touch, sync, mount, open, user: () => (reload(), meta.user || null) };
+  window.Acct = { online, touch, sync, mount, open, user: () => (reload(), meta.user || null) };
   if (online) {
     if (meta.token) sync();
     addEventListener('online', sync);
