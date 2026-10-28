@@ -8,7 +8,7 @@ different angle. Long-term aim: every topic gets these.
 
 Status: still trialling on a few topics before settling the rules. Trials so far:
 Semiconductors & Doping (`semiconductors`), Entropy & the Second Law (`secondlaw`),
-Faraday's Law (`faraday`). Only `semiconductors` is on the page so far (prototype).
+Faraday's Law (`faraday`). All three are on the page.
 
 ### Structure (decided)
 
@@ -56,7 +56,9 @@ Add-on (partial coverage is fine):
 5. The numbers add-on is only included when the topic has numbers worth scaling.
 6. **Explain every piece of notation.** Every unfamiliar symbol or operation in the article
    (integrals, d/dt, Σ, ∝, cos θ, subscripts like n_i, etc.) gets a plain-words answer somewhere
-   in the Q&A, e.g. "What does dΦ/dt mean if I don't do calculus?"
+   in the **Reading the symbols** list (kept separate from the concept Q&A), e.g. "What does dΦ/dt
+   mean if I don't do calculus?" Include units and jargon terms the article uses without defining
+   (eV, kelvin, "normal to the loop").
 
 ### Presentation
 
@@ -64,13 +66,14 @@ Jacob wants these **collapsible** so articles don't become overwhelmingly long. 
 already uses collapsible cards (`<details class="card fold">`, see `exampleCard`, `historyCard`)
 and per-item "Show solution" toggles, so reuse those patterns.
 
-Built (prototype on `semiconductors`):
+Built:
 
 - Content lives in a separate `ALT` object (the line after `APPS`), keyed by topic id:
-  `{why: html, qa: [[question, answer html], ...], nums: html}`. `nums` is optional.
+  `{why: html, qa: [[question, answer html], ...], sym: [[question, answer html], ...], nums: html}`.
+  `nums` is optional.
 - Write maths as plain HTML (`<i>n</i><sub>i</sub>`, `<sup>`, Unicode ∝ ≈ ×), the way `APPS` does.
   Topic bodies use pre-rendered KaTeX, but there is no KaTeX at runtime, so don't paste TeX.
 - `altCard(t)` renders one folded card, **collapsed by default**, directly under the article body:
   tag "Stuck?", title "Try another way in". Inside are tabs: The problem it solves | Questions (n) |
-  Numbers at human scale. Each Q&A answer is hidden until its question is clicked. `wireAlt`
+  Reading the symbols (n) | Numbers at human scale. Each Q&A answer is hidden until its question is clicked. `wireAlt`
   handles the tabs.
