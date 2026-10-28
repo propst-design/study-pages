@@ -6,10 +6,9 @@ Goal: many Field Notes topics (`study-pages/field-notes-physics.html`) are dense
 rewriting them, add extra explanation alongside the existing article that comes at the idea from a
 different angle. Long-term aim: every topic gets these.
 
-Status: still trialling on a few topics before settling the rules. Trials so far:
-Semiconductors & Doping (`semiconductors`), Entropy & the Second Law (`secondlaw`),
-Faraday's Law (`faraday`), Special Relativity & Time Dilation (`timedilation`),
-Exponents & Logarithms (`logs`). All five are on the page.
+Status: done. All 136 topics have an alternate-explanation section. The first five
+(`semiconductors`, `secondlaw`, `faraday`, `timedilation`, `logs`) were trials worked through with
+Jacob; the rest were rolled out in 14 batches using the rules below. New topics should get one too.
 
 ### Structure (decided)
 
@@ -87,9 +86,9 @@ Built:
   Symbols & terms (n) | Numbers at human scale. Each Q&A answer is hidden until its question is clicked. `wireAlt`
   handles the tabs.
 
-### Rollout plan (in progress)
+### Rollout (done)
 
-Rules are settled; rolling out to the remaining 131 topics in 14 batches, grouped by subject
+Rolled out to the remaining 131 topics in 14 batches, grouped by subject
 group. Each batch is drafted separately, then checked before it goes on the page:
 
 1. Automatic check: right shape, Problem-it-solves 150–430 words, at least 4 questions and 2
@@ -114,5 +113,3 @@ group. Each batch is drafted separately, then checked before it goes on the page
 | 12 | Compact Objects, Cosmology, Semiconductors | 7 |
 | 13 | Analog Circuits, Digital Logic | 7 |
 | 14 | Units & Numbers, Algebra & Graphs, Vectors, Calculus | 10 |
-
-When all batches are on the page, merge to `main`.
