@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/icon-180.png"><meta name="apple-mobile-web-app-title" content="Study Pages">
 <title>Field Notes: Physics</title>
 <style>
 /* Greek letters: one typeface everywhere (STIX Two Text Greek subset, SIL OFL 1.1) */
@@ -199,6 +200,24 @@ nav a.item.done::after{content:"✓";float:right;color:var(--ci);font-size:12px;
 .toolgrid a{display:block;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);color:var(--ink)}
 .toolgrid a:hover{border-color:var(--accent);text-decoration:none}
 .toolgrid b{display:block;font-size:15px} .toolgrid span{color:var(--muted);font-size:13px}
+.mainwrap{min-width:0}
+.rail{display:none}
+.card,.body{scroll-margin-top:16px}
+@media (min-width:1300px){
+  .mainwrap{display:grid;grid-template-columns:minmax(0,900px) 240px;justify-content:center;align-items:start}
+  .mainwrap.wide{grid-template-columns:minmax(0,1140px)}
+  .mainwrap:not(.wide) .rail{display:block}
+  .rail{position:sticky;top:0;max-height:100vh;overflow:auto;padding:44px 20px 32px 0;font-size:13.5px}
+  .rail h4{font:600 11px/1 FN Greek,-apple-system,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px}
+  .rail .toc{border-left:1px solid var(--line);margin:0 0 26px}
+  .rail .toc a{display:block;padding:4px 0 4px 12px;margin-left:-1px;border-left:2px solid transparent;color:var(--muted);line-height:1.35}
+  .rail .toc a:hover{color:var(--ink);text-decoration:none}
+  .rail .toc a.on{color:var(--ink);border-left-color:var(--accent);font-weight:600}
+  .rail .eq{margin:0 0 8px;padding:6px 4px;cursor:pointer}
+  .rail .eq:hover{border-color:var(--accent)}
+  .rail .eq math{font-size:.9em}
+}
+@media (min-width:1640px){ .mainwrap{grid-template-columns:minmax(0,900px) 300px} }
 @media print{
   aside,.no-print,.menu-btn,a[href="index.html"]{display:none!important}
   .layout{display:block} main{max-width:none;padding:0}
@@ -245,7 +264,7 @@ nav a.item.done::after{content:"✓";float:right;color:var(--ci);font-size:12px;
     <button class="theme-btn" id="themeBtn">Toggle light / dark</button>
   </div>
 </aside>
-<main id="main"></main>
+<div class="mainwrap" id="mainwrap"><main id="main"></main><div class="rail no-print" id="rail"></div></div>
 </div>
 
 <template id="constTpl">
@@ -2474,6 +2493,30 @@ function simLevels(el) {
 }
 Object.assign(SIMS, { slits: simSlits, photo: simPhoto, blackbody: simBlackbody, box: simBox, logic: simLogic, levels: simLevels });
 
+// ── wide-screen side rail on topic pages: section links and the article's equations
+const RAILNAME = { 'Stuck?': 'Try another way in', 'In practice': 'Applications', Symbols: 'Symbols', Greek: 'Greek letters', Examples: 'Worked examples',
+  'Watch out': 'Common mistakes', Calculator: 'Calculator', Practice: 'Practice problem', History: 'History', 'Hands-on': 'Circuits Challenges' };
+const railSecs = main => [$('.body', main), ...main.querySelectorAll(':scope > .card')];
+function railTopic(main) {
+  const name = el => { if (el.classList.contains('body')) return 'Article';
+    const tag = el.querySelector('h3 .tag'); return tag && RAILNAME[tag.textContent] || el.querySelector('h3').textContent.trim(); };
+  const eqs = [...$('.body', main).querySelectorAll('.eq')];
+  return `<h4>On this page</h4><div class="toc">${railSecs(main).map((el, i) => `<a href="javascript:void 0" data-sec="${i}">${name(el)}</a>`).join('')}</div>` +
+    (eqs.length ? `<h4>Key equations</h4>${eqs.map((e, i) => `<div class="eq" data-eq="${i}" title="Show in the article">${e.innerHTML}</div>`).join('')}` : '');
+}
+function railGo(el) { if (el.tagName === 'DETAILS') el.open = true; el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+$('#rail').onclick = e => { const main = $('#main'), a = e.target.closest('[data-sec]'), q = e.target.closest('[data-eq]');
+  if (a) railGo(railSecs(main)[a.dataset.sec]);
+  else if (q) { const el = $('.body', main).querySelectorAll('.eq')[q.dataset.eq]; el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
+function railSpy() {
+  const links = document.querySelectorAll('#rail [data-sec]'); if (!links.length || !links[0].offsetParent) return;
+  const secs = railSecs($('#main')), end = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+  let cur = 0; secs.forEach((el, i) => { if (el.getBoundingClientRect().top <= 120) cur = i; });
+  if (end) cur = secs.length - 1;
+  links.forEach((a, i) => a.classList.toggle('on', i === cur));
+}
+addEventListener('scroll', railSpy, { passive: true }); addEventListener('resize', railSpy);
+
 // ── router
 function route() {
   cleanups.forEach(f => f()); cleanups = [];
@@ -2488,12 +2531,14 @@ function route() {
   else if (id === 'progress') { main.innerHTML = pageProgress(); wireProgress(main); document.title = 'My progress · Field Notes'; }
   else if (byId[id]) { main.innerHTML = pageTopic(byId[id]); wireCalc(main); wireStudy(main); wireAlt(main); wirePractice(main); document.title = byId[id].title + ' · Field Notes'; }
   else { main.innerHTML = '<h1 class="title">Not found</h1><p><a href="#/">Back home</a></p>'; }
+  $('#mainwrap').classList.toggle('wide', !byId[id]); $('#rail').innerHTML = byId[id] ? railTopic(main) : '';
   main.querySelectorAll('.sim').forEach(s => SIMS[s.dataset.sim] && SIMS[s.dataset.sim](s));
-  wireEqs(main);
-  markActive(); $('#side').classList.remove('open'); scrollTo(0, 0);
+  wireEqs(main); wireEqs($('#rail'));
+  markActive(); $('#side').classList.remove('open'); scrollTo(0, 0); railSpy();
 }
 addEventListener('hashchange', route);
 buildNav(); route();
 </script>
+<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) addEventListener('load', () => navigator.serviceWorker.register('sw.js'));</script>
 </body>
 </html>
