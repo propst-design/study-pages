@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="account.js"></script>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/icon-180.png"><meta name="apple-mobile-web-app-title" content="Study Pages">
 <title>Field Notes: Physics</title>
 <script>
@@ -415,6 +416,7 @@ input[type=range],input[type=checkbox],input[type=radio]{accent-color:var(--acce
       </div>
       <button class="theme-btn" id="themeBtn">Toggle light / dark</button>
     </div>
+    <div class="looks"><span>Sync</span><div id="acctSlot"></div></div>
   </div>
 </aside>
 <div class="mainwrap" id="mainwrap"><main id="main"></main><div class="rail no-print" id="rail"></div></div>
@@ -949,11 +951,18 @@ themeBtn.onclick = () => {
 };
 $('#menuBtn').onclick = () => $('#side').classList.toggle('open');
 
-// ── study progress: which topics the reader has studied and when each is next due for review (this browser only)
+// ── study progress: which topics the reader has studied and when each is next due for review (this browser, plus the sync account if signed in)
 const DAY = 864e5, IVL = [1, 3, 7, 14, 30, 60]; // days until the next review, growing after each review
 let PROG = {};
 try { PROG = JSON.parse(localStorage.getItem('fn-progress') || '{}') || {}; } catch (e) {}
-const saveProg = () => { try { localStorage.setItem('fn-progress', JSON.stringify(PROG)); } catch (e) {} };
+const saveProg = () => { try { localStorage.setItem('fn-progress', JSON.stringify(PROG)); } catch (e) {} if (window.Acct) Acct.touch('fn-progress'); };
+// progress from another browser arrived (account.js): redraw what shows it, without moving the reader's place on a topic page
+addEventListener('acct-sync', e => {
+  if (!e.detail.changed.includes('fn-progress')) return;
+  try { PROG = JSON.parse(localStorage.getItem('fn-progress') || '{}') || {}; } catch (e) { PROG = {}; }
+  buildNav(); const id = location.hash.replace(/^#\/?/, ''), bar = $('[data-study]');
+  if (!id || id === 'progress') route(); else if (bar && byId[bar.dataset.study]) { bar.innerHTML = studyBar(byId[bar.dataset.study]); }
+});
 const isDue = p => !!p && Date.now() >= p.due;
 function markStudied(id) {
   const p = PROG[id], n = p ? Math.min(p.n + 1, IVL.length - 1) : 0;
@@ -3004,6 +3013,7 @@ function route() {
 addEventListener('hashchange', route);
 buildNav(); route();
 </script>
+<script>if (window.Acct) Acct.mount(document.getElementById('acctSlot'));</script>
 <script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   // the service worker says a newer copy of this page arrived after the saved one was shown: offer a reload
   navigator.serviceWorker.onmessage = e => { if (e.data !== 'updated' || document.getElementById('swup')) return;
