@@ -6,7 +6,7 @@ Goal: many Field Notes topics (`study-pages/field-notes-physics.html`) are dense
 rewriting them, add extra explanation alongside the existing article that comes at the idea from a
 different angle. Long-term aim: every topic gets these.
 
-Status: done. All 137 topics have an alternate-explanation section (Impedance was added later, written to the same rules). The first five
+Status: done. All 142 topics have an alternate-explanation section (Impedance, Karnaugh Maps, Adders, Multiplexers & Decoders, Counters & Shift Registers, ADCs & DACs and Complex Numbers were added later, written to the same rules). The first five
 (`semiconductors`, `secondlaw`, `faraday`, `timedilation`, `logs`) were trials worked through with
 Jacob; the rest were rolled out in 14 batches using the rules below. New topics should get one too.
 
@@ -136,5 +136,10 @@ group. Each batch is drafted separately, then checked before it goes on the page
   an equation, edit both copies** (or delete the `eqn` copy and the `class="eqw"`, and it simply
   scrolls on phones again).
 - New wide equations should get an `eqn` copy too; check at 360px and 375px wide.
+- Display equations with no hand-made `eqn` copy get one built in the browser (`autoBreak`, called from
+  `wireEqs`) when they overflow: first split at top-level `\quad` gaps / `, \qquad` lists, then at each
+  `=`, `≈` …, aligned on the first relation. It can't break inside a fraction or an `aligned` block, so
+  very wide single terms still need writing narrower by hand. Inline maths never wraps: keep long
+  calculations in display equations, not mid-sentence.
 - Tables (`table.t`) that still overflow on a phone switch to a stacked layout (one block per row,
   cells labelled with their column heading) via the same `wireEqs` hook. No markup needed.
