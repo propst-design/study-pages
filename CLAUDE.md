@@ -6,7 +6,7 @@ Goal: many Field Notes topics (`study-pages/field-notes-physics.html`) are dense
 rewriting them, add extra explanation alongside the existing article that comes at the idea from a
 different angle. Long-term aim: every topic gets these.
 
-Status: done. All 136 topics have an alternate-explanation section. The first five
+Status: done. All 137 topics have an alternate-explanation section (Impedance was added later, written to the same rules). The first five
 (`semiconductors`, `secondlaw`, `faraday`, `timedilation`, `logs`) were trials worked through with
 Jacob; the rest were rolled out in 14 batches using the rules below. New topics should get one too.
 
