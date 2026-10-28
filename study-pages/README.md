@@ -19,15 +19,15 @@ The site can be installed as an app on phones and computers ("Add to Home Screen
 
 The service worker only runs over http(s), not when a page is opened straight from disk.
 
-## Deploying on Cloudflare Pages
+## Deploying on Cloudflare
 
-Connect this repo in Cloudflare Pages with:
+The site is deployed by Cloudflare Workers Builds (project `study-pages`, live at
+https://study-pages.jacobt666.workers.dev), connected to this repo. `wrangler.jsonc` at the repo
+root configures it: everything in `study-pages/` is served from the site root.
 
-- Framework preset: None
-- Build command: (leave empty)
-- Build output directory: `/`
-
-Every push to `main` redeploys.
+- Every push to `main` redeploys the live site (Production deploy command: `npx wrangler deploy`).
+- Pushes to other branches build a preview. Cloudflare runs `npx wrangler preview` for these, which
+  needs the `previews` block in `wrangler.jsonc`.
 
 ## Fonts
 

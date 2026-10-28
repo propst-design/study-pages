@@ -1,0 +1,9 @@
+// Cloudflare Workers Builds config for the live site (https://study-pages.jacobt666.workers.dev).
+// The site is plain static files: everything in study-pages/ is served from the site root.
+{
+  "name": "study-pages",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./study-pages" },
+  // Needed by `npx wrangler preview`, which Cloudflare runs for pull-request builds.
+  "previews": {}
+}
