@@ -807,12 +807,14 @@ CC.problemSet=function(root,s,spec){
 };
 
 /* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
-/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}}} */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}} */
 CC.trouble=function(root,s,spec){
   const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
   root.appendChild(w);
   s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  // like a real meter, the readings float a little: redraw them every 0.7 s
+  let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
     const b=spec.build(k);let pts=P;CC._last=b;
     if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
@@ -821,7 +823,7 @@ CC.trouble=function(root,s,spec){
     updP();
     const body=$('#tbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
-      <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button></div></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row">${b.blackFixed?`<span class="small muted">Tap a pad to move the red probe. The black probe stays on ${esc(b.padName(b.start.black))}.</span><span class="hide"><button id="pr"></button><button id="pk"></button></span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
       <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
       <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
       <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
@@ -849,6 +851,7 @@ CC.trouble=function(root,s,spec){
     const tap=id=>{
       if(card.dataset.graded)return;
       // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      if(b.blackFixed)probe.active='red';
       const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
       probe[which]=id;
       setActive(!probe[other]?other:first?'red':which);
@@ -858,6 +861,7 @@ CC.trouble=function(root,s,spec){
       draw();
     };
     if(readings.length)$('#rlog',card).innerHTML=readings.join('<br>');
+    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     draw();
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
@@ -878,7 +882,7 @@ CC.trouble=function(root,s,spec){
 };
 
 /* meter helpers */
-CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.008,0.008));};
+CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.002,0.002));};
 CC.lcd=(v,dec=2)=>{if(!isFinite(v))return 'OL';const a=Math.abs(v);if(a<0.005)return (0).toFixed(dec);return v.toFixed(a>=100?1:dec);};
 
 /* ---------- PC-board drawing kit ---------- */
@@ -1125,6 +1129,8 @@ K.trouble=function(root,s,spec){
   const w=CC.el(`<div><div class="statusbar"><span class="pill" id="tn"></span>${per?'<span class="pill" id="tp"></span>':''}<span class="pill" id="ts">Points earned: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
   root.appendChild(w);
   s.every(()=>{CC.$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  // like a real meter, the reading floats a little: redraw it every 0.7 s
+  let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
     const b=spec.build(k);CC._last=b;let pts=P,probe=null;const inputs={};(b.inputs||[]).forEach(i=>inputs[i.key]=i.value);
     const meter=CC.meterErr();
@@ -1156,6 +1162,7 @@ K.trouble=function(root,s,spec){
       CC.$('#bw',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
       CC.$$('.pad',card).forEach(g=>{const f=()=>{if(card.dataset.graded)return;const ch=probe!==g.dataset.id;probe=g.dataset.id;draw();readout(ch);};g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
     };
+    tick=()=>readout(false);
     draw();
     CC.$('#tg',card).onclick=()=>{
       const btn=CC.$('#tg',card);
