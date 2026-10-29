@@ -893,11 +893,16 @@ B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}"
 B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
 B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
 /** component between two pad points (horizontal or vertical) */
-B.part=(type,a,b,label)=>{
+// resistor color code for a marked value (two significant digits) and a tolerance in percent (20% has no tolerance band)
+B.bands=(ohms,tol=5)=>{const C=['#111','#6d4c41','#c62828','#ef6c00','#fbc02d','#2e7d32','#1565c0','#7b1fa2','#8d8d8d','#f5f5f5'];
+  let e=Math.floor(Math.log10(ohms))-1,d=Math.round(ohms/Math.pow(10,e));if(d>=100){e++;d=Math.round(d/10);}
+  const mult=e===-1?'#c9a227':e===-2?'#c0c0c0':C[e],t={1:'#6d4c41',2:'#c62828',5:'#c9a227',10:'#c0c0c0'}[tol];
+  return [C[Math.floor(d/10)],C[d%10],mult].concat(t?[t]:[]);};
+B.part=(type,a,b,label,o={})=>{
   const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
   let body='';const bl=Math.min(L-26,64);
   const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
-  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+(o.ohms?B.bands(o.ohms,o.tol):['#c62828','#6d4c41','#ef6c00','#c9a227']).map((c,i)=>`<rect x="${[-.3,-.12,.06,.3][i]*bl-2.5}" y="-8" width="5" height="16" fill="${c}"/>`).join('');
   if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
   if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
   if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
@@ -1414,7 +1419,7 @@ const SER={name:'SER',nodes:8,marked:()=>{let R;do{R=[0,0,0,0].map(()=>eVal(220,
   apply:applyStd,
   pads:{J1:[60,150,1,'J1 (+)'],R1a:[100,150,1,'R1 left'],R1b:[200,150,2,'R1 right'],R2a:[260,150,3,'R2 left'],R2b:[360,150,4,'R2 right'],R3a:[470,180,5,'R3 top'],R3b:[470,280,6,'R3 bottom'],R4a:[360,300,7,'R4 right'],R4b:[250,300,0,'R4 left'],J2:[60,300,0,'J2 (−)']},
   draw:R=>wires(60,150,60,300)+B.trace([[60,150],[100,150]])+B.trace([[200,150],[260,150]],'TRACE 1',[230,140])+B.trace([[360,150],[470,150],[470,180]],'TRACE 2',[415,140])+B.trace([[470,280],[470,300],[360,300]],'TRACE 3',[415,318])+B.trace([[250,300],[60,300]])+
-    B.part('R',[100,150],[200,150],'R1')+B.part('R',[260,150],[360,150],'R2')+B.part('R',[470,180],[470,280],'R3')+B.part('R',[250,300],[360,300],'R4')+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})};
+    B.part('R',[100,150],[200,150],'R1',{ohms:R[0],tol:2})+B.part('R',[260,150],[360,150],'R2',{ohms:R[1],tol:2})+B.part('R',[470,180],[470,280],'R3',{ohms:R[2],tol:2})+B.part('R',[250,300],[360,300],'R4',{ohms:R[3],tol:2})+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})};
 const PAR={name:'PAR',nodes:8,marked:()=>{let R;do{R=[0,0,0].map(()=>eVal(220,4700));}while(Math.max(...R)/Math.min(...R)>5||[[0,1],[0,2],[1,2]].some(([a,b])=>Math.max(R[a],R[b])/Math.min(R[a],R[b])<2));return R;},
   faults:['R1 Open','R2 Open','R3 Open','R1, R2 or R3 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Trace 5 Open','Trace 6 Open','No Faults'],
   elems:R=>[{id:'T1',a:1,b:2,R:TR},{id:'R1',a:2,b:5,R:R[0]},{id:'T2',a:2,b:3,R:TR},{id:'R2',a:3,b:6,R:R[1]},{id:'T3',a:3,b:4,R:TR},{id:'R3',a:4,b:7,R:R[2]},{id:'T4',a:5,b:6,R:TR},{id:'T5',a:6,b:7,R:TR},{id:'T6',a:7,b:0,R:TR}],
@@ -1423,7 +1428,7 @@ const PAR={name:'PAR',nodes:8,marked:()=>{let R;do{R=[0,0,0].map(()=>eVal(220,47
   draw:R=>B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,92],[510,92],[510,300],[490,300]],'#222')+
     B.trace([[60,150],[150,150],[150,165]],'TRACE 1',[105,140])+B.trace([[150,150],[280,150],[280,165]],'TRACE 2',[215,140])+B.trace([[280,150],[410,150],[410,165]],'TRACE 3',[345,140])+
     B.trace([[150,275],[150,300],[280,300],[280,275]],'TRACE 4',[215,318])+B.trace([[280,300],[410,300],[410,275]],'TRACE 5',[345,318])+B.trace([[410,300],[490,300]],'TRACE 6',[452,318])+
-    B.part('R',[150,165],[150,275],'R1')+B.part('R',[280,165],[280,275],'R2')+B.part('R',[410,165],[410,275],'R3')+B.label(60,135,'J1',{size:11})+B.label(490,325,'J2',{size:11})};
+    B.part('R',[150,165],[150,275],'R1',{ohms:R[0],tol:2})+B.part('R',[280,165],[280,275],'R2',{ohms:R[1],tol:2})+B.part('R',[410,165],[410,275],'R3',{ohms:R[2],tol:2})+B.label(60,135,'J1',{size:11})+B.label(490,325,'J2',{size:11})};
 const SPB={name:'SPB',nodes:9,marked:()=>{let R;do{R=[0,0,0,0].map(()=>eVal(220,4700));}while(Math.max(...R)/Math.min(...R)>4||Math.max(R[1],R[2])/Math.min(R[1],R[2])<1.8||Math.max(R[1],R[2])/Math.min(R[1],R[2])>3);return R;},
   faults:['R1 Open','R1 Shorted','R2 Open','R3 Open','R2 or R3 Shorted','R4 Open','R4 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Trace 5 Open','No Faults'],
   elems:R=>[{id:'T1',a:1,b:2,R:TR},{id:'R1',a:2,b:3,R:R[0]},{id:'T2',a:3,b:4,R:TR},{id:'R2',a:4,b:6,R:R[1]},{id:'T3',a:4,b:5,R:TR},{id:'R3',a:5,b:7,R:R[2]},{id:'T4',a:7,b:6,R:TR},{id:'T5',a:6,b:8,R:TR},{id:'R4',a:8,b:0,R:R[3]}],
@@ -1431,7 +1436,7 @@ const SPB={name:'SPB',nodes:9,marked:()=>{let R;do{R=[0,0,0,0].map(()=>eVal(220,
   pads:{J1:[60,150,1,'J1 (+)'],R1a:[110,150,2,'R1 left'],R1b:[210,150,3,'R1 right'],R2a:[290,170,4,'R2 top'],R2b:[290,275,6,'R2 bottom'],R3a:[430,170,5,'R3 top'],R3b:[430,275,7,'R3 bottom'],R4a:[230,300,8,'R4 right'],R4b:[120,300,0,'R4 left'],J2:[60,300,0,'J2 (−)']},
   draw:R=>wires(60,150,60,300)+B.trace([[60,150],[110,150]],'TRACE 1',[85,170])+B.trace([[210,150],[290,150],[290,170]],'TRACE 2',[250,140])+B.trace([[290,150],[430,150],[430,170]],'TRACE 3',[360,140])+
     B.trace([[430,275],[430,300],[290,300]],'TRACE 4',[360,318])+B.trace([[290,275],[290,300],[230,300]],'TRACE 5',[262,318])+B.trace([[120,300],[60,300]])+
-    B.part('R',[110,150],[210,150],'R1')+B.part('R',[290,170],[290,275],'R2')+B.part('R',[430,170],[430,275],'R3')+B.part('R',[120,300],[230,300],'R4')+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})};
+    B.part('R',[110,150],[210,150],'R1',{ohms:R[0],tol:2})+B.part('R',[290,170],[290,275],'R2',{ohms:R[1],tol:2})+B.part('R',[430,170],[430,275],'R3',{ohms:R[2],tol:2})+B.part('R',[120,300],[230,300],'R4',{ohms:R[3],tol:2})+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})};
 const TS_HOW='<p>Tap a solder pad to place the selected probe. The first two taps place red, then black; after that the selected probe stays selected until you pick the other with the probe buttons. The voltmeter reads the voltage from the red (+) probe to the black (−) probe. Like a real meter it has a small error, but it is accurate enough to find every fault. The supply\'s own voltage and current displays are always visible and cost nothing.</p><p><b>Scoring:</b> each board starts at 10 points, and each new voltmeter reading costs 1 point. Select the fault and choose <b>Grade item</b>: a correct answer earns the points that remain, a wrong answer earns 0. There are 10 boards, and your score is the percentage of the 100 possible points. After each board you can see the normal and faulty voltages.</p>';
 const tsMod=(id,title,sub,def,txt,sch)=>({id,title,icon:'wrench',sub,intro:CC.introPage({text:`<div class="cols2" style="align-items:center"><div><p>${TXT.tsIntro}</p>${txt}</div><div class="diagram">${sch}</div></div>`,how:TS_HOW}),
   run:(el,s)=>CC.trouble(el,s,{count:10,points:10,build:boardFactory(def)})});

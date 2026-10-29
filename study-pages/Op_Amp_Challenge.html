@@ -893,11 +893,16 @@ B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}"
 B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
 B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
 /** component between two pad points (horizontal or vertical) */
-B.part=(type,a,b,label)=>{
+// resistor color code for a marked value (two significant digits) and a tolerance in percent (20% has no tolerance band)
+B.bands=(ohms,tol=5)=>{const C=['#111','#6d4c41','#c62828','#ef6c00','#fbc02d','#2e7d32','#1565c0','#7b1fa2','#8d8d8d','#f5f5f5'];
+  let e=Math.floor(Math.log10(ohms))-1,d=Math.round(ohms/Math.pow(10,e));if(d>=100){e++;d=Math.round(d/10);}
+  const mult=e===-1?'#c9a227':e===-2?'#c0c0c0':C[e],t={1:'#6d4c41',2:'#c62828',5:'#c9a227',10:'#c0c0c0'}[tol];
+  return [C[Math.floor(d/10)],C[d%10],mult].concat(t?[t]:[]);};
+B.part=(type,a,b,label,o={})=>{
   const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
   let body='';const bl=Math.min(L-26,64);
   const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
-  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+(o.ohms?B.bands(o.ohms,o.tol):['#c62828','#6d4c41','#ef6c00','#c9a227']).map((c,i)=>`<rect x="${[-.3,-.12,.06,.3][i]*bl-2.5}" y="-8" width="5" height="16" fill="${c}"/>`).join('');
   if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
   if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
   if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
@@ -1415,7 +1420,7 @@ function invBoard(){
     B.trace([pos.R2R,P6])+B.trace([pos.R2R,[490,P6[1]],[490,214],pos.OUT],'TRACE 5',[470,200])+
     B.trace([pos.VPT,[410,150],[410,P7[1]],P7],'TRACE 2',[505,166])+B.trace([P4,[P4[0],262],pos.VNT],'TRACE 3',[420,276])+
     B.trace([P3,[250,P3[1]],pos.R3T])+B.trace([pos.R3B,pos.GND])+
-    dip(X,Y,'IC1')+B.part('R',pos.R1L,pos.R1R,'R1 '+kl(R1))+B.part('R',pos.R2L,pos.R2R,'')+`<text x="441" y="${(pos.R2L[1]+pos.R2R[1])/2+4}" font-size="12" font-weight="700" fill="#2b1a05" text-anchor="end">R2 ${kl(R2)}</text>`+B.part('R',pos.R3T,pos.R3B,'R3 '+kl(R3))+
+    dip(X,Y,'IC1')+B.part('R',pos.R1L,pos.R1R,'R1 '+kl(R1),{ohms:R1*1000})+B.part('R',pos.R2L,pos.R2R,'',{ohms:R2*1000})+`<text x="441" y="${(pos.R2L[1]+pos.R2R[1])/2+4}" font-size="12" font-weight="700" fill="#2b1a05" text-anchor="end">R2 ${kl(R2)}</text>`+B.part('R',pos.R3T,pos.R3B,'R3 '+kl(R3),{ohms:R3*1000})+
     term(...pos.IN1,'IN1')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,`+${VP}V`)+term(...pos.VNT,`−${VP}V`));
   const pads=Object.keys(pos).map(id=>({id,x:pos[id][0],y:pos[id][1],label:names[id]}));
   const rd=(id,v)=>{const x=read(id,{in1:v});return (x>0.0005?'+':'')+fmt(Math.abs(x)<0.0005?0:x,3)+' V';};
@@ -1474,7 +1479,7 @@ function instBoard(){
     supT([pos.VNT,[545,BUS],[22,BUS],[22,pos.I1p4[1]],pos.I1p4],'TRACE 1',[455,BUS-7])+supT([pos.I2p4,[pos.I2p4[0],BUS]])+supT([[pos.I3p4[0],BUS],pos.I3p4])+
     supT([pos.VPT,[275,30],[275,pos.I2p7[1]],pos.I2p7],'TRACE 2',[400,24])+supT([[275,pos.I1p7[1]],pos.I1p7],'TRACE 3',[252,pos.I1p7[1]-8])+supT([pos.VPT,[545,50],[460,50],[460,pos.I3p7[1]],pos.I3p7],'TRACE 4',[505,44])+
     dip(...c1,'IC1')+dip(...c2,'IC2')+dip(...c3,'IC3')+jw(pos.I1p2,pos.I1p6,-40)+jw(pos.I2p2,pos.I2p6,-40)+jv(pos.R4B,[300,330],-46)+
-    B.part('R',pos.R1L,pos.R1R,'R1 '+kl(ra))+B.part('R',pos.R2L,pos.R2R,'')+`<text x="333" y="294" font-size="12" font-weight="700" fill="#2b1a05">R2 ${kl(ra)}</text>`+B.part('R',pos.R3L,pos.R3R,'R3 '+kl(rb))+B.part('R',pos.R4T,pos.R4B,'R4 '+kl(rb))+
+    B.part('R',pos.R1L,pos.R1R,'R1 '+kl(ra),{ohms:ra*1000})+B.part('R',pos.R2L,pos.R2R,'',{ohms:ra*1000})+`<text x="333" y="294" font-size="12" font-weight="700" fill="#2b1a05">R2 ${kl(ra)}</text>`+B.part('R',pos.R3L,pos.R3R,'R3 '+kl(rb),{ohms:rb*1000})+B.part('R',pos.R4T,pos.R4B,'R4 '+kl(rb),{ohms:rb*1000})+
     term(...pos.IN1,'IN1')+term(...pos.IN2,'IN2')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,`+${VP}V`)+term(...pos.VNT,`−${VP}V`));
   const pads=Object.keys(pos).map(id=>({id,x:pos[id][0],y:pos[id][1],label:names[id]}));
   const rd=(id,a,b)=>{const x=read(id,{in1:a,in2:b});return (x>0.0005?'+':'')+fmt(Math.abs(x)<0.0005?0:x,3)+' V';};
