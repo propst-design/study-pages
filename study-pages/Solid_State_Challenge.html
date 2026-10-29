@@ -1398,9 +1398,22 @@ function transistorBuild(){
 function ampBoard(type,forceFault){ // 'bb' or 'div'
   const div=type==='div';
   const tol=()=>1+rnd(-0.1,0.1);
-  const VCC=div?20:12,vin=div?pick([0.01,0.015,0.02]):pick([0.005,0.008,0.01]);
+  const vin=div?pick([0.01,0.015,0.02]):pick([0.005,0.008,0.01]);
   const beta=div?pick([80,100,120,150,180]):pick([80,90,100,110,120,130,150]);
-  const R1=(div?68e3:1.2e6)*tol(),R2=27e3*tol(),RE=5.6e3*tol(),RC=(div?12e3:5.6e3)*tol();const VBE=rnd(0.62,0.7);
+  // marked (nominal) values, E12, chosen so a working board sits well inside the active region
+  let VCC,R1n,R2n=0,REn=0,RCn;
+  if(div){let ok;do{
+      VCC=pick([12,15,18,20]);RCn=eVal(2200,15000);const IEt=VCC*rnd(0.3,0.45)/RCn,VEt=rnd(1.5,VCC*0.25);REn=eNear(VEt/IEt);
+      R2n=eVal(4700,47000);const VBt=VEt+0.7;R1n=eNear(R2n*(VCC-VBt)/VBt);
+      const vb=VCC*R2n/(R1n+R2n),ie=(vb-0.7)/REn,vc=VCC-ie*RCn,rt=R1n*R2n/(R1n+R2n);
+      ok=vb>=2&&R1n>=10e3&&R1n<=220e3&&(vc-(vb-0.7))/VCC>=0.3&&(vc-(vb-0.7))/VCC<=0.6&&RCn/REn>=1.5&&RCn/REn<=6&&rt<=0.04*81*REn&&RCn*ie/0.025>=60;
+    }while(!ok);}
+  else{let ok;do{
+      VCC=pick([9,12,15,18]);RCn=eVal(1000,10000);const ICt=VCC*rnd(0.4,0.65)/RCn;R1n=eNear((VCC-0.7)/(ICt/beta));
+      const vc=VCC-beta*(VCC-0.7)/R1n*RCn;
+      ok=R1n>=100e3&&R1n<=3.3e6&&vc/VCC>=0.35&&vc/VCC<=0.6;
+    }while(!ok);}
+  const R1=R1n*tol(),R2=R2n*tol(),RE=REn*tol(),RC=RCn*tol();const VBE=rnd(0.62,0.7);
   const faults=div?['C1 Open','C2 Open','C3 Open','R1 Open','RC Open','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Open B-E Junction in Q1','Shorted B-E Junction in Q1','No Faults']
                   :['C1 Open','C2 Open','RC Open','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Open Junctions in Q1','Shorted Junctions in Q1','No Faults'];
   const ans=forceFault!=null?forceFault:ri(0,faults.length-1);const f=faults[ans];
@@ -1487,12 +1500,12 @@ function ampBoard(type,forceFault){ // 'bb' or 'div'
     'Open Junctions in Q1':'The base reads the full VCC (R1 carries no current, so it drops no voltage) and the collector reads VCC. The transistor conducts nowhere: open junctions.',
     'Shorted Junctions in Q1':'Base, collector and emitter all read 0 V: the shorted transistor ties the collector and base to the grounded emitter.',
     'No Faults':'All DC voltages are close to the calculated values and the amplifier has a large output signal.'};
-  const work=div?(()=>{const Rt=68e3*27e3/95e3,vb=20*27/95,ie=(vb-0.7)/5600;return ['>Normal values from the marked parts (stiff-divider estimate):',`V_B=V_{CC}\\frac{R_2}{R_1+R_2}=20\\,\\text{V}\\frac{27\\,\\text{k}\\Omega}{68\\,\\text{k}\\Omega+27\\,\\text{k}\\Omega}=${tV(vb)}`,`V_E=V_B-0.7\\,\\text{V}=${tV(vb-0.7)}`,`I_E=\\frac{V_E}{R_E}=\\frac{${tV(vb-0.7)}}{5.6\\,\\text{k}\\Omega}=${tmA(ie)}`,`V_C=V_{CC}-I_E R_C=20\\,\\text{V}-(${tmA(ie)})(12\\,\\text{k}\\Omega)=${tV(20-ie*12e3)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{12\\,\\text{k}\\Omega}{${tO(0.025/ie)}}=${tn(12e3*ie/0.025,3)}`,'>Real readings differ from these by up to about 10% because of part tolerance and meter error.'].flatMap(splitEq);})
-    :(()=>{const ib=11.3/1.2e6,ic=beta*ib;return ['>Normal values from the marked parts:',`I_B=\\frac{V_{CC}-0.7\\,\\text{V}}{R_1}=\\frac{12\\,\\text{V}-0.7\\,\\text{V}}{1.2\\,\\text{M}\\Omega}=${tuA(ib)}`,`I_C=\\beta I_B=(${beta})(${tuA(ib)})=${tmA(ic)}`,`V_C=V_{CC}-I_C R_C=12\\,\\text{V}-(${tmA(ic)})(5.6\\,\\text{k}\\Omega)=${tV(12-ic*5600)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{5.6\\,\\text{k}\\Omega}{${tO(0.025/(ib+ic))}}=${tn(5600*(ib+ic)/0.025,3)}`,'>Real readings differ from these by up to about 10% because of part tolerance and meter error.'].flatMap(splitEq);});
+  const work=div?(()=>{const vb=VCC*R2n/(R1n+R2n),ie=(vb-0.7)/REn;return ['>Normal values from the marked parts (stiff-divider estimate):',`V_B=V_{CC}\\frac{R_2}{R_1+R_2}=${tV(VCC)}\\frac{${tR(R2n)}}{${tR(R1n)}+${tR(R2n)}}=${tV(vb)}`,`V_E=V_B-0.7\\,\\text{V}=${tV(vb-0.7)}`,`I_E=\\frac{V_E}{R_E}=\\frac{${tV(vb-0.7)}}{${tR(REn)}}=${tmA(ie)}`,`V_C=V_{CC}-I_E R_C=${tV(VCC)}-(${tmA(ie)})(${tR(RCn)})=${tV(VCC-ie*RCn)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{${tR(RCn)}}{${tO(0.025/ie)}}=${tn(RCn*ie/0.025,3)}`,'>Real readings differ from these by up to about 10% because of part tolerance and meter error.'].flatMap(splitEq);})
+    :(()=>{const ib=(VCC-0.7)/R1n,ic=beta*ib;return ['>Normal values from the marked parts:',`I_B=\\frac{V_{CC}-0.7\\,\\text{V}}{R_1}=\\frac{${tV(VCC)}-0.7\\,\\text{V}}{${tR(R1n)}}=${tuA(ib)}`,`I_C=\\beta I_B=(${beta})(${tuA(ib)})=${tmA(ic)}`,`V_C=V_{CC}-I_C R_C=${tV(VCC)}-(${tmA(ic)})(${tR(RCn)})=${tV(VCC-ic*RCn)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{${tR(RCn)}}{${tO(0.025/(ib+ic))}}=${tn(RCn*(ib+ic)/0.025,3)}`,'>Real readings differ from these by up to about 10% because of part tolerance and meter error.'].flatMap(splitEq);});
   return {svg,pads,faults,answer:ans,dc,ac:acv,vcc:VCC,vin,explain:()=>EXPL[f],work,
     schematic:div?schCE('byp',{out:'C3',byp:'C2'}):schCE('bb'),
-    info:()=>div?`Marked values: R1 = 68 kΩ, R2 = 27 kΩ, RE = 5.6 kΩ, RC = 12 kΩ. C1 is the input capacitor, C2 the emitter bypass capacitor and C3 the output capacitor. Beta = ${beta}. Parts are within 10% of their marked values, and the meter can be off by up to 5%.`
-                :`Marked values: R1 = 1.2 MΩ, RC = 5.6 kΩ. C1 is the input capacitor and C2 the output capacitor. Beta = ${beta}. Parts are within 10% of their marked values, and the meter can be off by up to 5%.`};
+    info:()=>div?`Marked values: R1 = ${fR(R1n)}, R2 = ${fR(R2n)}, RE = ${fR(REn)}, RC = ${fR(RCn)}. C1 is the input capacitor, C2 the emitter bypass capacitor and C3 the output capacitor. Beta = ${beta}. Parts are within 10% of their marked values, and the meter can be off by up to 5%.`
+                :`Marked values: R1 = ${fR(R1n)}, RC = ${fR(RCn)}. C1 is the input capacitor and C2 the output capacitor. Beta = ${beta}. Parts are within 10% of their marked values, and the meter can be off by up to 5%.`};
 }
 SK._ampBoard=ampBoard; // exposed for automated fault sweeps
 const TS_TEXT=(what,nf)=>`<p>Find the fault in a ${what} amplifier built on a PC board. The fault can be a failed part or a broken circuit trace, or the board may have no fault at all. There are ${nf} possible answers, and each run gives you ten boards.</p><p>Like real equipment, the parts are only within 10% of their marked values, and the meter can be off by up to 5% and drifts a little. You will not get the calculated values exactly, but you will always get enough information to decide. Before you start, work out roughly what the normal base, emitter and collector voltages should be (the worked solution after each item shows how).</p><p>A good strategy: check the DC voltages at the transistor first (they tell you whether it is cut off, saturated or normal), then follow the signal with the AC meter from the input toward the output. To find the voltage across a part, measure both ends and subtract.</p>`;
