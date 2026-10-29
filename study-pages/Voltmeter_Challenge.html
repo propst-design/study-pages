@@ -1214,8 +1214,9 @@ bench:`<p>Practice finding a bad module with AC voltage readings. It isn't grade
 open:`<p>A circuit is a complete path for current. An <b>open circuit</b> has a break somewhere in that path, so it has infinite resistance. A conductor can break inside its insulation and still look perfect from the outside, and any part (a fuse, a heater element, a lamp) can fail open.</p>
 <h3>Finding an open with a voltmeter</h3><p>In a working series circuit, the voltage divides in proportion to resistance. Almost all of it is dropped across the load (here the heater). A fuse drops a small voltage, and wires drop almost nothing.</p>
 <p><b>With one open part, no current flows. The good parts drop 0 V, and the entire supply voltage appears across the open part.</b></p>
-<p><b>With two open parts</b>, the section between them isn't connected to either battery terminal. A voltmeter across just one of the opens reads about 0 V, because the other open breaks the meter's path back to the battery. Measuring across both opens at once shows the full voltage. A good method: put the black probe on Battery − and move the red probe from Battery + toward the load. The reading drops to 0 V just past the first open. Then put the black probe on Battery + and work back from Battery −. The reading changes from −12 V to 0 V just past the second open.</p>`,
-modules3:`<p>This circuit has three modules in series with a 12 V battery and a fuse. Each module contains a resistor in parallel with a capacitor. Your job is to find the fault, if any, in each of ten circuits. The black probe stays on the battery's negative terminal, and you move the red probe.</p>
+<p><b>With two open parts</b>, the section between them isn't connected to either battery terminal. A voltmeter across just one of the opens reads about 0 V, because the other open breaks the meter's path back to the battery. Measuring across both opens at once shows the full voltage. A good method: put the black probe on Battery − and move the red probe from Battery + toward the load. The reading drops to 0 V just past the first open. Then put the black probe on Battery + and work back from Battery −. The reading changes from the full battery voltage (shown as a negative number) to 0 V just past the second open.</p>
+<p>The battery (6, 12 or 24 V) and the heater's resistance change from circuit to circuit, so check the circuit parameters each time.</p>`,
+modules3:`<p>This circuit has three modules in series with a battery and a fuse. The battery (6, 12 or 24 V) and the module resistance change from circuit to circuit, but the three modules always match each other, so the fractions below always hold. Each module contains a resistor in parallel with a capacitor. Your job is to find the fault, if any, in each of ten circuits. The black probe stays on the battery's negative terminal, and you move the red probe.</p>
 <p>A resistor usually fails <b>open</b>. A module with an open resistor is an open circuit, because a good capacitor blocks DC and provides no current path. A capacitor often fails <b>shorted</b>, and a shorted capacitor shorts the whole module, bypassing its resistor.</p>
 <h3>What each fault looks like</h3><p>All readings below are with the black probe on Battery −. Current flows from Battery + through the fuse, then M3, M2 and M1, back to Battery −.</p>
 <table class="t small"><thead><tr><th>Condition</th><th>M3 top</th><th>M3 bottom = M2 bottom</th><th>M2 top = M1 top</th><th>M1 bottom</th></tr></thead><tbody>
@@ -1248,8 +1249,8 @@ divider:`<p>These modules each contain one DC source and a resistor voltage divi
 <p><b>Method:</b> first work out the voltage of each point, measured from the source's negative terminal: + is the full source voltage, junction A is ${m('V_{R2}')} (plus ${m('V_{R3}')} in the three-resistor module), and so on. Then find a wire that reads the most negative compared with the others, which is the − terminal. Measure every other wire against it and match the readings to the point voltages. A wire that reads 0 V to every other wire is not connected. Two wires that read 0 V to each other are tied to the same point.</p>
 <p><b>Polarity:</b> a positive reading means the red probe is on the higher-voltage point.</p>`,
 ts1:`<p>In this activity you move only the red probe. The black probe stays on the battery's negative terminal. That's an efficient way to troubleshoot: every reading tells you the voltage of one point compared with Battery −.</p>
-<p>In a series circuit with one open part, every point between Battery + and the open reads the full battery voltage. Every point between the open and Battery − reads 0 V. <b>The open part is the one with full voltage on one terminal and 0 V on the other.</b> For example, if the blue wire is open in a 12 V circuit, every point from Battery + up to one end of the blue wire reads 12 V, and every point past its other end reads 0 V.</p>
-<p>Some circuits have no fault. Then the voltage steps down a little at each part, in proportion to its resistance: the three equal resistors each drop about one-third of the battery voltage, the fuse drops a few hundredths of a volt and the wires drop almost nothing.</p>
+<p>In a series circuit with one open part, every point between Battery + and the open reads the full battery voltage. Every point between the open and Battery − reads 0 V. <b>The open part is the one with full voltage on one terminal and 0 V on the other.</b> For example, if the blue wire is open, every point from Battery + up to one end of the blue wire reads the full battery voltage, and every point past its other end reads 0 V.</p>
+<p>Some circuits have no fault. Then the voltage steps down a little at each part, in proportion to its resistance: the three equal resistors each drop about one-third of the battery voltage, the fuse drops a few hundredths of a volt and the wires drop almost nothing. The battery (6, 12 or 24 V) and the resistor value change from circuit to circuit, but the three resistors always match.</p>
 <p><b>Strategy:</b> don't test every point in order. Start in the middle of the circuit. If that point reads full voltage, the open is further along toward Battery −. If it reads 0 V, the open is back toward Battery +. Keep halving the section that's left, and you'll find any open in about four readings.</p>`,
 ac:`<p>This circuit has three heater elements (R1, R2 and R3) in series with a toggle switch, powered from a 120 V AC line (household line voltage). Set the meter to AC volts. The black probe stays on the neutral (white) conductor, and you move the red probe to the test points on the conduit. The colored wires run through the conduit to the test points, so a hidden short between two of them is possible.</p>
 <table class="t small"><thead><tr><th>Test point</th><th>Wire</th><th>Connected to</th></tr></thead><tbody>
@@ -1271,22 +1272,22 @@ ac:`<p>This circuit has three heater elements (R1, R2 and R3) in series with a t
 <p><b>Purple-to-blue short:</b> bypasses R2. TP3 reads full voltage, and TP4 and TP2 read the same: ${m('V_{TP4}=V_{TP2}=V_S\\frac{R_3}{R_1+R_3}')}.</p>
 <p><b>Red-to-blue short:</b> bypasses R1 and R2. TP3, TP4 and TP2 all read full voltage, and only R3 carries current.</p>
 <p><b>Tip:</b> a divider calculation is just "this resistor's share": divide the resistance by the total resistance in the path, then multiply by the source voltage. Use the TP1 reading as ${m('V_S')}. The line voltage varies by about ±5%.</p>`,
-sp:`<p>This activity asks you to find shorted modules, open modules, a blown fuse or a weak battery in the circuit shown. Each module is a resistor (6 Ω) in parallel with a capacitor in one package. Modules fail open (open resistor) or shorted (shorted capacitor). The black probe stays on Battery −.</p>
+sp:`<p>This activity asks you to find shorted modules, open modules, a blown fuse or a weak battery in the circuit shown. Each module is a resistor in parallel with a capacitor in one package. All four resistors have the same value, ${m('R')}. That value (3 Ω to 15 Ω) and the battery (6, 12 or 24 V) change from circuit to circuit, so check the circuit parameters each time. Modules fail open (open resistor) or shorted (shorted capacitor). The black probe stays on Battery −.</p>
 <p><b>The circuit:</b> M2 and M4 are in series, and that pair is in parallel with M3. The parallel group is in series with M1. With DC, the capacitors carry no current and have no effect.</p>
-${M('R_T=R_1+\\frac{R_3(R_2+R_4)}{R_3+R_2+R_4}=6+\\frac{6\\times12}{18}=10\\,\\Omega')}
-<p><b>Normal operation:</b> all the current flows through M1, so M1 drops ${m('\\frac{6}{10}=60\\%')} of the supply. The parallel group drops the other 40%, so M3 drops 40%, and M2 and M4 split that equally at 20% each. Reading from Battery −: M1 right (= M2 left = M3 top) is about 40% of the supply, and M2 right (= M4 top) is about 20%.</p>
-<table class="t small"><thead><tr><th>Condition</th><th>Total R</th><th>M1 right / M3 top</th><th>M4 top</th><th>Clue</th></tr></thead><tbody>
-<tr><td>Normal</td><td>10 Ω</td><td>40%</td><td>20%</td><td>battery 12 V ± 10%</td></tr>
+${M('R_T=R_1+\\frac{R_3(R_2+R_4)}{R_3+R_2+R_4}=R+\\frac{R\\times2R}{3R}=\\frac{5}{3}R')}
+<p><b>Normal operation:</b> all the current flows through M1, so M1 drops ${m('\\frac{R}{R_T}=\\frac{3}{5}=60\\%')} of the supply. (With 6 Ω modules, for example, ${m('R_T=10\\,\\Omega')}.) The parallel group drops the other 40%, so M3 drops 40%, and M2 and M4 split that equally at 20% each. Reading from Battery −: M1 right (= M2 left = M3 top) is about 40% of the supply, and M2 right (= M4 top) is about 20%.</p>
+<table class="t small"><thead><tr><th>Condition</th><th>Total resistance</th><th>M1 right / M3 top</th><th>M4 top</th><th>Clue</th></tr></thead><tbody>
+<tr><td>Normal</td><td>1⅔ R</td><td>40%</td><td>20%</td><td>battery within ±10% of its rated voltage</td></tr>
 <tr><td>Blown fuse</td><td>∞</td><td>0</td><td>0</td><td>fuse left = battery, fuse right = 0 V</td></tr>
-<tr><td>Weak battery</td><td>10 Ω</td><td>40%</td><td>20%</td><td>battery below 10.8 V (90% of 12 V); every reading is proportionally low</td></tr>
+<tr><td>Weak battery</td><td>1⅔ R</td><td>40%</td><td>20%</td><td>battery below 90% of its rated voltage (10.8 V for a 12 V battery); every reading is proportionally low</td></tr>
 <tr><td>M1 open</td><td>∞</td><td>0</td><td>0</td><td>M1 left = full; no current, so <b>both fuse terminals read the same</b></td></tr>
-<tr><td>M2 open</td><td>12 Ω</td><td>50%</td><td>0</td><td>M1 and M3 split the supply</td></tr>
-<tr><td>M3 open</td><td>18 Ω</td><td>67%</td><td>33%</td><td>M1, M2 and M4 split the supply in thirds</td></tr>
-<tr><td>M1 shorted</td><td>4 Ω</td><td>100%</td><td>50%</td><td>M1 drops 0 V</td></tr>
-<tr><td>M2 shorted</td><td>9 Ω</td><td>33%</td><td>33%</td><td>M3 and M4 in parallel; M2 drops 0 V</td></tr>
-<tr><td>M3 shorted</td><td>6 Ω</td><td>0</td><td>0</td><td>large current (about 2 A), so <b>the fuse drops a few tenths of a volt</b></td></tr>
-<tr><td>M4 shorted</td><td>9 Ω</td><td>33%</td><td>0</td><td>M2 and M3 in parallel</td></tr></tbody></table>
-<p><b>Watch out:</b> "M1 open" and "M3 shorted" both put full voltage on M1 left and 0 V on M1 right. Tell them apart by comparing the two fuse terminals. With no current (M1 open) they read the same. With the large current of a shorted M3, the fuse right terminal reads a few tenths of a volt lower than the left.</p>`
+<tr><td>M2 open</td><td>2 R</td><td>50%</td><td>0</td><td>M1 and M3 split the supply</td></tr>
+<tr><td>M3 open</td><td>3 R</td><td>67%</td><td>33%</td><td>M1, M2 and M4 split the supply in thirds</td></tr>
+<tr><td>M1 shorted</td><td>⅔ R</td><td>100%</td><td>50%</td><td>M1 drops 0 V</td></tr>
+<tr><td>M2 shorted</td><td>1½ R</td><td>33%</td><td>33%</td><td>M3 and M4 in parallel; M2 drops 0 V</td></tr>
+<tr><td>M3 shorted</td><td>1 R</td><td>0</td><td>0</td><td>large current (battery voltage ÷ R), so <b>the fuse drops about 2% of the battery voltage</b> (a few tenths of a volt on a 12 V battery)</td></tr>
+<tr><td>M4 shorted</td><td>1½ R</td><td>33%</td><td>0</td><td>M2 and M3 in parallel</td></tr></tbody></table>
+<p><b>Watch out:</b> "M1 open" and "M3 shorted" both put full voltage on M1 left and 0 V on M1 right. Tell them apart by comparing the two fuse terminals. With no current (M1 open) they read the same. With the large current of a shorted M3, the fuse right terminal reads about 2% of the battery voltage lower than the left (a few tenths of a volt on a 12 V battery).</p>`
 };
 const HOW={
   both:(free)=>`<p>Both probes can be moved. Tap a terminal to move the active probe, and use the <b>Red probe</b> and <b>Black probe</b> buttons to choose which probe moves. Select the condition that matches your readings and choose <b>Grade item</b>. You can change your selection until you grade, and you can keep measuring until you choose <b>Continue</b>.</p>`+K.scoreHow({points:10,free}),
@@ -1302,23 +1303,31 @@ const tbl=rows=>`<table class="t">${rows.map(r=>`<tr><td>${r[0]}</td><td><b>${r[
 const R=(a,b,r)=>({t:'R',a,b,r}),V=(a,b,v)=>({t:'V',a,b,v});
 const rtab=(head,rows)=>`><table class="t small"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 const NOERR='>Readings for this item (no meter error shown):';
+// value sets: rated battery voltage, standard fuse ratings, resistor power ratings
+const BATS=[6,12,24],FUSES=[0.5,1,2,3,5,7.5,10,15,20,25,30],WATTS=[1,2,5,10,25,50,100];
+const fuseFor=i=>FUSES.find(x=>x>=1.5*i)||30;            // fuse rated at least 1.5 × the largest normal-ish current
+const wattFor=p=>WATTS.find(x=>x>=1.5*p)||100;
+const batLabel=nom=>nom?nom+' V BATTERY':'BATTERY';
+const pickSet=(rs,ok)=>{const all=[];BATS.forEach(v=>rs.forEach(r=>{if(ok(v,r))all.push([v,r]);}));return pick(all);};
 
 /* ---------------- Open Circuits: battery, fuse, heater ---------------- */
 const HP={Bp:[330,250],FR:[440,70],FL:[340,70],HR:[240,70],HL:[110,70],Bn:[210,250]};
 const HNAMES={Bp:'Battery +',FR:'Fuse right',FL:'Fuse left',HR:'Heater right',HL:'Heater left',Bn:'Battery −'};
 const HEAT_OPTS=[['Normal operation',[]],['Red wire open',[0]],['Fuse blown',[1]],['Purple wire open',[2]],['Heater element open',[3]],['Green wire open',[4]],['Red and green wires open',[0,4]],['Fuse blown and heater open',[1,3]],['Purple and green wires open',[2,4]],['Red wire and heater open',[0,3]],['Fuse blown and green wire open',[1,4]],['Red and purple wires open',[0,2]]];
 const HPARTS=[['Bp','FR','red wire'],['FR','FL','fuse'],['FL','HR','purple wire'],['HR','HL','heater'],['HL','Bn','green wire']];
-function heaterSvg(){
+function heaterSvg(nom){
   let g=D.wire([HP.Bp,[490,250],[490,70],HP.FR],'#e53935','Red',[505,165,'#ddd'])+D.wire([HP.FL,HP.HR],'#c13fd1','Purple',[290,58])+D.wire([HP.HL,[50,70],[50,250],HP.Bn],'#3cc24e','Green',[34,165]);
   g+=D.part('F',HP.FL,HP.FR,'FUSE',{bl:80})+D.part('H',HP.HL,HP.HR,'HEATER',{bl:90});
-  g+=D.battery(190,232,160,62,'12 V BATTERY');
+  g+=D.battery(190,232,160,62,batLabel(nom));
   Object.values(HP).forEach(p=>g+=scr(p));
   return D.svg(540,300,g,BG);
 }
 function heaterItem(force){
   const ans=force??ri(0,HEAT_OPTS.length-1);const opens=HEAT_OPTS[ans][1];
-  const Vb=rnd(12.3,12.9),rw=()=>rnd(0.004,0.015);
-  const r=[rw(),rnd(0.07,0.12),rw(),rnd(3.8,4.2),rw()].map((x,i)=>opens.includes(i)?Infinity:x);
+  const [nom,Rh]=pickSet([1,1.5,2,3,4,6,8,12],(v,r)=>v/r>=2&&v/r<=6);   // heater current 2–6 A
+  const I0=nom/Rh,fuse=fuseFor(I0),Ph=Math.round(nom*nom/Rh);
+  const Vb=nom*rnd(1.025,1.075),rw=()=>rnd(0.004,0.015);
+  const r=[rw(),rnd(0.35,0.6)/fuse,rw(),Rh*rnd(0.95,1.05),rw()].map((x,i)=>opens.includes(i)?Infinity:x);
   const E=[V('Bp','Bi',Vb),R('Bi','Bn',0.01),R('Bp','FR',r[0]),R('FR','FL',r[1]),R('FL','HR',r[2]),R('HR','HL',r[3]),R('HL','Bn',r[4])];
   const meas=(a,b)=>K.volts(E,a,b);
   const work=()=>{
@@ -1329,27 +1338,32 @@ function heaterItem(force){
     else if(opens.length===1)s.push(`>The full battery voltage appears across the ${HPARTS[opens[0]][2]} and every other part reads about 0 V, so the <b>${HPARTS[opens[0]][2]} is open</b>.`);
     else{const [a,b]=opens;s.push(`>No part reads the full voltage by itself, but there is no current either (the heater drops 0 V). So there are two opens. With the black probe on Battery −, the reading falls to 0 V just past the ${HPARTS[a][2]}. With the black probe on Battery +, the reading changes from −${fmt(Vb,3)} V to 0 V just past the ${HPARTS[b][2]}. Measuring across both opens at once (${HNAMES[HPARTS[a][0]]} to ${HNAMES[HPARTS[b][1]]}) reads the full battery voltage. <b>${esc(HEAT_OPTS[ans][0])}.</b>`);}
     return s;};
-  return {svg:heaterSvg,pads:Object.keys(HP).map(k=>({id:k,x:HP[k][0],y:HP[k][1],label:HNAMES[k]})),unit:'volt',options:HEAT_OPTS.map(o=>o[0]),answer:ans,work,
-    measure:meas,params:tbl([['Battery','12 V lead-acid'],['Fuse','5 A, 250 V'],['Heater element','4 Ω, 100 W']]),
+  return {svg:()=>heaterSvg(nom),pads:Object.keys(HP).map(k=>({id:k,x:HP[k][0],y:HP[k][1],label:HNAMES[k]})),unit:'volt',options:HEAT_OPTS.map(o=>o[0]),answer:ans,work,
+    measure:meas,params:tbl([['Battery',nom+' V lead-acid'],['Fuse',fmt(fuse)+' A, 250 V'],['Heater element',`${fmt(Rh)} Ω ± 5%, ${Ph} W at ${nom} V`]]),
     explain:'The entire supply voltage appears across an open part in a series circuit. With two opens, the section between them is cut off from the battery, and a meter across just one of the opens reads about 0 V.'};
 }
 
 /* ---------------- series loop of three parts (TS1/2 resistors, Shorts & Opens modules) ---------------- */
 const SP={Bp:[140,150],FL:[180,40],FR:[290,40],X3t:[480,100],X3b:[480,210],X2b:[380,210],X2t:[380,100],X1t:[280,100],X1b:[280,210],Bn:[80,150]};
-function loopSvg(kind,labels,colors){
+function loopSvg(kind,labels,colors,nom){
   const c=colors;
   let g=D.wire([SP.Bp,[140,40],SP.FL],c[0],'Red',[124,96])+D.wire([SP.FR,[480,40],SP.X3t],c[1],labels.w1,[440,30])+D.wire([SP.X3b,[480,250],[380,250],SP.X2b],c[2],labels.w2,[430,268])+D.wire([SP.X2t,[380,70],[280,70],SP.X1t],c[3],labels.w3,[330,62])+D.wire([SP.X1b,[280,270],[30,270],[30,150],SP.Bn],c[4],'Green',[150,288]);
   g+=D.part('F',SP.FL,SP.FR,'FUSE',{bl:70,labelAbove:false})+D.part(kind,SP.X3t,SP.X3b,labels.p[2],{bl:70})+D.part(kind,SP.X2t,SP.X2b,labels.p[1],{bl:70,labelLeft:false})+D.part(kind,SP.X1t,SP.X1b,labels.p[0],{bl:70});
-  g+=D.battery(50,160,120,70,'12 V BATTERY');
+  g+=D.battery(50,160,120,70,batLabel(nom));
   Object.values(SP).forEach(p=>g+=scr(p));
   return D.svg(540,300,g,BG);
 }
 const LNAMES=p=>({Bp:'Battery +',FL:'Fuse left',FR:'Fuse right',X3t:p+'3 top',X3b:p+'3 bottom',X2b:p+'2 bottom',X2t:p+'2 top',X1t:p+'1 top',X1b:p+'1 bottom',Bn:'Battery −'});
 const LOOPN=['Bp','FL','FR','X3t','X3b','X2b','X2t','X1t','X1b','Bn'];
+const TS1_LAB={w1:'Gray',w2:'Purple',w3:'Blue',p:['R1','R2','R3']},TS1_COL=['#e53935','#a9a9a9','#c13fd1','#2f86ff','#3cc24e'];
+const SO_LAB={w1:'',w2:'',w3:'',p:['M1','M2','M3']},SO_COL=['#e53935','#a9a9a9','#e8a33c','#2f86ff','#3cc24e'];
 const TS1_OPTS=['Red wire open','Fuse blown','Gray wire open','R3 open','Purple wire open','R2 open','Blue wire open','R1 open','Green wire open','Normal operation'];
 function seriesItem(force){
-  const ans=force??ri(0,9);const Vb=rnd(12.3,12.9);
-  const r=[rnd(0.004,0.012),rnd(0.03,0.06),rnd(0.004,0.012),rnd(2.85,3.15),rnd(0.004,0.012),rnd(2.85,3.15),rnd(0.004,0.012),rnd(2.85,3.15),rnd(0.004,0.012)];
+  const ans=force??ri(0,9);
+  const [nom,Rr]=pickSet([2,3,4,6,8,10],(v,r)=>v/(3*r)>=0.25&&v/(3*r)<=4);   // loop current 0.25–4 A
+  const fuse=fuseFor(nom/(3*Rr)),Vb=nom*rnd(1.025,1.075),watt=wattFor(Math.pow(nom*1.075,2)/(9*Rr));
+  const rr=()=>Rr*rnd(0.95,1.05);
+  const r=[rnd(0.004,0.012),rnd(0.06,0.12)/fuse,rnd(0.004,0.012),rr(),rnd(0.004,0.012),rr(),rnd(0.004,0.012),rr(),rnd(0.004,0.012)];
   if(ans<9)r[ans]=Infinity;
   const E=[V('Bp','Bi',Vb),R('Bi','Bn',0.02)];r.forEach((x,i)=>E.push(R(LOOPN[i],LOOPN[i+1],x)));
   const nm=LNAMES('R');const meas=(a,b)=>K.volts(E,a,b);
@@ -1357,9 +1371,9 @@ function seriesItem(force){
     if(ans===9)s.push(`>The voltage steps down by about one-third at each resistor: ${fv(meas('X3b','Bn'))} below R3, ${fv(meas('X1t','Bn'))} below R2. No point jumps from full voltage to 0 V. <b>Normal operation.</b>`,`V_{R}\\approx\\frac{V_B}{3}=\\frac{${fmt(Vb,3)}\\,\\text{V}}{3}=${fmt(Vb/3,3)}\\,\\text{V}`);
     else s.push(`>${nm[LOOPN[ans]]} reads full battery voltage and ${nm[LOOPN[ans+1]]} reads 0 V. The part between them, the <b>${esc(TS1_OPTS[ans].replace(' open',''))}</b>, is open.`);
     return s;};
-  return {svg:()=>loopSvg('R',{w1:'Gray',w2:'Purple',w3:'Blue',p:['R1','R2','R3']},['#e53935','#a9a9a9','#c13fd1','#2f86ff','#3cc24e']),work,
+  return {svg:()=>loopSvg('R',TS1_LAB,TS1_COL,nom),work,
     pads:LOOPN.map(k=>({id:k,x:SP[k][0],y:SP[k][1],label:nm[k]})),blackFixed:'Bn',unit:'volt',options:TS1_OPTS,answer:ans,
-    measure:meas,params:tbl([['Battery','12 V lead-acid'],['Fuse','3 A, 250 V'],['R1, R2, R3','3 Ω, 10 W resistors']]),
+    measure:meas,params:tbl([['Battery',nom+' V lead-acid'],['Fuse',fmt(fuse)+' A, 250 V'],['R1, R2, R3',`${fmt(Rr)} Ω ± 5%, ${watt} W resistors`]]),
     explain:'The open part is the one between a full supply voltage reading and a zero volt reading.'};
 }
 const SO_OPTS=['Blown fuse','M1 open','M2 open','M3 open','M1 Shorted','M2 Shorted','M3 Shorted','Normal operation'];
@@ -1372,16 +1386,18 @@ const SO_WHY=['Fuse left reads full voltage and fuse right reads 0 V, so the ful
   'M3 drops 0 V (both terminals read full voltage) and M1 and M2 each drop half the supply.',
   'Each module drops about one-third of the supply.'];
 function modules3Item(force){
-  const ans=force??ri(0,7);const f=SO_OPTS[ans];const Vb=rnd(12.3,12.9);
-  const mm=[rnd(1.9,2.1),rnd(1.9,2.1),rnd(1.9,2.1)];
+  const ans=force??ri(0,7);const f=SO_OPTS[ans];
+  const [nom,Rm]=pickSet([2,3,4,6,8],(v,r)=>v/r>=1&&v/r<=12);   // up to 6 A with one module shorted
+  const fuse=fuseFor(nom/(2*Rm)),Cm=pick([1,2.2,4.7,10]),Vb=nom*rnd(1.025,1.075);
+  const mm=[0,0,0].map(()=>Rm*rnd(0.95,1.05));
   [1,2,3].forEach(i=>{if(f===`M${i} open`)mm[i-1]=Infinity;if(f===`M${i} Shorted`)mm[i-1]=0.005;});
-  const r=[0.006,f==='Blown fuse'?Infinity:rnd(0.02,0.04),0.006,mm[2],0.006,mm[1],0.006,mm[0],0.006];
+  const r=[0.006,f==='Blown fuse'?Infinity:rnd(0.2,0.4)/fuse,0.006,mm[2],0.006,mm[1],0.006,mm[0],0.006];
   const E=[V('Bp','Bi',Vb),R('Bi','Bn',0.02)];r.forEach((x,i)=>E.push(R(LOOPN[i],LOOPN[i+1],x)));
   const nm=LNAMES('M');const meas=(a,b)=>K.volts(E,a,b);
   const work=()=>[NOERR,rtab(['Red probe on','Reading (black on Battery −)','Fraction of battery'],LOOPN.slice(0,9).map(k=>{const v=meas(k,'Bn');return [nm[k],fv(v),fmt(v/meas('Bp','Bn'),2)];})),`><b>${esc(f)}</b>: ${SO_WHY[ans]}`];
-  return {svg:()=>loopSvg('M',{w1:'',w2:'',w3:'',p:['M1','M2','M3']},['#e53935','#a9a9a9','#e8a33c','#2f86ff','#3cc24e']),work,
+  return {svg:()=>loopSvg('M',SO_LAB,SO_COL,nom),work,
     pads:LOOPN.map(k=>({id:k,x:SP[k][0],y:SP[k][1],label:nm[k]})),blackFixed:'Bn',unit:'volt',options:SO_OPTS,answer:ans,
-    measure:meas,params:tbl([['Battery','12 V lead-acid'],['Fuse','10 A, 250 V'],['M1, M2, M3 resistor','2 Ω each'],['M1, M2, M3 capacitor','2 µF each']])};
+    measure:meas,params:tbl([['Battery',nom+' V lead-acid'],['Fuse',fmt(fuse)+' A, 250 V'],['M1, M2, M3 resistor',fmt(Rm)+' Ω ± 5% each'],['M1, M2, M3 capacitor',fmt(Cm)+' µF each']])};
 }
 
 /* ---------------- AC heater circuit with conduit (TS3/4) ---------------- */
@@ -1451,36 +1467,39 @@ const QNAMES={Bp:'Battery +',FL:'Fuse left',FR:'Fuse right',M1L:'M1 left',M1R:'M
 const SPQ_OPTS=['Blown Fuse','Weak Battery','Normal Operation','M1 Open','M2 Open','M3 Open','M1 Shorted','M2 Shorted','M3 Shorted','M4 Shorted'];
 const SPQ_FRAC=[null,[0.4,0.2],[0.4,0.2],[0,0],[0.5,0],[2/3,1/3],[1,0.5],[1/3,1/3],[0,0],[1/3,0]];
 const SPQ_WHY=['Fuse left reads the battery voltage and fuse right reads 0 V, so the full supply is across the fuse.',
-  'The battery reads below 10.8 V (90% of 12 V), and every other reading is the normal fraction of that low voltage.',
-  'The battery is within 12 V ± 10%, M1 drops about 60%, and M2 and M4 each drop about 20%.',
+  nom=>`The battery reads below ${fmt(0.9*nom)} V (90% of its rated ${nom} V), and every other reading is the normal fraction of that low voltage.`,
+  nom=>`The battery is within ${nom} V ± 10% (${fmt(0.9*nom)} V to ${fmt(1.1*nom)} V), M1 drops about 60%, and M2 and M4 each drop about 20%.`,
   'M1 left reads full voltage and M1 right reads 0 V, and the two fuse terminals read the same. With no current, the fuse drops nothing.',
   'M1 and M3 split the supply (M1 right about 50%), and M4 top reads 0 V because no current flows through M2 and M4.',
   'M1, M2 and M4 split the supply in thirds: M1 right is about 67% and M4 top about 33%.',
   'M1 drops 0 V (M1 right reads the full voltage), and M4 top reads about half.',
   'M1 right and M4 top read the same (about one-third), so M2 drops 0 V.',
-  'M1 right reads 0 V, but unlike an open M1 the fuse right terminal reads a few tenths of a volt below fuse left. A large current is flowing.',
+  'M1 right reads 0 V, but unlike an open M1 the fuse right terminal reads noticeably below fuse left (about 2% of the battery voltage). A large current is flowing.',
   'M4 top reads 0 V while M1 right reads about one-third, so M4 drops 0 V.'];
-function spSvg(){
+function spSvg(nom){
   let g=D.wire([QP.Bp,[120,40],QP.FL],'#e53935','Red',[104,96])+D.wire([QP.FR,[270,40],QP.M1L],'#a9a9a9','Gray',[290,52])+D.wire([QP.M1R,QP.M2L],'#f2c94c')+D.wire([[385,90],QP.M3t],'#f2c94c')+D.wire([QP.M2R,QP.M4t],'#f2c94c')+
     D.wire([QP.M4b,[500,270],[385,270],QP.M3b],'#ff8a1f','Orange',[445,288])+D.wire([[385,270],QP.J],'#f2c94c','Yellow',[330,288])+D.wire([QP.J,[30,270],[30,150],QP.Bn],'#3cc24e','Green',[150,288]);
   g+=D.part('F',QP.FL,QP.FR,'FUSE',{bl:62})+D.part('M',QP.M1L,QP.M1R,'M1',{bl:66,labelAbove:true})+D.part('M',QP.M2L,QP.M2R,'M2',{bl:66,labelAbove:true})+D.part('M',QP.M3t,QP.M3b,'M3',{bl:66,labelLeft:true})+D.part('M',QP.M4t,QP.M4b,'M4',{bl:66,labelLeft:true});
-  g+=D.battery(30,160,120,70,'12 V BATTERY');
+  g+=D.battery(30,160,120,70,batLabel(nom));
   Object.values(QP).forEach(p=>g+=scr(p));
   return D.svg(540,300,g,BG);
 }
 function spItem(force){
   const ans=force??ri(0,9),f=SPQ_OPTS[ans];
-  const Vb=f==='Weak Battery'?rnd(8.2,10.2):rnd(11.4,12.9);
-  const mm=[1,2,3,4].map(()=>6*rnd(0.95,1.05));
+  const [nom,Rm]=pickSet([3,6,12,15],(v,r)=>v/r>=0.4&&v/r<=4);   // V/R (M3 shorted current) 0.4–4 A
+  const I0=nom/Rm,fuse=fuseFor(I0),// I0: current with M3 shorted; the fuse then drops about 2% of the battery voltage
+        Cm=pick([1,2.2,2.7,4.7]),Rt=Rm*5/3;
+  const Vb=nom*(f==='Weak Battery'?rnd(0.68,0.85):rnd(0.95,1.075));
+  const mm=[1,2,3,4].map(()=>Rm*rnd(0.95,1.05));
   [1,2,3,4].forEach(i=>{if(f===`M${i} Open`)mm[i-1]=Infinity;if(f===`M${i} Shorted`)mm[i-1]=0.005;});
   const w=0.006;
-  const E=[V('Bp','Bi',Vb),R('Bi','Bn',0.03),R('Bp','FL',w),R('FL','FR',f==='Blown Fuse'?Infinity:rnd(0.1,0.15)),R('FR','M1L',w),R('M1L','M1R',mm[0]),R('M1R','M2L',w),R('M1R','M3t',w),R('M2L','M2R',mm[1]),R('M2R','M4t',w),R('M4t','M4b',mm[3]),R('M4b','M3b',w),R('M3t','M3b',mm[2]),R('M3b','J',w),R('J','Bn',w)];
+  const E=[V('Bp','Bi',Vb),R('Bi','Bn',0.03),R('Bp','FL',w),R('FL','FR',f==='Blown Fuse'?Infinity:nom*rnd(0.017,0.025)/I0),R('FR','M1L',w),R('M1L','M1R',mm[0]),R('M1R','M2L',w),R('M1R','M3t',w),R('M2L','M2R',mm[1]),R('M2R','M4t',w),R('M4t','M4b',mm[3]),R('M4b','M3b',w),R('M3t','M3b',mm[2]),R('M3b','J',w),R('J','Bn',w)];
   const meas=(a,b)=>K.volts(E,a,b);
   const work=()=>{const vb=meas('Bp','Bn');const s=[NOERR,rtab(['Red probe on','Reading (black on Battery −)','% of battery'],['Bp','FL','FR','M1L','M1R','M4t'].map(k=>{const v=meas(k,'Bn');return [QNAMES[k],fv(v),vb>0.5?fmt(v/vb*100,3)+'%':'–'];}))];
-    if(SPQ_FRAC[ans]&&(ans===1||ans===2))s.push(`V_{M1}=V_B\\frac{R_1}{R_T}=${fmt(vb,3)}\\,\\text{V}\\times\\frac{6\\,\\Omega}{10\\,\\Omega}=${fmt(vb*0.6,3)}\\,\\text{V}`);
-    s.push(`><b>${esc(f)}</b>: ${SPQ_WHY[ans]}`);return s;};
-  return {svg:spSvg,pads:Object.keys(QP).map(k=>({id:k,x:QP[k][0],y:QP[k][1],label:QNAMES[k]})),blackFixed:'Bn',unit:'volt',options:SPQ_OPTS,answer:ans,work,
-    measure:meas,params:tbl([['Battery','12 V ± 10% when good'],['Fuse','3 A, 250 V'],['Each module','R = 6 Ω ± 5%, C = 2.7 µF']])+`<p class="small muted">Schematic: the fuse feeds M1; M3 is connected in parallel with the series combination of M2 and M4.</p>`};
+    if(SPQ_FRAC[ans]&&(ans===1||ans===2))s.push(`V_{M1}=V_B\\frac{R_1}{R_T}=${fmt(vb,3)}\\,\\text{V}\\times\\frac{${fmt(Rm)}\\,\\Omega}{${fmt(Rt)}\\,\\Omega}=${fmt(vb*0.6,3)}\\,\\text{V}`);
+    const why=SPQ_WHY[ans];s.push(`><b>${esc(f)}</b>: ${typeof why==='function'?why(nom):why}`);return s;};
+  return {svg:()=>spSvg(nom),pads:Object.keys(QP).map(k=>({id:k,x:QP[k][0],y:QP[k][1],label:QNAMES[k]})),blackFixed:'Bn',unit:'volt',options:SPQ_OPTS,answer:ans,work,
+    measure:meas,params:tbl([['Battery',`${nom} V ± 10% when good`],['Fuse',fmt(fuse)+' A, 250 V'],['Each module',`R = ${fmt(Rm)} Ω ± 5%, C = ${fmt(Cm)} µF`]])+`<p class="small muted">Schematic: the fuse feeds M1; M3 is connected in parallel with the series combination of M2 and M4.</p>`};
 }
 
 /* ---------------- battery modules (Circuit Testing One/Two) ---------------- */
@@ -1565,7 +1584,7 @@ function benchBoard(){
 /* ---------------- assemble ---------------- */
 const lab=(build,id,extra={})=>(el,s)=>K.lab(el,s,Object.assign({count:10,points:10,moveCost:id?1:0,free:id?FREE[id]:0,meterLabel:'DC voltmeter',itemWord:'Circuit',build:()=>build()},extra));
 const intro=(text,how,fig)=>CC.introPage({text:(fig?`<div class="diagram" style="margin-bottom:12px">${fig}</div>`:'')+text,how});
-const heaterSchem=CC.svg.series([{t:'R',label:'Heater'},{t:'F',label:'Fuse'}],{src:'dc',srcLabel:'12 V'});
+const heaterSchem=CC.svg.series([{t:'R',label:'Heater'},{t:'F',label:'Fuse'}],{src:'dc',srcLabel:'V'});
 const modOpt={itemWord:'Module',selectLabel:'Select a wiring diagram'};
 function hero(slot){
   slot.appendChild(CC.el(`<div class="card"><div class="row" style="justify-content:space-between"><b>PC board testing</b><span class="small muted">practice · not graded</span></div>
@@ -1589,7 +1608,7 @@ CC.App.init({
     {title:'Opens and shorts',items:[
       {id:'open1',title:'Open Circuits One',icon:'wire',sub:'heater, fuse, battery and wires',intro:intro(`<p>Use the voltmeter to find the open parts in a battery, fuse and heater circuit. Each of the ten circuits may have one or two open parts, or none.</p>`+TXT.open+condList(HEAT_OPTS.map(o=>o[0])),HOW.both(null),heaterSchem),run:lab(heaterItem,null)},
       {id:'open2',title:'Open Circuits Two',icon:'wire',sub:`${FREE.open2} free moves, then −1 per move`,intro:intro(twoNote('Open Circuits One','open2')+TXT.open+condList(HEAT_OPTS.map(o=>o[0])),HOW.both(FREE.open2),heaterSchem),run:lab(heaterItem,'open2')},
-      {id:'so1',title:'Shorts and Opens One',icon:'res',sub:'three RC modules in series',intro:intro(`<p>Find the open or shorted part in each of ten circuits. Each circuit is in one of 8 conditions, including normal operation.</p>`+TXT.modules3,so_how(null),loopSvg('M',{w1:'',w2:'',w3:'',p:['M1','M2','M3']},['#e53935','#a9a9a9','#e8a33c','#2f86ff','#3cc24e'])),run:lab(modules3Item,null)},
+      {id:'so1',title:'Shorts and Opens One',icon:'res',sub:'three RC modules in series',intro:intro(`<p>Find the open or shorted part in each of ten circuits. Each circuit is in one of 8 conditions, including normal operation.</p>`+TXT.modules3,so_how(null),loopSvg('M',SO_LAB,SO_COL)),run:lab(modules3Item,null)},
       {id:'so2',title:'Shorts and Opens Two',icon:'res',sub:`${FREE.so2} free moves, then −1 per move`,intro:intro(twoNote('Shorts and Opens One','so2')+TXT.modules3,so_how(FREE.so2)),run:lab(modules3Item,'so2')},
     ]},
     {title:'Circuit testing (modules)',items:[
@@ -1599,7 +1618,7 @@ CC.App.init({
       {id:'ct4',title:'Circuit Testing Four',icon:'chip',sub:`3-resistor dividers, ${FREE.ct4} free moves`,intro:intro(`<p>This is like <b>Circuit Testing Three</b>, but the dividers have three resistors and the scoring is stricter. On each item the first ${FREE.ct4} probe moves are free, and every move after that costs a point.</p>`+TXT.divider,HOW.mod(FREE.ct4,'voltage-divider module'),divSchem(true)),run:lab(()=>dividerItem(true),'ct4',modOpt)},
     ]},
     {title:'Troubleshooting',items:[
-      {id:'ts1',title:'Troubleshooting One',icon:'wrench',sub:'DC series circuit',intro:intro(`<p>Use the voltmeter to find the open part in a series circuit. In each of ten circuits, one wire or part may be open, or there may be no fault.</p>`+TXT.ts1+condList(TS1_OPTS),HOW.red(null,' Here it stays on Battery −.'),seriesItem().svg()),run:lab(seriesItem,null)},
+      {id:'ts1',title:'Troubleshooting One',icon:'wrench',sub:'DC series circuit',intro:intro(`<p>Use the voltmeter to find the open part in a series circuit. In each of ten circuits, one wire or part may be open, or there may be no fault.</p>`+TXT.ts1+condList(TS1_OPTS),HOW.red(null,' Here it stays on Battery −.'),loopSvg('R',TS1_LAB,TS1_COL)),run:lab(seriesItem,null)},
       {id:'ts2',title:'Troubleshooting Two',icon:'wrench',sub:`${FREE.ts2} free moves, then −1 per move`,intro:intro(twoNote('Troubleshooting One','ts2')+TXT.ts1+condList(TS1_OPTS),HOW.red(FREE.ts2,' Here it stays on Battery −.')),run:lab(seriesItem,'ts2')},
       {id:'ts3',title:'Troubleshooting Three',icon:'plug',sub:'AC heaters, switch and conduit',intro:intro(TXT.ac,HOW.red(null,' Here it stays on the neutral conductor. Operating the switch is free.'),acSchem()),run:lab(acItem,null,{meterLabel:'AC voltmeter'})},
       {id:'ts4',title:'Troubleshooting Four',icon:'plug',sub:`${FREE.ts4} free moves, then −1 per move`,intro:intro(twoNote('Troubleshooting Three','ts4')+TXT.ac,HOW.red(FREE.ts4,' Here it stays on the neutral conductor. Operating the switch is free.'),acSchem()),run:lab(acItem,'ts4',{meterLabel:'AC voltmeter'})},
