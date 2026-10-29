@@ -946,7 +946,7 @@ T.comparator=`<p>A <b>comparator</b> tells you which of two voltages is greater.
 <p>"Greater" means further to the right on the number line, so −1 V is greater than −5 V. In practice the output stops a volt or two short of each supply rail.</p>
 <p>Comparators are usually part of a larger circuit, such as a voltage regulator, a level detector or an analog-to-digital converter.</p>`;
 T.itov=`<p>A <b>current-to-voltage (I to V) converter</b> feeds the input current into the inverting input, which is held at virtual ground. All of that current flows through the feedback resistor ${m('R_f')}, so by Ohm's law:</p>${M('V_{out}=-I_{in}R_f')}
-<p>For example, with ${m('R_f=100\\text{ k}\\Omega')} and ${m('I_{in}=20\\text{ µA}')}, the output is 2 V (negative for current flowing into the input as drawn). Going the other way, ${m('I_{in}=V_{out}/R_f')}.</p>
+<p>For example, with ${m('R_f=100\\text{ k}\\Omega')} and ${m('I_{in}=20\\text{ µA}')}, the output is −2 V for current flowing into the input as drawn. Going the other way, ${m('I_{in}=-V_{out}/R_f')}; a positive output means current flows out of the input node.</p>
 <p>Because the input sits at virtual ground, the current source sees almost zero resistance and doesn't have to supply any voltage. Sensors such as photodiodes produce a current, and an I to V converter turns it into a voltage the next stage can use.</p>`;
 
 /* ---------- inverting ---------- */
@@ -1244,9 +1244,9 @@ function simpleItems(){
   for(let j=0;j<2;j++){const rf=pick([1,1.5,2,3,4.7,10,22,47]);const imax=Math.min(900,Math.floor(12/rf*1000));const iin=ri(20,imax);const vo=iin*1e-6*rf*1e3;
     it.push(num(`Rf = ${fmt(rf)} kΩ and the input current is ${iin} µA. What is the magnitude of the output voltage of the circuit in figure one?`,vo,'V',fig(F.itov({rf:'Rf'})),{signFree:true},M('|V_{out}|=I_{in}R_f')+tip('With the current flowing into the input as drawn, the output is negative; either sign is accepted.'),
       ['>Convert to base units first: µA to A and kΩ to Ω.',`|V_{out}|=I_{in}R_f=(${iin}\\times10^{-6}\\text{ A})(${N(rf*1e3)}\\text{ }\\Omega)`,`|V_{out}|=${N(vo)}\\text{ V}`]));}
-  {const rf=pick([1,2,3,10,100]);const vo=+(rnd(0.5,9)).toFixed(2);const ii=vo/(rf*1e3)*1e6;
-    it.push(num(`Rf = ${fmt(rf)} kΩ and the output voltage is ${fmt(vo)} V. What is the input current of the circuit in figure one?`,ii,'µA',fig(F.itov()),{signFree:true},M('I_{in}=\\frac{V_{out}}{R_f}'),
-      [`I_{in}=\\frac{V_{out}}{R_f}=\\frac{${N(vo)}\\text{ V}}{${N(rf*1e3)}\\text{ }\\Omega}`,`I_{in}=${N(ii/1e6,4)}\\text{ A}=${N(ii)}\\text{ µA}`]));}
+  {const rf=pick([1,2,3,10,100]);const vo=+(rnd(0.5,9)).toFixed(2);const ii=-vo/(rf*1e3)*1e6;
+    it.push(num(`Rf = ${fmt(rf)} kΩ and the output voltage is ${fmt(vo)} V. What is the signed input current of the circuit in figure one? Take current into the inverting node as positive.`,ii,'µA',fig(F.itov()),{},M('I_{in}=-\\frac{V_{out}}{R_f}'),
+      [`I_{in}=-\\frac{V_{out}}{R_f}=-\\frac{${N(vo)}\\text{ V}}{${N(rf*1e3)}\\text{ }\\Omega}`,`I_{in}=${N(ii/1e6,4)}\\text{ A}=${N(ii)}\\text{ µA}`,'>The negative sign means current flows out of the input node.']));}
   return shuffle(it);
 }
 

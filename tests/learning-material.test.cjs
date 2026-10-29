@@ -106,3 +106,96 @@ test('generated inverting-amplifier bandwidth answers use noise gain and reject 
   }
   assert.ok(rejected > 20, 'exercised cases where signal gain gives a materially wrong answer');
 });
+
+test('binding energy rejects impossible masses and noninteger nucleon counts', () => {
+  for (const v of [{ Z: 2, N: 2, M: 5 }, { Z: 2.5, N: 2, M: 4 }, { Z: 2, N: 1.5, M: 4 }, { Z: 2, N: 2, M: 2 }]) {
+    assert.throws(() => calculators.binding(v));
+  }
+  const energy = calculators.binding({ Z: 2, N: 2, M: 4.00260325413 })[1][1];
+  assert.ok(Math.abs(energy - 28.296) < 0.01, 'helium-4 measured binding energy is about 28.296 MeV');
+});
+
+test('linear regulator rejects impossible output and large ripple, accepts a feasible design', () => {
+  const v = { Vrms: 12, f: 60, C: 0.0022, I: 0.5, Vout: 5 };
+  assert.throws(() => calculators.powersupplies({ ...v, Vout: 20 }), /Cannot regulate/);
+  assert.throws(() => calculators.powersupplies({ ...v, C: 1e-6 }), /Ripple/);
+  assert.throws(() => calculators.powersupplies({ ...v, f: 0 }));
+  const rows = calculators.powersupplies(v);
+  assert.ok(rows[2][1] >= v.Vout + 2);
+  assert.ok(rows[3][1] > 0 && rows[3][1] < 100);
+});
+
+test('passive meter designs respect movement limits, including no-extension cases', () => {
+  const v = { Ig: 0.001, Rg: 50, I: 1, V: 10 };
+  const rows = calculators.meters(v);
+  // Full-scale current divides into movement and shunt; each has the same voltage.
+  assert.ok(Math.abs((v.I - v.Ig) * rows[0][1] - v.Ig * v.Rg) < 1e-12);
+  assert.equal(rows[1][1], 9950);
+  assert.throws(() => calculators.meters({ ...v, I: 0.0005 }));
+  assert.throws(() => calculators.meters({ ...v, V: 0.01 }));
+  const bare = calculators.meters({ ...v, I: v.Ig, V: v.Ig * v.Rg });
+  assert.match(bare[0][1], /no shunt/);
+  assert.equal(bare[1][1], 0);
+});
+
+test('discrete calculator inputs reject fractions rather than silently rounding', () => {
+  for (const [id, input] of [
+    ['quantumnumbers', { Z: 26.5 }], ['schrodinger', { m: 9.109e-31, L: 1e-9, n: 1.5 }],
+    ['fission', { m: 1, A: 235.5, Ef: 200 }], ['standing', { L: 1, v: 300, n: 2.5 }],
+    ['binary', { n: 8.5 }], ['combinational', { n: 8.5 }], ['adcdac', { n: 10.5 }],
+    ['counters', { n: 8, N: 10.5 }], ['flipflops', { n: 15.5 }]
+  ]) assert.throws(() => calculators[id](input), undefined, id);
+});
+
+test('zero vectors have no direction or mutual angle, including cancellation roundoff', () => {
+  assert.match(calculators.products({ ax: 0, ay: 0, az: 0, bx: 1, by: 0, bz: 0 })[5][1], /undefined/);
+  assert.equal(calculators.products({ ax: 1, ay: 0, az: 0, bx: 0, by: 1, bz: 0 })[5][1], 90);
+  const zero = calculators.vectors({ A: 1, tA: 0, B: 1, tB: 180 });
+  assert.equal(zero[2][1], 0);
+  assert.match(zero[3][1], /undefined/);
+});
+
+test('practice uses isotope tuples, shows mass precision, and generates valid constrained inputs', () => {
+  const ctx = vm.createContext({});
+  const calc = fieldNotes.slice(fieldNotes.indexOf('const R = String.raw;'), fieldNotes.indexOf('const byId ='));
+  const format = fieldNotes.slice(fieldNotes.indexOf('const SI ='), fieldNotes.indexOf('// ── pages'));
+  const practice = fieldNotes.slice(fieldNotes.indexOf('const PRACTICE_ISOTOPES ='), fieldNotes.indexOf('function practiceCard'));
+  vm.runInContext(`${calc}\n${format}\n${practice}\nglobalThis.helpers={practiceValues,makePractice,practiceValue};`, ctx);
+  const { practiceValues, makePractice, practiceValue } = ctx.helpers;
+  for (const t of data('TOPICS').filter(t => t.calc)) {
+    for (let i = 0; i < 25; i++) {
+      const p = makePractice(t);
+      assert.ok(p && Number.isFinite(p.ans), `${t.id}: usable practice problem`);
+      if (t.id === 'binding') {
+        const eb = calculators.binding(p.v)[1][1];
+        assert.ok(eb > 0 && eb / (p.v.Z + p.v.N) < 9, 'bound isotope with plausible binding per nucleon');
+        assert.equal(Number(practiceValue(t, 'M', p.v.M)), p.v.M, 'displayed mass retains all supplied digits');
+      }
+      if (t.id === 'powersupplies') assert.ok(calculators.powersupplies(p.v)[3][1] < 100);
+      if (t.id === 'bohr') assert.ok(Number.isInteger(p.v.ni) && Number.isInteger(p.v.nf) && p.v.ni > p.v.nf);
+      if (t.id === 'statics') assert.ok(p.v.x <= p.v.L);
+      if (t.id === 'kepler') assert.ok(p.v.rp <= p.v.ra);
+    }
+  }
+  assert.ok(practiceValues(data('TOPICS').find(t => t.id === 'binding')).M > 0);
+});
+
+test('inverse transimpedance question grades the signed current into the node', () => {
+  const source = read('Op_Amp_Challenge.html');
+  const context = contextWithUtilities(source);
+  context.OAK = { fig: new Proxy({}, { get: () => () => '' }) };
+  context.window.OAT = {};
+  vm.runInContext('CC.m=CC.M=s=>s;', context);
+  const start = source.indexOf('const {fmt,pick,rnd,ri,shuffle,eVal,m,M,svg:S,board:B,esc}=CC;');
+  const end = source.indexOf('const itemsRun=', start);
+  vm.runInContext(`${source.slice(start, end)}\nglobalThis.simple=simpleItems;`, context);
+  for (let i = 0; i < 50; i++) {
+    const item = context.simple().find(x => x.prompt.includes('signed input current'));
+    const rf = Number(item.prompt.match(/Rf = ([\d.]+) kΩ/)[1]) * 1000;
+    const vo = Number(item.prompt.match(/output voltage is ([\d.]+) V/)[1]);
+    const field = item.fields[0];
+    assert.ok(Math.abs(field.value + vo / rf * 1e6) < 1e-9);
+    assert.ok(!field.signFree, 'sign is graded');
+    assert.equal(context.CC.close(-field.value, field.value, 0.01), false);
+  }
+});
