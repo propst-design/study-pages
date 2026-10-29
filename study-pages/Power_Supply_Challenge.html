@@ -976,7 +976,9 @@ PS.make=function(type,fault){
     if(part==='Transformer secondary')return c.ok(part)?fmt(rnd(0.4,1.2),2)+' Ω':'OL';
     if(part==='Resistor R1')return c.ok(part)?fmt(c.R1*rnd(0.97,1.03)/1000,3)+' kΩ':'OL';
     const d=part.replace('Diode ','');if(!c.diodeOK(d))return 'OL';return rev?'OL':fmt(rnd(0.55,0.7),2)+' kΩ';};
-  c.specs=()=>[`T1: 120 V primary, ${vsec} V secondary${type==='full'?' (center tapped, each half)':''}`,`${PS.TYPES[type].diodes.join(', ')}: 1N4001 silicon rectifier diode${type==='half'?'':'s'}`,'C1: 4700 µF, 35 V electrolytic filter capacitor',`R1: ${fmt(c.R1/1000)} kΩ, ½ W bleeder resistor`,`U1: 78${String(vreg).padStart(2,'0')} +${vreg} V regulator · load ${fmt(il*1000)} mA`,'F1: 1 A slow-blow fuse · S1: SPST power switch'];
+  // 24 V rms can require about 68 V PIV and 1.1 W in a 1 kΩ bleeder.
+  // Use 400 V rectifiers and 2 W resistors to cover every generated combination.
+  c.specs=()=>[`T1: 120 V primary, ${vsec} V secondary${type==='full'?' (center tapped, each half)':''}`,`${PS.TYPES[type].diodes.join(', ')}: 1N4004 silicon rectifier diode${type==='half'?'':'s'}`,'C1: 4700 µF, 35 V electrolytic filter capacitor',`R1: ${fmt(c.R1/1000)} kΩ, 2 W bleeder resistor`,`U1: 78${String(vreg).padStart(2,'0')} +${vreg} V regulator · load ${fmt(il*1000)} mA`,'F1: 1 A slow-blow fuse · S1: SPST power switch'];
   return c;
 };
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;

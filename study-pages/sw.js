@@ -2,7 +2,7 @@
 // Pages: network first, so a new deploy shows up on the next visit; the cached copy is used offline or
 // when the network takes more than 4 s; if a newer copy then arrives, the page shows a "New version" bar. Everything else (icons, fonts): cache first.
 // Bump VERSION when adding or renaming a page so the precache list is fetched again.
-const VERSION = 'v5';
+const VERSION = 'v6';
 const CACHE = 'study-pages-' + VERSION;
 const PAGES = ['./', 'index.html', 'field-notes-physics.html', 'circuits.html',
   'AC_Circuits_Challenge.html', 'Basic_Circuits_Challenge.html', 'DC_Circuits_Challenge.html', 'Digital_Challenge.html',
