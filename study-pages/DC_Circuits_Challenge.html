@@ -1077,291 +1077,274 @@ const K=DCK,fR=K.fR,it=K.it;
 const tO=r=>fmt(r)+'\\,\\Omega', tV=x=>fmt(x)+'\\,\\text{V}', tA=x=>fmt(x)+'\\,\\text{A}', tmA=x=>fmt(x*1e3)+'\\,\\text{mA}',
   tW=x=>fmt(x)+'\\,\\text{W}', tmW=x=>fmt(x*1e3)+'\\,\\text{mW}';
 const par2=(a,b)=>1/(1/a+1/b);
-const q3=x=>x===0?0:+x.toPrecision(3), ident=x=>x;
-/* rounding students: plain 3-digit rounding, plus versions nudged ±0.1% so borderline round-half cases go both ways */
-const QS=[q3,x=>x===0?0:+(x*1.001).toPrecision(3),x=>x===0?0:+(x*0.999).toPrecision(3)];
-const TOL=0.02;
+const TOL=0.05;
+/* the original draws every worksheet resistor from these eight values */
+const RSET=[390,470,560,680,820,1000,1200,1500];
 
 /* ---------- circuit solver ----------
-   One routine answers every worksheet. q() rounds each intermediate result: identity for the exact
-   answers, 3 significant digits to imitate a careful student (used to reject circuits where normal
-   rounding would fail the ±2% tolerance). g: {V, R:[..], PT (W), rx (index of unknown resistor or -1)} */
-function solve(top,variant,g,q){
-  const R=g.R.slice(),N=R.length;let V=g.V,PT=g.PT,RT,IT,Req,e1,e2;const I=[],Vr=[];
-  const sum=(arr,skip)=>arr.reduce((a,b,i)=>i===skip?a:a+b,0);
-  if(top==='ser'){
-    if(variant==='rx'){RT=q(V*V/PT);IT=q(PT/V);R[g.rx]=q(RT-sum(R,g.rx));}
-    else{RT=q(sum(R,-1));if(variant==='src'){IT=q(Math.sqrt(PT/RT));V=q(IT*RT);}else IT=q(V/RT);}
-    R.forEach((r,i)=>{I[i]=IT;Vr[i]=q(IT*r);});
-  } else if(top==='par'){
-    if(variant==='rx'){IT=q(PT/V);RT=q(V/IT);R.forEach((r,i)=>{if(i!==g.rx)I[i]=q(V/r);});I[g.rx]=q(IT-sum(I.map(x=>x||0),g.rx));R[g.rx]=q(V/I[g.rx]);}
-    else{RT=q(1/R.reduce((a,r)=>a+1/r,0));if(variant==='src'){V=q(Math.sqrt(PT*RT));}R.forEach((r,i)=>{I[i]=q(V/r);});IT=variant==='src'?q(V/RT):q(sum(I,-1));}
-    R.forEach((r,i)=>{Vr[i]=V;});
-  } else if(top==='sp3'){
-    if(variant==='rx'){RT=q(V*V/PT);IT=q(PT/V);
-      if(g.rx===0){Req=q(par2(R[1],R[2]));R[0]=q(RT-Req);}
-      else{Req=q(RT-R[0]);const k=g.rx===1?2:1;R[g.rx]=q(1/(1/Req-1/R[k]));}}
-    else{Req=q(par2(R[1],R[2]));RT=q(R[0]+Req);if(variant==='src'){IT=q(Math.sqrt(PT/RT));V=q(IT*RT);}else IT=q(V/RT);}
-    Vr[0]=q(IT*R[0]);const vp=q(V-Vr[0]);Vr[1]=vp;Vr[2]=vp;I[0]=IT;I[1]=q(vp/R[1]);I[2]=q(vp/R[2]);
-  } else if(top==='sp4'){
-    e1=q(R[1]+R[3]);e2=q(par2(R[2],e1));RT=q(R[0]+e2);
-    if(variant==='src'){IT=q(Math.sqrt(PT/RT));V=q(IT*RT);}else IT=q(V/RT);
-    Vr[0]=q(IT*R[0]);Vr[2]=q(V-Vr[0]);I[0]=IT;I[2]=q(Vr[2]/R[2]);const i24=q(Vr[2]/e1);I[1]=i24;I[3]=i24;Vr[1]=q(i24*R[1]);Vr[3]=q(i24*R[3]);
-  }
-  const P=I.map((x,i)=>q(x*Vr[i]));
-  if(variant==='known')PT=q(V*IT);
-  return {R,V,PT,RT,IT,I,Vr,P,Req,e1,e2};
+   full(): every resistor and the source known. solve(): works out the unknown first (the source voltage
+   for 'src', resistor R[gi] for 'rx') from the given current Ig through R[gi], then solves the circuit.
+   g: {V, R:[..] (null for the unknown), gi (index of the resistor whose current is given, or -1), Ig (A)} */
+function full(top,R,V){
+  let RT,IT,Req,e1,e2;const I=[],Vr=[];
+  if(top==='ser'){RT=R.reduce((a,b)=>a+b,0);IT=V/RT;R.forEach((r,i)=>{I[i]=IT;Vr[i]=IT*r;});}
+  else if(top==='par'){RT=1/R.reduce((a,r)=>a+1/r,0);IT=V/RT;R.forEach((r,i)=>{I[i]=V/r;Vr[i]=V;});}
+  else if(top==='sp3'){Req=par2(R[1],R[2]);RT=R[0]+Req;IT=V/RT;Vr[0]=IT*R[0];Vr[1]=Vr[2]=V-Vr[0];I[0]=IT;I[1]=Vr[1]/R[1];I[2]=Vr[2]/R[2];}
+  else{e1=R[1]+R[3];e2=par2(R[2],e1);RT=R[0]+e2;IT=V/RT;Vr[0]=IT*R[0];Vr[2]=V-Vr[0];I[0]=IT;I[2]=Vr[2]/R[2];I[1]=I[3]=Vr[2]/e1;Vr[1]=I[1]*R[1];Vr[3]=I[3]*R[3];}
+  return {R,V,RT,IT,I,Vr,P:I.map((x,i)=>x*Vr[i]),PT:V*IT,Req,e1,e2};
 }
-/** answer list (key, value in display units) */
-function answers(top,variant,s,rx){
+function solve(top,variant,g){
+  const R=g.R.slice(),k=g.gi,Ig=g.Ig;let V=g.V;
+  if(variant==='rx'){
+    if(top==='ser')R[k]=V/Ig-R.reduce((a,r,i)=>i===k?a:a+r,0);
+    else if(top==='par')R[k]=V/Ig;
+    else R[0]=(V-Ig*(top==='sp3'?par2(R[1],R[2]):par2(R[2],R[1]+R[3])))/Ig;
+  }
+  if(variant==='src'){
+    if(top==='ser')V=Ig*R.reduce((a,b)=>a+b,0);
+    else if(top==='par')V=Ig*R[k];
+    else if(k===0)V=Ig*(R[0]+par2(R[1],R[2]));
+    else{const vp=Ig*R[k];V=vp+vp/par2(R[1],R[2])*R[0];}
+  }
+  return full(top,R,V);
+}
+/** answer list (key, value in display units), in the original's order */
+function answers(top,variant,s,gi){
   const N=s.R.length,a=[['RT',s.RT],['IT',s.IT*1e3]];
-  for(let i=0;i<N;i++)a.push(['IR'+(i+1),s.I[i]*1e3]);
+  for(let i=0;i<N;i++)if(i!==gi)a.push(['IR'+(i+1),s.I[i]*1e3]);
   for(let i=0;i<N;i++)a.push(['VR'+(i+1),s.Vr[i]]);
   if(variant==='known'&&top!=='sp4')a.push(['PT',s.PT*1e3]);
   if(variant==='src')a.push(['VS',s.V]);
-  if(variant==='rx')a.push(['RX',s.R[rx]]);
+  if(variant==='rx'&&top!=='sp4')a.push(['RX',s.R[gi]]);
   if(top!=='sp4')for(let i=0;i<N;i++)a.push(['PR'+(i+1),s.P[i]*1e3]);
   return a;
 }
 
 /* ---------- help text (teaches the order of the calculation) ---------- */
 const MA='<b>Watch the units:</b> divide volts by ohms to get amperes, then multiply by 1000 for milliamperes (mA). Power in watts × 1000 = milliwatts (mW).';
-function helps(top,N,v,rx){
+const AMP='Change the given current from milliamperes to amperes before using it (divide by 1000).';
+function helps(top,N,v,gi){
   const Rs=Array.from({length:N},(_,i)=>'R_'+(i+1));
-  const h={};const k=rx+1;
+  const h={};const k=gi+1,Ik='I_{R'+k+'}';
   const pw=i=>['$P_{R'+i+'}=V_{R'+i+'}I_{R'+i+'}','$P_{R'+i+'}=I_{R'+i+'}^2 R_'+i+'\\qquad P_{R'+i+'}=\\frac{V_{R'+i+'}^2}{R_'+i+'}','Any of the three power formulas works once you know two of V, I and R for this resistor. Use the current in amperes, not milliamperes, or your answer will be 1000 times too large.',MA];
   h.PT=['$P_T=V_S I_T','$P_T=I_T^2 R_T\\qquad P_T=\\frac{V_S^2}{R_T}','Total power is the power delivered by the source. It also equals the sum of the individual resistor powers, which is a good check.',MA];
-  const ptW='Change P<sub>T</sub> from milliwatts to watts before using it (divide by 1000).';
+  for(let i=1;i<=N;i++)h['PR'+i]=pw(i);
   if(top==='ser'){
-    h.RT=v==='rx'?['$R_T=\\frac{V_S^2}{P_T}','One resistor is unknown, so you cannot add the resistors. Instead use the source voltage and the total power. '+ptW]:['$R_T='+Rs.join('+'),'In a series circuit the total resistance is simply the sum of all the resistors. Do this first: every other answer depends on it.'];
-    h.IT=v==='src'?['$I_T=\\sqrt{\\frac{P_T}{R_T}}','The source voltage is unknown, so use '+m('P=I^2R')+' solved for I. Find R<sub>T</sub> first. '+ptW,MA]:v==='rx'?['$I_T=\\frac{P_T}{V_S}','Use '+m('P=VI')+' solved for I. '+ptW,MA]:['$I_T=\\frac{V_S}{R_T}','Ohm\'s law with the total voltage and total resistance gives the total current.',MA];
-    for(let i=1;i<=N;i++){h['IR'+i]=['$I_{R'+i+'}=I_T','A series circuit has only one path, so the same current flows through every part.'];h['VR'+i]=['$V_{R'+i+'}=I_{R'+i+'}R_'+i,'Ohm\'s law for this one resistor. Use the current in amperes. Check: the drops must add up to V<sub>S</sub> (Kirchhoff\'s voltage law).'];h['PR'+i]=pw(i);}
-    h.RX=['$R_T=\\frac{V_S^2}{P_T}','$R_'+k+'=R_T-(\\text{sum of the known resistors})','Find R<sub>T</sub> from the power first, then subtract the resistors you know. '+ptW];
-    h.VS=['$V_S=I_T R_T','Once I<sub>T</sub> (in amperes) and R<sub>T</sub> are known, Ohm\'s law gives the source voltage. Check: it equals the sum of the drops.'];
+    h.RT=v==='rx'?['$R_T=\\frac{V_S}{I_T}','R'+k+' is unknown, so you cannot add the resistors yet. The given current is the total current (a series circuit has only one path), so Ohm\'s law for the whole circuit gives the total resistance. '+AMP]:['$R_T='+Rs.join('+'),'In a series circuit the total resistance is simply the sum of all the resistors. Do this first: every other answer depends on it.'];
+    h.IT=v==='known'?['$I_T=\\frac{V_S}{R_T}','Ohm\'s law with the total voltage and total resistance gives the total current.',MA]:['$I_T='+Ik,'A series circuit has only one path, so the given current flows everywhere, and it is the total current.'];
+    for(let i=1;i<=N;i++){h['IR'+i]=['$I_{R'+i+'}=I_T','A series circuit has only one path, so the same current flows through every part.'];h['VR'+i]=['$V_{R'+i+'}=I_{R'+i+'}R_'+i,'Ohm\'s law for this one resistor. Use the current in amperes. Check: the drops must add up to V<sub>S</sub> (Kirchhoff\'s voltage law).'];}
+    h.RX=['$R_'+k+'=R_T-(\\text{sum of the known resistors})','$R_'+k+'=\\frac{V_{R'+k+'}}{'+Ik+'}','Find R<sub>T</sub> from V<sub>S</sub> and the given current first, then subtract the resistors you know. Ohm\'s law on R'+k+' gives the same answer.'];
+    h.VS=['$V_S=I_T R_T','The given current is the total current. Multiply it (in amperes) by R<sub>T</sub>. Check: the source voltage equals the sum of the drops.'];
   }
   if(top==='par'){
-    h.RT=v==='rx'?['$R_T=\\frac{V_S}{I_T}','One resistor is unknown, so find I<sub>T</sub> from the total power first, then use Ohm\'s law.']:['$R_T=\\frac{1}{'+Rs.map(r=>'\\frac{1}{'+r+'}').join('+')+'}','Add the reciprocals (1/R) of the branch resistors, then take the reciprocal of the sum. <b>Common mistake:</b> forgetting the final reciprocal. R<sub>T</sub> must be smaller than the smallest branch resistor.'];
-    h.IT=v==='src'?['$V_S=\\sqrt{P_T R_T}','$I_T=\\frac{V_S}{R_T}','Find R<sub>T</sub>, then the source voltage from the power, then the total current. '+ptW,MA]:v==='rx'?['$I_T=\\frac{P_T}{V_S}','Use '+m('P=VI')+' solved for I. '+ptW,MA]:['$I_T=\\frac{V_S}{R_T}','$I_T='+Rs.map((_,i)=>'I_{R'+(i+1)+'}').join('+'),'Either method works. Adding the branch currents is a good check on R<sub>T</sub>.',MA];
-    for(let i=1;i<=N;i++){h['IR'+i]=(v==='rx'&&i===k)?['$I_{R'+i+'}=I_T-(\\text{sum of the known branch currents})','Kirchhoff\'s current law: the branch currents add up to the total current.',MA]:['$I_{R'+i+'}=\\frac{V_S}{R_'+i+'}','Each branch has the full source voltage across it, so use Ohm\'s law with V<sub>S</sub> and that branch\'s resistor. Smaller resistors carry larger currents.',MA];h['VR'+i]=['$V_{R'+i+'}=V_S','Every branch of a parallel circuit is connected directly across the source, so each has the full source voltage.'];h['PR'+i]=pw(i);}
-    h.VS=['$V_S=\\sqrt{P_T R_T}','Find R<sub>T</sub> first, then solve '+m('P=\\frac{V^2}{R}')+' for V. '+ptW];
-    h.RX=['$I_{R'+k+'}=I_T-(\\text{sum of the known branch currents})','$R_'+k+'=\\frac{V_S}{I_{R'+k+'}}','Find I<sub>T</sub> from the power, subtract the branch currents you can calculate, then use Ohm\'s law on the unknown branch.'];
+    h.RT=['$R_T=\\frac{1}{'+Rs.map(r=>'\\frac{1}{'+r+'}').join('+')+'}',(v==='rx'?'Find R'+k+' from its given current first. Then a':'A')+'dd the reciprocals (1/R) of the branch resistors and take the reciprocal of the sum. <b>Common mistake:</b> forgetting the final reciprocal. R<sub>T</sub> must be smaller than the smallest branch resistor.'];
+    h.IT=['$I_T=\\frac{V_S}{R_T}','$I_T='+Rs.map((_,i)=>'I_{R'+(i+1)+'}').join('+'),'Either method works. Adding the branch currents is a good check on R<sub>T</sub>.'+(v==='known'?'':' Include the given current in the sum.'),MA];
+    for(let i=1;i<=N;i++){h['IR'+i]=['$I_{R'+i+'}=\\frac{V_S}{R_'+i+'}','Each branch has the full source voltage across it, so use Ohm\'s law with V<sub>S</sub> and that branch\'s resistor. Smaller resistors carry larger currents.',MA];h['VR'+i]=['$V_{R'+i+'}=V_S','Every branch of a parallel circuit is connected directly across the source, so each has the full source voltage.'];}
+    h.VS=['$V_S='+Ik+'R_'+k,'Every branch has the full source voltage across it. Ohm\'s law on the branch whose current is given (R'+k+') gives that voltage. '+AMP];
+    h.RX=['$R_'+k+'=\\frac{V_S}{'+Ik+'}','R'+k+' has the full source voltage across it and its current is given, so Ohm\'s law gives its value. '+AMP];
   }
   if(top==='sp3'){
-    h.RT=v==='rx'?['$R_T=\\frac{V_S^2}{P_T}','One resistor is unknown, so use the source voltage and the total power. '+ptW]:['$R_{eq}=\\frac{R_2 R_3}{R_2+R_3}','$R_T=R_1+R_{eq}','Work from the inside out: R2 and R3 are in parallel, so combine them first. Then add R1, which is in series with that combination.'];
-    h.IT=v==='src'?['$I_T=\\sqrt{\\frac{P_T}{R_T}}',ptW,MA]:v==='rx'?['$I_T=\\frac{P_T}{V_S}',ptW,MA]:['$I_T=\\frac{V_S}{R_T}',MA];
+    const vp=['$V_{R2}=V_{R3}=V_S-V_{R1}','Kirchhoff\'s voltage law: whatever voltage R1 does not drop appears across the parallel pair. R2 and R3 are in parallel, so they have the same voltage.'];
+    h.RT=v==='rx'?['$R_T=\\frac{V_S}{I_T}','R1 is unknown, so use Ohm\'s law for the whole circuit. The given current through R1 is the total current. '+AMP]:['$R_{eq}=\\frac{R_2 R_3}{R_2+R_3}','$R_T=R_1+R_{eq}','Work from the inside out: R2 and R3 are in parallel, so combine them first. Then add R1, which is in series with that combination.'];
+    h.IT=v==='known'?['$I_T=\\frac{V_S}{R_T}',MA]:gi===0?['$I_T=I_{R1}','R1 is in series with the source, so the given current through it is the total current.']:['$I_T=I_{R2}+I_{R3}','Find the voltage across the parallel pair from the given current first, then the other branch current. Kirchhoff\'s current law: the two branch currents add up to the total current.',MA];
     h.IR1=['$I_{R1}=I_T','R1 is in series with the source, so all of the circuit current flows through it.'];
-    h.VR1=['$V_{R1}=I_{R1}R_1','Ohm\'s law for R1, using the current in amperes.'];
-    h.VR2=['$V_{R2}=V_S-V_{R1}','Kirchhoff\'s voltage law: whatever voltage R1 does not drop appears across the parallel pair. R2 and R3 are in parallel, so they have the same voltage.'];h.VR3=['$V_{R3}=V_{R2}=V_S-V_{R1}','R2 and R3 are in parallel, so they have the same voltage.'];
+    h.VR1=v==='rx'?['$V_{R1}=V_S-V_{R2}','R1 is unknown, so find the voltage across the parallel pair first ('+m('V_{R2}=I_T R_{eq}')+'), then subtract it from the source voltage.']:['$V_{R1}=I_{R1}R_1','Ohm\'s law for R1, using the current in amperes.'];
+    h.VR2=v==='rx'?['$V_{R2}=V_{R3}=I_T R_{eq}','$R_{eq}=\\frac{R_2 R_3}{R_2+R_3}','The whole circuit current flows through the parallel pair, so Ohm\'s law on its equivalent resistance gives its voltage.']:v==='src'&&gi>0?['$V_{R2}=V_{R3}='+Ik+'R_'+k,'R2 and R3 are in parallel, so they have the same voltage. Ohm\'s law on the resistor whose current is given finds it. '+AMP]:vp;
+    h.VR3=h.VR2;
     h.IR2=['$I_{R2}=\\frac{V_{R2}}{R_2}','Find V<sub>R2</sub> first, then use Ohm\'s law.',MA];h.IR3=['$I_{R3}=\\frac{V_{R3}}{R_3}','Check with Kirchhoff\'s current law: '+m('I_{R2}+I_{R3}=I_T')+'.',MA];
-    for(let i=1;i<=3;i++)h['PR'+i]=pw(i);
-    h.RX=k===1?['$R_T=\\frac{V_S^2}{P_T}','$R_1=R_T-R_{eq}','Find R<sub>T</sub> from the power. R<sub>eq</sub> is the parallel value of R2 and R3.']:['$R_T=\\frac{V_S^2}{P_T}','$R_{eq}=R_T-R_1','$R_'+k+'=\\frac{1}{\\frac{1}{R_{eq}}-\\frac{1}{R_'+(k===2?3:2)+'}}','Find R<sub>T</sub> from the power, subtract R1 to get the parallel equivalent, then remove the known parallel resistor. Keep 4 significant digits here: this step magnifies rounding errors.'];
-    h.VS=['$V_S=I_T R_T','Ohm\'s law for the whole circuit, with I<sub>T</sub> in amperes.'];
+    h.RX=['$R_1=\\frac{V_{R1}}{I_{R1}}','$R_1=R_T-R_{eq}','Find V<sub>R1</sub> first, then use Ohm\'s law with the given current (in amperes). Subtracting R<sub>eq</sub> from R<sub>T</sub> gives the same answer.'];
+    h.VS=gi>0?['$V_S=V_{R1}+V_{R2}','Kirchhoff\'s voltage law around the outside loop: the source voltage equals the drop across R1 plus the drop across the parallel pair.']:['$V_S=I_T R_T','Ohm\'s law for the whole circuit, with I<sub>T</sub> in amperes.'];
   }
   if(top==='sp4'){
-    h.RT=['$R_{eq1}=R_2+R_4','$R_{eq2}=\\frac{R_3 R_{eq1}}{R_3+R_{eq1}}','$R_T=R_1+R_{eq2}','Start at the far end of the circuit: R2 and R4 are in series. That pair is in parallel with R3. R1 is in series with everything.'];
-    h.IT=v==='src'?['$I_T=\\sqrt{\\frac{P_T}{R_T}}',ptW,MA]:['$I_T=\\frac{V_S}{R_T}',MA];
-    h.IR1=['$I_{R1}=I_T','R1 is in series with the source.'];h.VR1=['$V_{R1}=I_{R1}R_1','Use the current in amperes.'];
-    h.VR3=['$V_{R3}=V_S-V_{R1}','R3 is in parallel with the series pair R2 + R4, so both see the voltage left over after R1.'];h.IR3=['$I_{R3}=\\frac{V_{R3}}{R_3}',MA];
+    h.RT=v==='rx'?['$R_T=\\frac{V_S}{I_T}','R1 is unknown, so use Ohm\'s law for the whole circuit. The given current through R1 is the total current. '+AMP]:['$R_{eq1}=R_2+R_4','$R_{eq2}=\\frac{R_3 R_{eq1}}{R_3+R_{eq1}}','$R_T=R_1+R_{eq2}','Start at the far end of the circuit: R2 and R4 are in series. That pair is in parallel with R3. R1 is in series with everything.'];
+    h.IT=v==='rx'?['$I_T=I_{R1}','R1 is in series with the source, so the given current through it is the total current.']:['$I_T=\\frac{V_S}{R_T}',MA];
+    h.IR1=['$I_{R1}=I_T','R1 is in series with the source.'];h.VR1=v==='rx'?['$V_{R1}=V_S-V_{R3}','R1 is unknown, so find the voltage across the parallel group first, then subtract it from the source voltage.']:['$V_{R1}=I_{R1}R_1','Use the current in amperes.'];
+    h.VR3=v==='rx'?['$R_{eq1}=R_2+R_4','$R_{eq2}=\\frac{R_3 R_{eq1}}{R_3+R_{eq1}}','$V_{R3}=I_T R_{eq2}','The whole circuit current flows into the parallel group, so Ohm\'s law on its equivalent resistance gives the voltage across it.']:['$V_{R3}=V_S-V_{R1}','R3 is in parallel with the series pair R2 + R4, so both see the voltage left over after R1.'];
+    h.IR3=['$I_{R3}=\\frac{V_{R3}}{R_3}',MA];
     h.IR2=['$I_{R2}=I_{R4}=\\frac{V_{R3}}{R_2+R_4}','R2 and R4 are in series, so they carry the same current. The voltage across the pair is V<sub>R3</sub>. Check: '+m('I_{R2}+I_{R3}=I_T')+'.',MA];h.IR4=h.IR2;
     h.VR2=['$V_{R2}=I_{R2}R_2','Check with Kirchhoff\'s voltage law: '+m('V_{R2}+V_{R4}=V_{R3}')+'.'];h.VR4=['$V_{R4}=I_{R4}R_4','Check with Kirchhoff\'s voltage law: '+m('V_{R2}+V_{R4}=V_{R3}')+'.'];
-    h.VS=['$V_S=I_T R_T','Ohm\'s law for the whole circuit, with I<sub>T</sub> in amperes.'];
   }
   return h;
 }
 
 /* ---------- worked solutions with this problem's numbers ---------- */
 function works(top,variant,s,g){
-  const w={},N=s.R.length,R=s.R,rx=g.rx,k=rx+1,V=s.V,PT=s.PT,tPT=fmt(PT,variant==='known'?4:5)+'\\,\\text{W}';
-  const pT='>Change the total power to watts: '+m(fmt(PT*1e3,5)+'\\,\\text{mW}='+fmt(PT,5)+'\\,\\text{W}')+'.';
-  const itStep=()=>variant==='src'?[pT,'I_T=\\sqrt{\\frac{P_T}{R_T}}','I_T=\\sqrt{\\frac{'+tPT+'}{'+tO(s.RT)+'}}='+tA(s.IT),'I_T='+tmA(s.IT)]
-    :variant==='rx'?[pT,'I_T=\\frac{P_T}{V_S}','I_T=\\frac{'+tPT+'}{'+tV(V)+'}='+tA(s.IT),'I_T='+tmA(s.IT)]
-    :['I_T=\\frac{V_S}{R_T}','I_T=\\frac{'+tV(V)+'}{'+tO(s.RT)+'}='+tA(s.IT),'I_T='+tmA(s.IT)];
-  const rtPow=[pT,'R_T=\\frac{V_S^2}{P_T}','R_T=\\frac{('+tV(V)+')^2}{'+tPT+'}','R_T='+tO(s.RT)];
+  const w={},N=s.R.length,R=s.R,gi=g.gi,k=gi+1,V=s.V,Ik='I_{R'+k+'}';
   const vI=i=>['V_{R'+i+'}=I_{R'+i+'}R_'+i,'V_{R'+i+'}=('+tA(s.I[i-1])+')('+tO(R[i-1])+')','V_{R'+i+'}='+tV(s.Vr[i-1])];
   const pR=i=>['P_{R'+i+'}=V_{R'+i+'}I_{R'+i+'}','P_{R'+i+'}=('+tV(s.Vr[i-1])+')('+tA(s.I[i-1])+')='+tW(s.P[i-1]),'P_{R'+i+'}='+tmW(s.P[i-1])];
-  w.PT=['P_T=V_S I_T','P_T=('+tV(V)+')('+tA(s.IT)+')='+tPT,'P_T='+tmW(PT),'>Check: '+m(Array.from({length:N},(_,i)=>'P_{R'+(i+1)+'}').join('+')+'='+tmW(s.P.reduce((a,b)=>a+b,0)))+'.'];
+  const ohmV=['V_S=I_T R_T','V_S=('+tA(s.IT)+')('+tO(s.RT)+')','V_S='+tV(V)];
+  const rtV=['R_T=\\frac{V_S}{I_T}','R_T=\\frac{'+tV(V)+'}{'+tA(s.IT)+'}','R_T='+tO(s.RT)];
+  const itGiven=why=>['>'+why,'I_T='+Ik+'='+tmA(s.IT)];
+  w.PT=['P_T=V_S I_T','P_T=('+tV(V)+')('+tA(s.IT)+')='+tW(s.PT),'P_T='+tmW(s.PT),'>Check: '+m(Array.from({length:N},(_,i)=>'P_{R'+(i+1)+'}').join('+')+'='+tmW(s.P.reduce((a,b)=>a+b,0)))+'.'];
   for(let i=1;i<=N;i++)w['PR'+i]=pR(i);
-  w.IT=itStep();
   if(top==='ser'){
-    w.RT=variant==='rx'?rtPow:['R_T='+R.map((_,i)=>'R_'+(i+1)).join('+'),'R_T='+R.map(tO).join('+'),'R_T='+tO(s.RT)];
+    w.RT=variant==='rx'?['>The given current is the total current: '+m('I_T='+tmA(s.IT))+'.',...rtV]:['R_T='+R.map((_,i)=>'R_'+(i+1)).join('+'),'R_T='+R.map(tO).join('+'),'R_T='+tO(s.RT)];
+    w.IT=variant==='known'?['I_T=\\frac{V_S}{R_T}','I_T=\\frac{'+tV(V)+'}{'+tO(s.RT)+'}='+tA(s.IT),'I_T='+tmA(s.IT)]:itGiven('A series circuit has one path, so the given current is the total current.');
     for(let i=1;i<=N;i++){w['IR'+i]=['>A series circuit has one path, so every part carries the total current.','I_{R'+i+'}=I_T='+tmA(s.IT)];w['VR'+i]=vI(i);}
     w.VR1.push('>Check: '+m(R.map((_,i)=>'V_{R'+(i+1)+'}').join('+')+'='+tV(s.Vr.reduce((a,b)=>a+b,0)))+', which equals '+m('V_S')+'.');
-    if(variant==='rx'){const kn=R.map((r,i)=>i).filter(i=>i!==rx);w.RX=['R_'+k+'=R_T-('+kn.map(i=>'R_'+(i+1)).join('+')+')','R_'+k+'='+tO(s.RT)+'-('+kn.map(i=>tO(R[i])).join('+')+')','R_'+k+'='+tO(R[rx])];}
-    w.VS=['V_S=I_T R_T','V_S=('+tA(s.IT)+')('+tO(s.RT)+')','V_S='+tV(V)];
+    if(variant==='rx'){const kn=R.map((r,i)=>i).filter(i=>i!==gi);w.RX=['R_'+k+'=R_T-('+kn.map(i=>'R_'+(i+1)).join('+')+')','R_'+k+'='+tO(s.RT)+'-('+kn.map(i=>tO(R[i])).join('+')+')','R_'+k+'='+tO(R[gi])];}
+    w.VS=ohmV;
   }
   if(top==='par'){
     const rec='\\frac{1}{'+R.map(r=>'\\frac{1}{'+tO(r)+'}').join('+')+'}';
-    if(variant==='rx')w.RT=['>Find '+m('I_T')+' from the total power first ('+m('I_T='+tmA(s.IT))+').','R_T=\\frac{V_S}{I_T}','R_T=\\frac{'+tV(V)+'}{'+tA(s.IT)+'}','R_T='+tO(s.RT)];
-    else w.RT=['R_T=\\frac{1}{'+R.map((_,i)=>'\\frac{1}{R_'+(i+1)+'}').join('+')+'}','R_T='+rec,'R_T='+tO(s.RT)];
-    if(variant==='known')w.IT=['I_T=\\frac{V_S}{R_T}','I_T=\\frac{'+tV(V)+'}{'+tO(s.RT)+'}='+tA(s.IT),'I_T='+tmA(s.IT),'>Check: '+m(R.map((_,i)=>'I_{R'+(i+1)+'}').join('+')+'='+tmA(s.I.reduce((a,b)=>a+b,0)))+'.'];
-    if(variant==='src')w.IT=[pT,'V_S=\\sqrt{P_T R_T}=\\sqrt{('+tPT+')('+tO(s.RT)+')}='+tV(V),'I_T=\\frac{V_S}{R_T}=\\frac{'+tV(V)+'}{'+tO(s.RT)+'}='+tA(s.IT),'I_T='+tmA(s.IT)];
-    for(let i=1;i<=N;i++){
-      if(variant==='rx'&&i===k){const kn=R.map((r,j)=>j).filter(j=>j!==rx);w['IR'+i]=['>Kirchhoff\'s current law: the branch currents add up to '+m('I_T')+'.','I_{R'+i+'}=I_T-('+kn.map(j=>'I_{R'+(j+1)+'}').join('+')+')','I_{R'+i+'}='+tmA(s.IT)+'-('+kn.map(j=>tmA(s.I[j])).join('+')+')','I_{R'+i+'}='+tmA(s.I[i-1])];}
-      else w['IR'+i]=['I_{R'+i+'}=\\frac{V_S}{R_'+i+'}','I_{R'+i+'}=\\frac{'+tV(V)+'}{'+tO(R[i-1])+'}='+tA(s.I[i-1]),'I_{R'+i+'}='+tmA(s.I[i-1])];
+    w.RT=[...(variant==='rx'?['>Use the value of '+m('R_'+k)+' found from its given current.']:[]),'R_T=\\frac{1}{'+R.map((_,i)=>'\\frac{1}{R_'+(i+1)+'}').join('+')+'}','R_T='+rec,'R_T='+tO(s.RT)];
+    w.IT=['I_T=\\frac{V_S}{R_T}','I_T=\\frac{'+tV(V)+'}{'+tO(s.RT)+'}='+tA(s.IT),'I_T='+tmA(s.IT),'>Check: '+m(R.map((_,i)=>'I_{R'+(i+1)+'}').join('+')+'='+tmA(s.I.reduce((a,b)=>a+b,0)))+'.'];
+    for(let i=1;i<=N;i++){w['IR'+i]=['I_{R'+i+'}=\\frac{V_S}{R_'+i+'}','I_{R'+i+'}=\\frac{'+tV(V)+'}{'+tO(R[i-1])+'}='+tA(s.I[i-1]),'I_{R'+i+'}='+tmA(s.I[i-1])];
       w['VR'+i]=['>Each branch is connected straight across the source.','V_{R'+i+'}=V_S='+tV(V)];}
-    w.VS=[pT,'V_S=\\sqrt{P_T R_T}','V_S=\\sqrt{('+tPT+')('+tO(s.RT)+')}','V_S='+tV(V)];
-    if(variant==='rx')w.RX=['>Use the branch current found for '+m('I_{R'+k+'}')+'.','R_'+k+'=\\frac{V_S}{I_{R'+k+'}}','R_'+k+'=\\frac{'+tV(V)+'}{'+tA(s.I[rx])+'}','R_'+k+'='+tO(R[rx])];
+    if(variant==='src')w.VS=['>Every branch has the full source voltage across it, including R'+k+', whose current is given.','V_S='+Ik+'R_'+k,'V_S=('+tA(g.Ig)+')('+tO(R[gi])+')','V_S='+tV(V)];
+    if(variant==='rx')w.RX=['>R'+k+' has the full source voltage across it.','R_'+k+'=\\frac{V_S}{'+Ik+'}','R_'+k+'=\\frac{'+tV(V)+'}{'+tA(g.Ig)+'}','R_'+k+'='+tO(R[gi])];
   }
   if(top==='sp3'){
     const reqStep=['R_{eq}=\\frac{R_2 R_3}{R_2+R_3}','R_{eq}=\\frac{('+tO(R[1])+')('+tO(R[2])+')}{'+tO(R[1])+'+'+tO(R[2])+'}='+tO(s.Req)];
-    w.RT=variant==='rx'?rtPow:[...reqStep,'R_T=R_1+R_{eq}='+tO(R[0])+'+'+tO(s.Req),'R_T='+tO(s.RT)];
+    w.RT=variant==='rx'?['>The given current through R1 is the total current: '+m('I_T='+tmA(s.IT))+'.',...rtV]:[...reqStep,'R_T=R_1+R_{eq}='+tO(R[0])+'+'+tO(s.Req),'R_T='+tO(s.RT)];
     w.IR1=['>R1 is in series with the source, so it carries the whole circuit current.','I_{R1}=I_T='+tmA(s.IT)];
     w.VR1=vI(1);
-    const vp=['V_{R2}=V_{R3}=V_S-V_{R1}','V_{R2}=V_{R3}='+tV(V)+'-'+tV(s.Vr[0]),'V_{R2}=V_{R3}='+tV(s.Vr[1])];
-    w.VR2=vp;w.VR3=vp;
+    let vp=['V_{R2}=V_{R3}=V_S-V_{R1}','V_{R2}=V_{R3}='+tV(V)+'-'+tV(s.Vr[0]),'V_{R2}=V_{R3}='+tV(s.Vr[1])];
     w.IR2=['I_{R2}=\\frac{V_{R2}}{R_2}','I_{R2}=\\frac{'+tV(s.Vr[1])+'}{'+tO(R[1])+'}='+tA(s.I[1]),'I_{R2}='+tmA(s.I[1])];
     w.IR3=['I_{R3}=\\frac{V_{R3}}{R_3}','I_{R3}=\\frac{'+tV(s.Vr[2])+'}{'+tO(R[2])+'}='+tA(s.I[2]),'I_{R3}='+tmA(s.I[2]),'>Check: '+m('I_{R2}+I_{R3}='+tmA(s.I[1]+s.I[2]))+' = '+m('I_T')+'.'];
-    if(variant==='rx'){
-      if(rx===0)w.RX=[...reqStep,'R_1=R_T-R_{eq}='+tO(s.RT)+'-'+tO(s.Req),'R_1='+tO(R[0])];
-      else{const o=rx===1?2:1;w.RX=['R_{eq}=R_T-R_1='+tO(s.RT)+'-'+tO(R[0])+'='+tO(s.Req),'R_'+k+'=\\frac{1}{\\frac{1}{R_{eq}}-\\frac{1}{R_'+(o+1)+'}}','R_'+k+'=\\frac{1}{\\frac{1}{'+tO(s.Req)+'}-\\frac{1}{'+tO(R[o])+'}}','R_'+k+'='+tO(R[rx])];}
-      if(rx===0)w.VR1=['>The parallel pair carries all of '+m('I_T')+', so find its voltage first.','V_{R2}=I_T R_{eq}=('+tA(s.IT)+')('+tO(s.Req)+')='+tV(s.Vr[1]),'V_{R1}=V_S-V_{R2}='+tV(V)+'-'+tV(s.Vr[1]),'V_{R1}='+tV(s.Vr[0])];
-    }
-    w.VS=['V_S=I_T R_T','V_S=('+tA(s.IT)+')('+tO(s.RT)+')','V_S='+tV(V)];
+    if(variant==='known')w.IT=['I_T=\\frac{V_S}{R_T}','I_T=\\frac{'+tV(V)+'}{'+tO(s.RT)+'}='+tA(s.IT),'I_T='+tmA(s.IT)];
+    else if(gi===0)w.IT=itGiven('R1 is in series with the source, so the given current through it is the total current.');
+    else w.IT=['I_T=I_{R2}+I_{R3}','I_T='+tmA(s.I[1])+'+'+tmA(s.I[2]),'I_T='+tmA(s.IT)];
+    if(variant==='src'&&gi>0)vp=['>R2 and R3 are in parallel, so they share the voltage across R'+k+', whose current is given.','V_{R2}=V_{R3}='+Ik+'R_'+k,'V_{R2}=V_{R3}=('+tA(g.Ig)+')('+tO(R[gi])+')','V_{R2}=V_{R3}='+tV(s.Vr[1])];
+    if(variant==='rx'){vp=[...reqStep,'V_{R2}=V_{R3}=I_T R_{eq}','V_{R2}=V_{R3}=('+tA(s.IT)+')('+tO(s.Req)+')','V_{R2}=V_{R3}='+tV(s.Vr[1])];
+      w.VR1=['V_{R1}=V_S-V_{R2}','V_{R1}='+tV(V)+'-'+tV(s.Vr[1]),'V_{R1}='+tV(s.Vr[0])];
+      w.RX=['R_1=\\frac{V_{R1}}{I_{R1}}','R_1=\\frac{'+tV(s.Vr[0])+'}{'+tA(s.IT)+'}','R_1='+tO(R[0])];}
+    w.VR2=vp;w.VR3=vp;
+    w.VS=gi>0?['V_S=V_{R1}+V_{R2}','V_S='+tV(s.Vr[0])+'+'+tV(s.Vr[1]),'V_S='+tV(V)]:ohmV;
   }
   if(top==='sp4'){
-    w.RT=['R_{eq1}=R_2+R_4='+tO(R[1])+'+'+tO(R[3])+'='+tO(s.e1),'R_{eq2}=\\frac{R_3 R_{eq1}}{R_3+R_{eq1}}=\\frac{('+tO(R[2])+')('+tO(s.e1)+')}{'+tO(R[2])+'+'+tO(s.e1)+'}='+tO(s.e2),'R_T=R_1+R_{eq2}='+tO(R[0])+'+'+tO(s.e2),'R_T='+tO(s.RT)];
+    const eqs=['R_{eq1}=R_2+R_4='+tO(R[1])+'+'+tO(R[3])+'='+tO(s.e1),'R_{eq2}=\\frac{R_3 R_{eq1}}{R_3+R_{eq1}}=\\frac{('+tO(R[2])+')('+tO(s.e1)+')}{'+tO(R[2])+'+'+tO(s.e1)+'}='+tO(s.e2)];
+    w.RT=variant==='rx'?['>The given current through R1 is the total current: '+m('I_T='+tmA(s.IT))+'.',...rtV]:[...eqs,'R_T=R_1+R_{eq2}='+tO(R[0])+'+'+tO(s.e2),'R_T='+tO(s.RT)];
+    w.IT=variant==='rx'?itGiven('R1 is in series with the source, so the given current through it is the total current.'):['I_T=\\frac{V_S}{R_T}','I_T=\\frac{'+tV(V)+'}{'+tO(s.RT)+'}='+tA(s.IT),'I_T='+tmA(s.IT)];
     w.IR1=['>R1 is in series with the source, so it carries the whole circuit current.','I_{R1}=I_T='+tmA(s.IT)];
-    w.VR1=vI(1);
-    w.VR3=['V_{R3}=V_S-V_{R1}','V_{R3}='+tV(V)+'-'+tV(s.Vr[0]),'V_{R3}='+tV(s.Vr[2])];
+    w.VR1=variant==='rx'?['V_{R1}=V_S-V_{R3}','V_{R1}='+tV(V)+'-'+tV(s.Vr[2]),'V_{R1}='+tV(s.Vr[0])]:vI(1);
+    w.VR3=variant==='rx'?[...eqs,'V_{R3}=I_T R_{eq2}','V_{R3}=('+tA(s.IT)+')('+tO(s.e2)+')','V_{R3}='+tV(s.Vr[2])]:['V_{R3}=V_S-V_{R1}','V_{R3}='+tV(V)+'-'+tV(s.Vr[0]),'V_{R3}='+tV(s.Vr[2])];
     w.IR3=['I_{R3}=\\frac{V_{R3}}{R_3}','I_{R3}=\\frac{'+tV(s.Vr[2])+'}{'+tO(R[2])+'}='+tA(s.I[2]),'I_{R3}='+tmA(s.I[2])];
     const i24=['>R2 and R4 are in series, so they carry the same current, and the pair has '+m('V_{R3}')+' across it.','I_{R2}=I_{R4}=\\frac{V_{R3}}{R_2+R_4}','I_{R2}=I_{R4}=\\frac{'+tV(s.Vr[2])+'}{'+tO(s.e1)+'}='+tA(s.I[1]),'I_{R2}=I_{R4}='+tmA(s.I[1])];
     w.IR2=i24;w.IR4=i24;
     w.VR2=vI(2);w.VR4=vI(4).concat(['>Check: '+m('V_{R2}+V_{R4}='+tV(s.Vr[1]+s.Vr[3]))+' = '+m('V_{R3}')+'.']);
-    w.VS=['V_S=I_T R_T','V_S=('+tA(s.IT)+')('+tO(s.RT)+')','V_S='+tV(V)];
   }
   return w;
 }
 
 /* ---------- generators ---------- */
-const VS_LIST=[5,6,9,10,12,15,18,20,24,25,30,36,40,45,48];
 const DIA={
   ser:(lab,src)=>S.series(lab.map(l=>({t:'R',label:l})),{src:'dc',srcLabel:src}),
   par:(lab,src)=>S.parallel(lab.map(l=>({t:'R',label:l})),{src:'dc',srcLabel:src,gap:80}),
   sp3:(lab,src)=>K.sp3(lab,src),sp4:(lab,src)=>K.sp4(lab,src)
 };
 const NAMES={RT:['R_T','Total resistance','Ω'],IT:['I_T','Total current','mA'],PT:['P_T','Total power','mW'],VS:['V_S','Source voltage','V']};
-/** realistic bench values: every resistor ≤ 1 W, no drop below 0.1 V, no current below 0.05 mA,
-    and a student who rounds every step to 3 significant digits still lands inside ±2 %. */
+const sf=(x,n)=>+x.toPrecision(n);
+/** the original's values: resistors from RSET and a source voltage between about 6.7 and 57 V that is
+    not a round number. 'src' gives a two-digit current through one resistor; 'rx' gives the unknown
+    resistor's own current. Series-Parallel III and V always leave R1 unknown. */
 function pickCircuit(top,N,variant){
-  for(let t=0;t<4000;t++){
-    const R=Array.from({length:N},()=>eVal(100,10000));
-    if(top==='par'&&Math.max(...R)/Math.min(...R)>15)continue;
-    const V=pick(VS_LIST);let rx=-1;if(variant==='rx')rx=ri(0,N-1);
-    const ex=solve(top,'known',{V,R,PT:0,rx:-1},ident);
-    if(Math.max(...ex.P)>1||Math.min(...ex.Vr)<0.1||Math.min(...ex.I)<5e-5)continue;
-    const PT=+(ex.PT*1e3).toPrecision(5)/1e3;
-    const g={V,R:R.map((r,i)=>i===rx?null:r),PT,rx};
-    const s=solve(top,variant,g,ident);
-    const A=answers(top,variant,s,rx);
-    if(QS.some(q=>{const B2=answers(top,variant,solve(top,variant,g,q),rx);return A.some((a,i)=>!(Math.abs(B2[i][1]-a[1])<=0.75*TOL*Math.abs(a[1])));}))continue;
-    return {R,V,PT,rx,g,s};
+  for(let t=0;t<1000;t++){
+    const R=Array.from({length:N},()=>pick(RSET));
+    const gi=variant==='known'?-1:variant==='rx'&&(top==='sp3'||top==='sp4')?0:ri(0,N-1);
+    let V=sf(rnd(6.7,57),5),Ig=0;
+    if(variant==='rx')Ig=sf(full(top,R,V).I[gi],5);
+    if(variant==='src'){Ig=sf(rnd(6.7,57)*full(top,R,1).I[gi],2);V=solve(top,'src',{R,gi,Ig}).V;if(V<6.7||V>57)continue;}
+    const g={V,R:R.map((r,i)=>variant==='rx'&&i===gi?null:r),gi,Ig};
+    return {R,V,gi,Ig,g,s:solve(top,variant,g)};
   }
   throw new Error('no circuit');
 }
 function sheet(top,N,variant){
   return ()=>{
-    const {R,V,PT,rx,g,s}=pickCircuit(top,N,variant);
-    const h=helps(top,N,variant,rx),w=works(top,variant,s,g);
+    const {R,V,gi,Ig,g,s}=pickCircuit(top,N,variant);
+    const h=helps(top,N,variant,gi),w=works(top,variant,s,g),rx=variant==='rx'?gi:-1;
     const title={ser:'Series circuit',par:'Parallel circuit',sp3:'Series-parallel circuit',sp4:'Series-parallel circuit'}[top];
     const givens=[];
-    if(variant!=='src')givens.push({k:'Source voltage, V<sub>S</sub>',v:fmt(V)+' V'});
+    if(variant!=='src')givens.push({k:'Source voltage, V<sub>S</sub>',v:fmt(V,5)+' V'});
     R.forEach((r,i)=>{givens.push({k:'R'+(i+1),v:i===rx?'unknown':fR(r)});});
-    if(variant!=='known')givens.push({k:'Total power, P<sub>T</sub>',v:fmt(PT*1e3,5)+' mW'});
-    const items=answers(top,variant,s,rx).map(([key,val])=>{
+    if(variant!=='known')givens.push({k:'Current through R'+(gi+1)+', I<sub>R'+(gi+1)+'</sub>',v:fmt(Ig*1e3,5)+' mA'});
+    const items=answers(top,variant,s,gi).map(([key,val])=>{
       let sym,name,unit;
       if(NAMES[key])[sym,name,unit]=NAMES[key];
-      else if(key==='RX'){sym='R_'+(rx+1);name='Unknown resistor R'+(rx+1);unit='Ω';}
+      else if(key==='RX'){sym='R_'+(gi+1);name='Unknown resistor R'+(gi+1);unit='Ω';}
       else{const t=key[0],i=key.slice(2);sym=t+'_{R'+i+'}';name={I:'Current through R',V:'Voltage across R',P:'Power in R'}[t]+i;unit={I:'mA',V:'V',P:'mW'}[t];}
       return it(sym,name,unit,val,h[key],{work:w[key]});});
-    return {title,diagram:DIA[top](R.map((_,i)=>i===rx?'R'+(i+1)+'\n= ?':'R'+(i+1)),variant==='src'?'VS = ?':'VS'),givens,items,tol:TOL,
-      note:(variant==='src'?'The source voltage is not given. Use the total power to find it. ':variant==='rx'?'One resistor value is not given. Use the total power to find it. ':'')+'Enter currents in mA, voltages in V, power in mW and resistance in Ω. Answers within ±2% are correct.'};
+    return {title,diagram:DIA[top](R.map((_,i)=>i===rx?'R'+(i+1)+'\n= ?':'R'+(i+1)),variant==='src'?'VS = ?':'VS'),givens,items,tol:TOL,itemScore:true,
+      note:(variant==='src'?'The source voltage is not given. The current through R'+(gi+1)+' is given instead. ':variant==='rx'?'R'+(gi+1)+' is not given. The current through it is given instead. ':'')+'Enter currents in mA, voltages in V, power in mW and resistance in Ω. Answers within ±5% are correct.'};
   };
 }
 /* ---------- two-source network ---------- */
-function netSolve(E1,E2,R1,R2,R3,q){
-  const G=q(q(1/R1)+q(1/R2)+q(1/R3)),num=q(q(E1/R1)+q(E2/R2));const Va=q(num/G);
-  const V1=q(E1-Va),V2=q(E2-Va);return {Va,G,num,V1,V2,I1:q(V1/R1),I2:q(V2/R2),I3:q(Va/R3)};
+function netSolve(E1,E2,R1,R2,R3){
+  const G=1/R1+1/R2+1/R3,num=E1/R1+E2/R2;const Va=num/G;
+  const V1=E1-Va,V2=E2-Va;return {Va,G,num,V1,V2,I1:V1/R1,I2:V2/R2,I3:Va/R3};
 }
+/** the original's networks: whole-volt sources (3–57 V) of either polarity, 2–9 Ω resistors, and
+    whole-number currents and drops. Built backwards from whole branch currents (I1 + I2 = I3). */
 function network(){
-  let V1,V2,f1,f2,R1,R2,R3,E1,E2,x;
-  for(let t=0;t<4000;t++){
-    V1=ri(5,30);V2=ri(5,30);f1=Math.random()<0.5;f2=Math.random()<0.5;
-    R1=eVal(470,10000);R2=eVal(470,10000);R3=eVal(470,10000);
-    E1=f1?-V1:V1;E2=f2?-V2:V2;
-    x=netSolve(E1,E2,R1,R2,R3,ident);
-    const I=[x.I1,x.I2,x.I3],Vv=[x.V1,x.V2,x.Va],Rr=[R1,R2,R3];
-    if(Math.min(...I.map(Math.abs))<2e-4)continue;
-    if(Math.max(...I.map((i,k)=>i*i*Rr[k]))>1)continue;
-    const ok=QS.every(q=>{const st=netSolve(E1,E2,R1,R2,R3,q);return [[x.I1,st.I1],[x.I2,st.I2],[x.I3,st.I3],[x.V1,st.V1],[x.V2,st.V2],[x.Va,st.Va]].every(([a,b])=>Math.abs(Math.abs(a)-Math.abs(b))<=0.75*TOL*Math.abs(a));});
-    if(ok)break;
-  }
-  const Rr=[R1,R2,R3];
-  const help=extra=>['$V_A=\\frac{\\frac{E_1}{R_1}+\\frac{E_2}{R_2}}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{R_3}}',
-    'One good method is <b>nodal analysis</b>. Take the bottom wire as 0 V and call the junction at the top of R3 node A. Give each source a sign: '+m('E_1=+V_1')+' if the long (positive) plate of V1 is on top, '+m('E_1=-V_1')+' if it is on the bottom; the same for '+m('E_2')+'. The formula above gives the voltage of node A.',
-    ...extra,'<b>Common mistakes:</b> ignoring a reversed source, and rounding '+m('V_A')+' too early. Keep 4 or 5 significant digits until the end. Superposition or mesh analysis give the same answers.'];
-  const H={I1:help(['$I_{R1}=\\frac{E_1-V_A}{R_1}','Then use Ohm\'s law on R1. Enter the magnitude in mA.']),I2:help(['$I_{R2}=\\frac{E_2-V_A}{R_2}','Then use Ohm\'s law on R2. Enter the magnitude in mA.']),I3:help(['$I_{R3}=\\frac{V_A}{R_3}','R3 is connected from node A to the 0 V wire.']),
-    V1:help(['$V_{R1}=E_1-V_A','The voltage across R1 is the difference between the two ends of R1.']),V2:help(['$V_{R2}=E_2-V_A','The voltage across R2 is the difference between the two ends of R2.']),V3:help(['$V_{R3}=V_A','R3 is connected from node A to the 0 V wire.'])};
+  let R1,R2,R3,I1,I2,E1,E2;
+  do{R1=ri(2,9);R2=ri(2,9);R3=ri(2,9);I1=ri(-9,9);I2=ri(-9,9);E1=(I1+I2)*R3+I1*R1;E2=(I1+I2)*R3+I2*R2;}
+  while(!I1||!I2||!(I1+I2)||[E1,E2].some(E=>Math.abs(E)<3||Math.abs(E)>57));
+  const V1=Math.abs(E1),V2=Math.abs(E2),f1=E1<0,f2=E2<0;
+  const x=netSolve(E1,E2,R1,R2,R3);
+  const help=['Help is not available for this exercise, and opening it costs nothing.','Two-source circuits need a network method: superposition, Thevenin\'s or Norton\'s theorem, mesh (loop) analysis or nodal analysis. Watch each source\'s polarity: the long plate (marked +) is the positive terminal.'];
   const sgn=E=>(E<0?'-':'')+fmt(Math.abs(E));const sgn5=E=>(E<0?'-':'')+fmt(Math.abs(E),5);
   const base=['>Take the bottom wire as 0 V and call the top of R3 node A. From the schematic, '+m('E_1='+sgn(E1)+'\\,\\text{V}')+' and '+m('E_2='+sgn(E2)+'\\,\\text{V}')+' (negative when the source\'s positive plate faces down).',
     'V_A=\\frac{\\frac{E_1}{R_1}+\\frac{E_2}{R_2}}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{R_3}}',
     'V_A=\\frac{\\frac{'+sgn(E1)+'}{'+fmt(R1)+'}+\\frac{'+sgn(E2)+'}{'+fmt(R2)+'}}{\\frac{1}{'+fmt(R1)+'}+\\frac{1}{'+fmt(R2)+'}+\\frac{1}{'+fmt(R3)+'}}=\\frac{'+fmt(x.num,5)+'}{'+fmt(x.G,5)+'}',
     'V_A='+fmt(x.Va,5)+'\\,\\text{V}'];
   const dir=(i,name,from,to)=>'>'+(i>=0?`The result is positive, so current flows through ${name} from ${from} toward ${to}.`:`The result is negative, so current actually flows through ${name} from ${to} toward ${from}.`);
-  const W={I1:[...base,'I_{R1}=\\frac{E_1-V_A}{R_1}=\\frac{'+sgn(E1)+'-('+sgn5(x.Va)+')}{'+tO(R1)+'}='+tmA(x.I1),dir(x.I1,'R1','the V1 side','node A')],
-    I2:[...base,'I_{R2}=\\frac{E_2-V_A}{R_2}=\\frac{'+sgn(E2)+'-('+sgn5(x.Va)+')}{'+tO(R2)+'}='+tmA(x.I2),dir(x.I2,'R2','the V2 side','node A')],
-    I3:[...base,'I_{R3}=\\frac{V_A}{R_3}=\\frac{'+tV(x.Va)+'}{'+tO(R3)+'}='+tmA(x.I3),dir(x.I3,'R3','node A','the bottom wire'),'>Check (Kirchhoff\'s current law): '+m('I_{R1}+I_{R2}='+tmA(x.I1+x.I2))+' = '+m('I_{R3}')+'.'],
+  const W={I1:[...base,'I_{R1}=\\frac{E_1-V_A}{R_1}=\\frac{'+sgn(E1)+'-('+sgn5(x.Va)+')}{'+tO(R1)+'}='+tA(x.I1),dir(x.I1,'R1','the V1 side','node A')],
+    I2:[...base,'I_{R2}=\\frac{E_2-V_A}{R_2}=\\frac{'+sgn(E2)+'-('+sgn5(x.Va)+')}{'+tO(R2)+'}='+tA(x.I2),dir(x.I2,'R2','the V2 side','node A')],
+    I3:[...base,'I_{R3}=\\frac{V_A}{R_3}=\\frac{'+tV(x.Va)+'}{'+tO(R3)+'}='+tA(x.I3),dir(x.I3,'R3','node A','the bottom wire'),'>Check (Kirchhoff\'s current law): '+m('I_{R1}+I_{R2}='+tA(x.I1+x.I2))+' = '+m('I_{R3}')+'.'],
     V1:[...base,'V_{R1}=E_1-V_A='+sgn(E1)+'-('+sgn5(x.Va)+')='+tV(x.V1),'>The magnitude is '+m(tV(Math.abs(x.V1)))+'.'],
     V2:[...base,'V_{R2}=E_2-V_A='+sgn(E2)+'-('+sgn5(x.Va)+')='+tV(x.V2),'>The magnitude is '+m(tV(Math.abs(x.V2)))+'.'],
     V3:[...base,'V_{R3}=V_A='+tV(x.Va)]};
   const opt={signFree:true};
-  return {title:'Two-source network',diagram:K.net(f1,f2),
+  return {title:'Two-source network',diagram:K.net(f1,f2),itemScore:true,helpCost:0,
     givens:[{k:'V1',v:V1+' V'},{k:'V2',v:V2+' V'},{k:'R1',v:fR(R1)},{k:'R2',v:fR(R2)},{k:'R3',v:fR(R3)}],
-    note:'Source polarity is shown on the schematic: the long plate (marked +) is the positive terminal. Enter magnitudes only (no minus signs); current direction is not graded. Currents in mA, voltages in V. Answers within ±2% are correct.',tol:TOL,
-    items:[it('I_{R1}','Current through R1','mA',Math.abs(x.I1*1e3),H.I1,{...opt,absTol:0.002,work:W.I1}),it('I_{R2}','Current through R2','mA',Math.abs(x.I2*1e3),H.I2,{...opt,absTol:0.002,work:W.I2}),it('I_{R3}','Current through R3','mA',Math.abs(x.I3*1e3),H.I3,{...opt,absTol:0.002,work:W.I3}),
-      it('V_{R1}','Voltage across R1','V',Math.abs(x.V1),H.V1,{...opt,absTol:0.005,work:W.V1}),it('V_{R2}','Voltage across R2','V',Math.abs(x.V2),H.V2,{...opt,absTol:0.005,work:W.V2}),it('V_{R3}','Voltage across R3','V',Math.abs(x.Va),H.V3,{...opt,absTol:0.005,work:W.V3})],
-    _net:{E1,E2,R:Rr}};
+    note:'Source polarity is shown on the schematic: the long plate (marked +) is the positive terminal. Enter magnitudes only (no minus signs); current direction is not graded. Currents in A, voltages in V. Answers within ±5% are correct.',tol:TOL,
+    items:[it('I_{R1}','Current through R1','A',Math.abs(x.I1),help,{...opt,work:W.I1}),it('I_{R2}','Current through R2','A',Math.abs(x.I2),help,{...opt,work:W.I2}),it('I_{R3}','Current through R3','A',Math.abs(x.I3),help,{...opt,work:W.I3}),
+      it('V_{R1}','Voltage across R1','V',Math.abs(x.V1),help,{...opt,work:W.V1}),it('V_{R2}','Voltage across R2','V',Math.abs(x.V2),help,{...opt,work:W.V2}),it('V_{R3}','Voltage across R3','V',Math.abs(x.Va),help,{...opt,work:W.V3})],
+    _net:{E1,E2,R:[R1,R2,R3]}};
 }
 
 /* ---------- intro texts ---------- */
 const TXT={
   serTop:'A series circuit has only <b>one path</b> for current, so the same current flows through every part. Each resistor takes a share of the source voltage in proportion to its resistance: a large resistor drops a large voltage, a small one drops a small voltage. The drops always add up to the source voltage (Kirchhoff\'s voltage law).',
   ser1:'Here every resistor and the source voltage are given. Add the resistors to get the total resistance, use Ohm\'s law for the current, then find each voltage drop and power.',
-  ser2:'All the resistors are given, but the source voltage is not. The total power is given instead. Find the total resistance, use the total power to get the current, and the rest follows.',
-  ser3:'One resistor value is missing. The source voltage and total power are enough to find the total resistance, and from that the missing resistor. No new formulas are needed, just one more step.',
+  ser2:'All the resistors are given, but the source voltage is not. Instead, the current through one resistor is given. In a series circuit that is the current everywhere, so it is also the total current. Find the total resistance, then Ohm\'s law gives the source voltage, and the rest follows.',
+  ser3:'One resistor value is missing, and the current through it is given. A series circuit has one path, so that is the total current. Ohm\'s law with the source voltage gives the total resistance, and subtracting the known resistors leaves the missing one.',
   parTop:'A parallel circuit gives each resistor its <b>own path</b>. Every branch is connected straight across the source, so every branch has the same voltage. Branch currents are inversely proportional to resistance: small resistors carry large currents. The branch currents add up to the total current (Kirchhoff\'s current law), and the total resistance is always less than the smallest branch.',
   par1:'Here every resistor and the source voltage are given. Use Ohm\'s law for each branch, the reciprocal formula for the total resistance, and the power formulas.',
-  par2:'All the resistors are given, but the source voltage is not. The total power is given instead. Find the total resistance, then use the power to find the source voltage.',
-  par3:'One resistor value is missing. Use the total power to find the total current, subtract the branch currents you can calculate, and the leftover current belongs to the unknown resistor.',
+  par2:'All the resistors are given, but the source voltage is not. Instead, the current through one branch is given. Every branch has the full source voltage across it, so Ohm\'s law on that branch gives the source voltage, and the rest follows.',
+  par3:'One resistor value is missing, and the current through it is given. Its branch has the full source voltage across it, so Ohm\'s law gives its value. Then solve the circuit as usual.',
   spTop:'A series-parallel circuit combines both kinds of connection. Solve it from the inside out: combine parallel groups and series groups step by step until one total resistance remains. Then work back out, using Ohm\'s law and Kirchhoff\'s laws: the currents entering a junction equal the currents leaving it, and the voltages around any closed loop add up to zero.',
   sp1:'R2 and R3 are in parallel, and that pair is in series with R1. All the values and the source voltage are given.',
-  sp2:'R2 and R3 are in parallel, and that pair is in series with R1. The source voltage is not given; use the total power to find the current first.',
-  sp3:'R2 and R3 are in parallel, and that pair is in series with R1. One resistor value is missing. Use the source voltage and the total power to find the total resistance, then work out the missing resistor.',
+  sp2:'R2 and R3 are in parallel, and that pair is in series with R1. The source voltage is not given. Instead, the current through one resistor is given: use it to find the voltage across that part of the circuit, then work outwards to the source.',
+  sp3:'R2 and R3 are in parallel, and that pair is in series with R1. The value of R1 is missing, and the current through R1 is given. That current is the total current, so you can find the voltage across the parallel pair, then the voltage across R1, then R1 itself.',
   sp4:'R2 and R4 are in series, that pair is in parallel with R3, and the whole group is in series with R1. All values and the source voltage are given.',
-  sp5:'The same four-resistor circuit, but the source voltage is not given. Use the total power and total resistance to find the current first.',
-  net:'<p>This circuit has <b>two voltage sources</b>, so the simple series and parallel rules are not enough on their own. You can solve it with superposition, Thevenin\'s theorem, mesh (loop) analysis, or nodal analysis. Nodal analysis is usually the quickest here: there is only one unknown node voltage, at the top of R3.</p><p>Watch the source polarities: they change from problem to problem. A source drawn with its positive plate at the bottom pushes the other way, so give it a minus sign in your equations.</p><p>Each problem has new resistor values, source voltages and polarities. Small rounding errors grow quickly in these calculations, so keep 4 or 5 significant digits until the final answer.</p>',
+  sp5:'The same four-resistor circuit and source voltage, but the value of R1 is missing. The current through R1 is given instead. It is the total current, so find the voltage across the parallel group first, then the rest.',
+  net:'<p>This circuit has <b>two voltage sources</b>, so the simple series and parallel rules are not enough on their own. You can solve it with superposition, Thevenin\'s or Norton\'s theorem, mesh (loop) analysis, or nodal analysis. Nodal analysis is usually the quickest here: there is only one unknown node voltage, at the top of R3.</p><p>Watch the source polarities: they change from problem to problem. A source drawn with its positive plate at the bottom pushes the other way, so give it a minus sign in your equations.</p><p>Each problem has new resistor values, source voltages and polarities. The help option is not available for this exercise; a worked solution appears for each answer after grading.</p>',
   tsIntro:'Troubleshooting is a different skill from circuit analysis: you use theory to predict what <i>should</i> be there, then plan a few measurements that tell you what is wrong. Don\'t worry about your score or time on your first few tries. Once you are comfortable, work on finding each fault with fewer readings.',
   tsSer:'<p>The most common fault is an <b>open</b>: a part, wire or circuit-board trace that no longer conducts. Cracks in traces are often too fine to see. In a series circuit an open stops all current, so every good resistor drops 0 V and the <b>whole supply voltage appears across the open</b>.</p><p>A <b>short</b> means a part\'s resistance has dropped to almost 0 Ω, usually because conductors on either side of it touch. A shorted resistor drops about 0 V, the current rises, and the other resistors drop more voltage than normal.</p>',
-  tsPar:'<p>An <b>open</b> branch simply drops out: its current is missing from the total, but every remaining branch still has the full supply voltage. Voltage readings across the resistors look normal, so compare the supply current with what you calculate for each branch. An open in the supply wiring (traces next to J1 or J2) stops all current.</p><p>A <b>short</b> across any branch shorts the supply itself. The current shoots up to the supply\'s 500 mA limit and the voltage collapses to almost 0 V. In real circuits this blows fuses or trips breakers.</p>',
-  tsSp:'<p>Faults in series-parallel circuits combine both patterns. An open in a part that carries the total current (R1, R4, or the traces in series with them) stops all current, and the supply voltage appears across the open. An open in one parallel branch (R2 or R3) only removes that branch\'s current: the total current falls and the parallel voltage rises.</p><p>A shorted part drops about 0 V and the total current rises. R2 and R3 are in parallel, so a short across either one looks the same from outside.</p>'
+  tsPar:'<p>An <b>open</b> branch simply drops out: its current is missing from the total, but every remaining branch still has the full supply voltage. Voltage readings across the resistors look normal, so compare the supply current with what you calculate for each branch. An open trace cuts off every branch beyond it. All the branch currents return to the supply through Trace 5 and Trace 6, so an open in either of those stops all current.</p>',
+  tsSp:'<p>Faults in series-parallel circuits combine both patterns. Here R1 and R2 are in parallel, and that pair is in series with R3. An open in a part that carries the total current (R3, or the traces in series with it) stops all current, and the supply voltage appears across the open. An open in one parallel branch (R1 or R2) only removes that branch\'s current: the total current falls and the parallel voltage rises.</p><p>A shorted part drops about 0 V and the total current rises. R1 and R2 are in parallel, so a short across either one looks the same from outside.</p>'
 };
-const HOWWS='<p>Type each answer in the box, in the unit shown next to it (mA, V, mW or Ω). You can also type engineering suffixes, such as <span class="kbd">4.7k</span> for 4700. Answers within <b>±2%</b> are marked correct, so 3 or 4 significant digits is plenty.</p><p><b>Scoring:</b> your score is the percentage of answers that are correct when you choose <b>Grade</b>. The <b>✓</b> button checks one answer: it costs nothing if the answer is right and 2 points if it is wrong. The <b>?</b> button shows formulas and hints for that item and costs 3 points. After grading, each item shows a worked solution. Every run uses new resistor values and a new source voltage.</p>';
+const HOWWS='<p>Type each answer in the box, in the unit shown next to it (mA, V, mW or Ω). You can also type engineering suffixes, such as <span class="kbd">4.7k</span> for 4700. Answers within <b>±5%</b> are marked correct. Errors carry from one answer to the next, so keep about 4 significant digits.</p><p><b>Scoring:</b> each item is worth an equal share of 100 points, rounded down (any remainder is free). The <b>✓</b> button checks one answer: a right answer is locked in; a wrong one takes 2 points off that item. The <b>?</b> button shows formulas for that item and takes 3 points off it every time you open it. An item never drops below 0. When you choose <b>Grade</b>, you keep the points left on every right item; wrong or blank items score 0. After grading, each item shows a worked solution. Every run uses new resistor values and a new source voltage.</p>';
 const FORM={
   ser:[{cap:'Total resistance',tex:'R_T=R_1+R_2+R_3'},{cap:'Total current',tex:'I_T=\\frac{V_S}{R_T}'},{cap:'Series current',tex:'I_{R1}=I_{R2}=I_{R3}=I_T'},{cap:'Ohm\'s law',tex:'V_{R1}=I_{R1}R_1'},{cap:'Kirchhoff\'s voltage law',tex:'V_S=V_{R1}+V_{R2}+V_{R3}'},{cap:'Power',tex:'P=VI=I^2R=\\frac{V^2}{R}'}],
   par:[{cap:'Total resistance',tex:'R_T=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{R_3}}'},{cap:'Parallel voltage',tex:'V_S=V_{R1}=V_{R2}=V_{R3}'},{cap:'Branch current',tex:'I_{R1}=\\frac{V_S}{R_1}'},{cap:'Kirchhoff\'s current law',tex:'I_T=I_{R1}+I_{R2}+I_{R3}'},{cap:'Power',tex:'P=VI=I^2R=\\frac{V^2}{R}'}],
   sp3:[{cap:'Parallel equivalent',tex:'R_{eq}=\\frac{R_2 R_3}{R_2+R_3}'},{cap:'Total resistance',tex:'R_T=R_1+R_{eq}'},{cap:'Total current',tex:'I_T=I_{R1}=\\frac{V_S}{R_T}'},{cap:'Kirchhoff\'s voltage law',tex:'V_{R2}=V_{R3}=V_S-V_{R1}'},{cap:'Kirchhoff\'s current law',tex:'I_T=I_{R2}+I_{R3}'},{cap:'Power',tex:'P=VI=I^2R=\\frac{V^2}{R}'}],
   sp4:[{cap:'Series pair',tex:'R_{eq1}=R_2+R_4'},{cap:'Parallel combination',tex:'R_{eq2}=\\frac{R_3 R_{eq1}}{R_3+R_{eq1}}'},{cap:'Total resistance',tex:'R_T=R_1+R_{eq2}'},{cap:'Branch currents',tex:'I_{R2}=I_{R4}=\\frac{V_{R3}}{R_{eq1}}'},{cap:'Kirchhoff\'s voltage law',tex:'V_{R3}=V_S-V_{R1}'}],
-  src:{cap:'Current from total power',tex:'I_T=\\sqrt{\\frac{P_T}{R_T}}'},
-  srcP:{cap:'Source voltage from total power',tex:'V_S=\\sqrt{P_T R_T}'},
-  rx:{cap:'Total resistance from power',tex:'R_T=\\frac{V_S^2}{P_T}'}
+  src:{ser:{cap:'Source voltage from the given current',tex:'V_S=I_T R_T'},par:{cap:'Source voltage from the given branch current',tex:'V_S=I_{R}R'},sp3:{cap:'Parallel voltage from a given branch current',tex:'V_{R2}=V_{R3}=I_{R2}R_2'}},
+  rx:{ser:{cap:'Total resistance from the given current',tex:'R_T=\\frac{V_S}{I_T}'},par:{cap:'Unknown branch resistor',tex:'R=\\frac{V_S}{I_R}'},sp3:{cap:'Unknown series resistor',tex:'R_1=\\frac{V_{R1}}{I_{R1}}'},sp4:{cap:'Total resistance from the given current',tex:'R_T=\\frac{V_S}{I_T}'}}
 };
 function wsMod(id,title,icon,sub,top,N,variant,txtTop,txt){
-  const f=FORM[top].slice();if(variant==='src')f.push(top==='par'?FORM.srcP:FORM.src);if(variant==='rx')f.push(FORM.rx);
+  const f=FORM[top].slice();if(variant!=='known')f.push(FORM[variant][top]);
   const lab=Array.from({length:N},(_,i)=>'R'+(i+1));
   return {id,title,icon,sub,intro:CC.introPage({diagram:null,text:`<div class="cols2" style="align-items:center"><div><p>${txtTop}</p><p>${txt}</p></div><div class="diagram">${DIA[top](lab,variant==='src'?'VS = ?':'VS')}</div></div>`,formulas:f,how:HOWWS}),
     run:(el,s)=>CC.worksheet(el,s,sheet(top,N,variant)())};
 }
 
-/* ---------- troubleshooting boards ---------- */
+/* ---------- troubleshooting boards ----------
+   As in the original: fixed resistor values that must be read from the colour bands, a supply voltage that
+   changes with every item, the black probe fixed on the supply's − pad and the red one starting on the board. */
 const RTOL=0.02;
 const OPEN=Infinity,SHORT=0.01,TR=0.001;
 const applyStd=(f,els)=>{if(f==='No Faults')return null;let mm=f.match(/^(R\d|Trace \d) (Open|Shorted)$/);
@@ -1372,28 +1355,30 @@ const applyStd=(f,els)=>{if(f==='No Faults')return null;let mm=f.match(/^(R\d|Tr
 const CLUE={
   SER:{Open:'An open anywhere in a series circuit stops all current. Every good resistor then drops 0 V, and the full supply voltage appears across the break. Measure across each part in turn until you find the one with the supply voltage across it.',
     Shorted:'A shorted resistor drops about 0 V. The total resistance falls, so the current rises and every other resistor drops more voltage than normal.',
-    None:'All drops are close to the values you calculate from the marked resistances (within the 2% resistor tolerance and 3% meter error), and the traces drop 0 V.'},
-  PAR:{Open:'An open branch resistor removes that branch\'s current from the total, but every branch still has the full supply voltage. Compare the supply current with the sum of the branch currents you calculate: the missing amount tells you which branch is open.',
-    Trace:'An open trace disconnects every branch beyond it. Voltage appears across the open trace itself, and the resistors cut off by it read 0 V. The supply current tells you how many branches are still connected.',
-    Feed:'An open in a supply trace (Trace 1 or Trace 6) cuts off every branch, so the current is 0 mA. The full supply voltage appears across that trace.',
-    Shorted:'A shorted branch shorts the whole supply. The current hits the 500 mA limit and the supply voltage collapses to almost 0 V. Because all branches are in parallel, you cannot tell which resistor is shorted without removing parts.',
+    None:'All drops are close to the values you calculate from the colour-coded resistances (within the meter\'s small error), and the traces drop 0 V.'},
+  PAR:{Open:'An open branch resistor removes that branch\'s current from the total, but every branch still has the full supply voltage. Compare the supply current with the branch currents you calculate: the missing amount tells you which branch is open.',
+    Trace:'An open trace disconnects every branch beyond it. The supply voltage appears across the open trace, and the supply current tells you how many branches are still connected.',
+    Feed:'Every branch current returns to the supply through Trace 5 and Trace 6, so an open in either stops all current (0 mA). The full supply voltage appears across that trace.',
     None:'The supply current matches the sum of the branch currents you calculate, and every trace drops 0 V.'},
-  SPB:{Series:'R1, R4 and Traces 1, 2 and 5 carry the total current. An open in any of them stops all current, and the supply voltage appears across the open part.',
-    Branch:'An open in one parallel branch removes that branch\'s current. The total current falls, so R1 and R4 drop less voltage and the parallel voltage rises. If the open is a trace, the voltage shows up across that trace.',
-    Shorted:'A shorted part drops about 0 V and the total current rises. A short across R2 or R3 also shorts the other one, so they look the same.',
-    None:'Every drop is close to the value you calculate from the marked resistances, and the traces drop 0 V.'}
+  SPB:{Series:'R3, Trace 2 and Trace 4 carry the total current. An open in any of them stops all current, and the supply voltage appears across the open part.',
+    Branch:'An open in R1 or R2, or in the trace that joins that resistor to the other one (Trace 3 for R1, Trace 1 for R2), removes one parallel branch. The total current falls, so R3 drops less voltage and the voltage across the parallel pair rises.',
+    R3:'With R3 shorted it drops about 0 V, so the whole supply voltage appears across R1 and R2 and the current rises.',
+    Pair:'R1 and R2 are in parallel, so a short across either one also shorts the other. The pair drops about 0 V and R3 takes the whole supply voltage.',
+    None:'Every drop is close to the value you calculate from the colour-coded resistances, and the traces drop 0 V.'}
 };
 function clueFor(name,f){
   if(f==='No Faults')return CLUE[name].None;
-  if(/Shorted/.test(f))return CLUE[name].Shorted;
-  if(name==='SER')return CLUE.SER.Open;
-  if(name==='PAR')return /Trace (1|6)/.test(f)?CLUE.PAR.Feed:/Trace/.test(f)?CLUE.PAR.Trace:CLUE.PAR.Open;
-  return /R1|R4|Trace (1|2|5)/.test(f)?CLUE.SPB.Series:CLUE.SPB.Branch;
+  if(name==='SER')return /Shorted/.test(f)?CLUE.SER.Shorted:CLUE.SER.Open;
+  if(name==='PAR')return /Trace (5|6)/.test(f)?CLUE.PAR.Feed:/Trace/.test(f)?CLUE.PAR.Trace:CLUE.PAR.Open;
+  return f==='R3 Shorted'?CLUE.SPB.R3:/Shorted/.test(f)?CLUE.SPB.Pair:/R3|Trace (2|4)/.test(f)?CLUE.SPB.Series:CLUE.SPB.Branch;
 }
+/* a board resistor drawn with its real colour bands (4 bands, gold tolerance) */
+const bands=r=>{const e=Math.floor(Math.log10(r))-1,d=Math.round(r/10**e);return [K.COL[Math.floor(d/10)][1],K.COL[d%10][1],K.COL[e][1],K.GOLD[1]];};
+const bandR=(a,b,label,r)=>{const c=bands(r);let i=0;return B.part('R',a,b,label).replace(/fill="(#c62828|#6d4c41|#ef6c00|#c9a227)"/g,()=>`fill="${c[i++]}"`);};
 function boardFactory(def){
   return (k,forced,exact)=>{
-    const R=def.marked();const Ra=exact?R.slice():R.map(r=>r*(1+rnd(-RTOL,RTOL)));
-    const Vs0=pick([12,15,18,20,24,30]);const Vs=Vs0*rnd(0.995,1.005);
+    const R=def.marked.slice();const Ra=exact?R.slice():R.map(r=>r*(1+rnd(-RTOL,RTOL)));
+    const Vs0=def.supply();const Vs=Vs0*rnd(0.995,1.005);
     const ans=forced!==undefined?forced:ri(0,def.faults.length-1);
     const good=def.elems(Ra).map(e=>Object.assign({},e));
     const elems=def.elems(Ra).map(e=>Object.assign({},e));
@@ -1410,43 +1395,45 @@ function boardFactory(def){
       return ['>'+(f==='No Faults'?'<b>No fault.</b> ':`<b>${esc(f)}${who&&/or/.test(f)?` (this board: ${who})`:''}.</b> `)+clueFor(def.name,f),
         '>With no fault, this board would draw about '+m(fmt(Math.abs(nor.I)*1000,3)+'\\,\\text{mA}')+'; on this board it draws '+m(fmt(Math.abs(sol.I)*1000,3)+'\\,\\text{mA}')+'.',
         `><span class="small">Voltage across each part, without meter error ("No fault" uses this board\'s actual resistor values):</span></p><div class="tablewrap"><table class="t"><thead><tr><th>Part</th><th>No fault</th><th>This board</th></tr></thead><tbody>${rows}</tbody></table></div><p class="small">`,
-        '>Good strategy: start with the free supply readings, predict the normal values from the marked resistances, then measure across the parts most likely to explain any difference.'];
+        '>Good strategy: start with the free supply readings, predict the normal values from the colour-coded resistances, then measure the parts most likely to explain any difference.'];
     };
-    return {faults:def.faults,answer:ans,measure,_sol:sol,_nor:nor,_P:P,_who:who,work,
+    return {faults:def.faults,answer:ans,measure,_sol:sol,_nor:nor,_P:P,_who:who,work,start:def.start,
       pads:Object.keys(P).map(id=>({id,x:P[id][0],y:P[id][1],label:P[id][3]})),
-      svg:()=>B.svg(540,340,B.supply(20,8,200,70,'DC POWER SUPPLY',Vs0+' VDC')+B.pcb(20,110,505,220)+def.draw(R)),
+      svg:()=>B.svg(540,340,B.supply(20,8,200,70,'DC POWER SUPPLY',fmt(Vs0,3)+' VDC')+B.pcb(20,110,505,220)+def.draw(R)),
       meters:()=>[{label:'Supply DC volts',text:CC.lcd(vs(sol.v[1]),2)},{label:'Supply DC mA',text:CC.lcd(am(Math.abs(sol.I)*1000),2)}],
-      info:()=>`Marked values: ${R.map((r,i)=>'R'+(i+1)+' = '+fR(r)).join(', ')}. Resistors are within ±2% of their marked values. The voltmeter can be off by up to 3%; the supply ammeter is accurate to about 1%. The red probe is the positive (+) meter lead. The supply limits its output current to 500 mA.`};
+      info:()=>'Read each resistor\'s value from its colour bands. The red probe is the positive (+) meter lead; the black (−) lead stays on the supply\'s negative terminal. The voltmeter can be off by up to 3%; the supply ammeter is accurate to about 1%. The supply limits its output current to 500 mA.'};
   };
 }
-const wires=(x1,y1,x2,y2)=>B.wire([[150,78],[150,95],[x1,95],[x1,y1]],'#c62828')+B.wire([[180,78],[180,100],[34,100],[34,y2],[x2,y2]],'#222');
-const SER={name:'SER',nodes:8,marked:()=>{let R;do{R=[0,0,0,0].map(()=>eVal(220,4700));}while(Math.max(...R)/Math.min(...R)>8);return R;},
+const redW=pts=>B.wire([[150,78],[150,96],...pts],'#c62828'),blkW=pts=>B.wire([[180,78],[180,100],...pts],'#222');
+/* four vertical resistors: + to R1 top, R1–R2 bottoms (Trace 1), R2–R3 tops (Trace 2), R3–R4 bottoms (Trace 3), R4 top to − */
+const SER={name:'SER',nodes:8,marked:[270,560,1200,470],supply:()=>pick([10,12.5,15,17.5,20,22.5,25,27.5,30]),
   faults:['R1 Open','R1 Shorted','R2 Open','R2 Shorted','R3 Open','R3 Shorted','R4 Open','R4 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','No Faults'],
   elems:R=>[{id:'R1',a:1,b:2,R:R[0]},{id:'T1',a:2,b:3,R:TR},{id:'R2',a:3,b:4,R:R[1]},{id:'T2',a:4,b:5,R:TR},{id:'R3',a:5,b:6,R:R[2]},{id:'T3',a:6,b:7,R:TR},{id:'R4',a:7,b:0,R:R[3]}],
-  apply:applyStd,
-  pads:{J1:[60,150,1,'J1 (+)'],R1a:[100,150,1,'R1 left'],R1b:[200,150,2,'R1 right'],R2a:[260,150,3,'R2 left'],R2b:[360,150,4,'R2 right'],R3a:[470,180,5,'R3 top'],R3b:[470,280,6,'R3 bottom'],R4a:[360,300,7,'R4 right'],R4b:[250,300,0,'R4 left'],J2:[60,300,0,'J2 (−)']},
-  draw:R=>wires(60,150,60,300)+B.trace([[60,150],[100,150]])+B.trace([[200,150],[260,150]],'TRACE 1',[230,140])+B.trace([[360,150],[470,150],[470,180]],'TRACE 2',[415,140])+B.trace([[470,280],[470,300],[360,300]],'TRACE 3',[415,318])+B.trace([[250,300],[60,300]])+
-    B.part('R',[100,150],[200,150],'R1')+B.part('R',[260,150],[360,150],'R2')+B.part('R',[470,180],[470,280],'R3')+B.part('R',[250,300],[360,300],'R4')+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})};
-const PAR={name:'PAR',nodes:8,marked:()=>{let R;do{R=[0,0,0].map(()=>eVal(220,4700));}while(Math.max(...R)/Math.min(...R)>5||[[0,1],[0,2],[1,2]].some(([a,b])=>Math.max(R[a],R[b])/Math.min(R[a],R[b])<2));return R;},
-  faults:['R1 Open','R2 Open','R3 Open','R1, R2 or R3 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Trace 5 Open','Trace 6 Open','No Faults'],
-  elems:R=>[{id:'T1',a:1,b:2,R:TR},{id:'R1',a:2,b:5,R:R[0]},{id:'T2',a:2,b:3,R:TR},{id:'R2',a:3,b:6,R:R[1]},{id:'T3',a:3,b:4,R:TR},{id:'R3',a:4,b:7,R:R[2]},{id:'T4',a:5,b:6,R:TR},{id:'T5',a:6,b:7,R:TR},{id:'T6',a:7,b:0,R:TR}],
-  apply:applyStd,
-  pads:{J1:[60,150,1,'J1 (+)'],R1a:[150,165,2,'R1 top'],R1b:[150,275,5,'R1 bottom'],R2a:[280,165,3,'R2 top'],R2b:[280,275,6,'R2 bottom'],R3a:[410,165,4,'R3 top'],R3b:[410,275,7,'R3 bottom'],J2:[490,300,0,'J2 (−)']},
-  draw:R=>B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,92],[510,92],[510,300],[490,300]],'#222')+
-    B.trace([[60,150],[150,150],[150,165]],'TRACE 1',[105,140])+B.trace([[150,150],[280,150],[280,165]],'TRACE 2',[215,140])+B.trace([[280,150],[410,150],[410,165]],'TRACE 3',[345,140])+
-    B.trace([[150,275],[150,300],[280,300],[280,275]],'TRACE 4',[215,318])+B.trace([[280,300],[410,300],[410,275]],'TRACE 5',[345,318])+B.trace([[410,300],[490,300]],'TRACE 6',[452,318])+
-    B.part('R',[150,165],[150,275],'R1')+B.part('R',[280,165],[280,275],'R2')+B.part('R',[410,165],[410,275],'R3')+B.label(60,135,'J1',{size:11})+B.label(490,325,'J2',{size:11})};
-const SPB={name:'SPB',nodes:9,marked:()=>{let R;do{R=[0,0,0,0].map(()=>eVal(220,4700));}while(Math.max(...R)/Math.min(...R)>4||Math.max(R[1],R[2])/Math.min(R[1],R[2])<1.8||Math.max(R[1],R[2])/Math.min(R[1],R[2])>3);return R;},
-  faults:['R1 Open','R1 Shorted','R2 Open','R3 Open','R2 or R3 Shorted','R4 Open','R4 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Trace 5 Open','No Faults'],
-  elems:R=>[{id:'T1',a:1,b:2,R:TR},{id:'R1',a:2,b:3,R:R[0]},{id:'T2',a:3,b:4,R:TR},{id:'R2',a:4,b:6,R:R[1]},{id:'T3',a:4,b:5,R:TR},{id:'R3',a:5,b:7,R:R[2]},{id:'T4',a:7,b:6,R:TR},{id:'T5',a:6,b:8,R:TR},{id:'R4',a:8,b:0,R:R[3]}],
-  apply:applyStd,
-  pads:{J1:[60,150,1,'J1 (+)'],R1a:[110,150,2,'R1 left'],R1b:[210,150,3,'R1 right'],R2a:[290,170,4,'R2 top'],R2b:[290,275,6,'R2 bottom'],R3a:[430,170,5,'R3 top'],R3b:[430,275,7,'R3 bottom'],R4a:[230,300,8,'R4 right'],R4b:[120,300,0,'R4 left'],J2:[60,300,0,'J2 (−)']},
-  draw:R=>wires(60,150,60,300)+B.trace([[60,150],[110,150]],'TRACE 1',[85,170])+B.trace([[210,150],[290,150],[290,170]],'TRACE 2',[250,140])+B.trace([[290,150],[430,150],[430,170]],'TRACE 3',[360,140])+
-    B.trace([[430,275],[430,300],[290,300]],'TRACE 4',[360,318])+B.trace([[290,275],[290,300],[230,300]],'TRACE 5',[262,318])+B.trace([[120,300],[60,300]])+
-    B.part('R',[110,150],[210,150],'R1')+B.part('R',[290,170],[290,275],'R2')+B.part('R',[430,170],[430,275],'R3')+B.part('R',[120,300],[230,300],'R4')+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})};
-const TS_HOW='<p>Tap a solder pad to place the selected probe. The first two taps place red, then black; after that the selected probe stays selected until you pick the other with the probe buttons. The voltmeter reads the voltage from the red (+) probe to the black (−) probe. Like a real meter it has a small error, but it is accurate enough to find every fault. The supply\'s own voltage and current displays are always visible and cost nothing.</p><p><b>Scoring:</b> each board starts at 10 points, and each new voltmeter reading costs 1 point. Select the fault and choose <b>Grade item</b>: a correct answer earns the points that remain, a wrong answer earns 0. There are 10 boards, and your score is the percentage of the 100 possible points. After each board you can see the normal and faulty voltages.</p>';
+  apply:applyStd,start:{red:'R4b',black:'R4a'},
+  pads:{R1a:[110,170,1,'R1 top (+)'],R1b:[110,280,2,'R1 bottom'],R2b:[220,280,3,'R2 bottom'],R2a:[220,170,4,'R2 top'],R3a:[330,170,5,'R3 top'],R3b:[330,280,6,'R3 bottom'],R4b:[440,280,7,'R4 bottom'],R4a:[440,170,0,'R4 top (−)']},
+  draw:R=>redW([[110,96],[110,170]])+blkW([[440,100],[440,170]])+B.trace([[110,280],[110,305],[220,305],[220,280]],'TRACE 1',[165,322])+B.trace([[220,170],[220,145],[330,145],[330,170]],'TRACE 2',[275,138])+B.trace([[330,280],[330,305],[440,305],[440,280]],'TRACE 3',[385,322])+
+    bandR([110,170],[110,280],'R1',R[0])+bandR([220,170],[220,280],'R2',R[1])+bandR([330,170],[330,280],'R3',R[2])+bandR([440,170],[440,280],'R4',R[3])};
+/* three vertical branches: + on R1 top, tops joined by Traces 1–2, bottoms by Traces 3–4, then Trace 5 to the corner and Trace 6 up to − */
+const PAR={name:'PAR',nodes:8,marked:[220,560,1200],supply:()=>sf(rnd(10.6,11.8),3),
+  faults:['Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Trace 5 Open','Trace 6 Open','R1 Open','R2 Open','R3 Open','No Faults'],
+  elems:R=>[{id:'T1',a:1,b:2,R:TR},{id:'T2',a:2,b:3,R:TR},{id:'R1',a:1,b:4,R:R[0]},{id:'R2',a:2,b:5,R:R[1]},{id:'R3',a:3,b:6,R:R[2]},{id:'T3',a:4,b:5,R:TR},{id:'T4',a:5,b:6,R:TR},{id:'T5',a:6,b:7,R:TR},{id:'T6',a:7,b:0,R:TR}],
+  apply:applyStd,start:{red:'T6b',black:'T6a'},
+  pads:{R1a:[110,175,1,'R1 top (+)'],R2a:[230,175,2,'R2 top'],R3a:[350,175,3,'R3 top'],R1b:[110,270,4,'R1 bottom'],R2b:[230,270,5,'R2 bottom'],R3b:[350,270,6,'R3 bottom'],T6b:[470,300,7,'Trace 6 bottom'],T6a:[470,150,0,'Trace 6 top (−)']},
+  draw:R=>redW([[110,96],[110,175]])+blkW([[470,100],[470,150]])+B.trace([[110,175],[110,150],[230,150],[230,175]],'TRACE 1',[170,140])+B.trace([[230,150],[350,150],[350,175]],'TRACE 2',[290,140])+
+    B.trace([[110,270],[110,300],[230,300],[230,270]],'TRACE 3',[170,318])+B.trace([[230,300],[350,300],[350,270]],'TRACE 4',[290,318])+B.trace([[350,300],[470,300]],'TRACE 5',[410,318])+B.trace([[470,300],[470,150]],'TRACE 6',[488,225,-90])+
+    bandR([110,175],[110,270],'R1',R[0])+bandR([230,175],[230,270],'R2',R[1])+bandR([350,175],[350,270],'R3',R[2])};
+/* (R1 ∥ R2) in series with R3: + on R1 top, Trace 1 to R2 top, Trace 3 joins R1 and R2 bottoms, Trace 4 to R3 bottom, R3 top by Trace 2 to −; Trace 5 is a dead-end test pad off R3 bottom */
+const SPB={name:'SPB',nodes:8,marked:[220,560,1200],supply:()=>ri(16,28),
+  faults:['Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','R1 Open','R2 Open','R3 Open','R3 Shorted','R1 or R2 Shorted','No Faults'],
+  elems:R=>[{id:'T1',a:1,b:2,R:TR},{id:'R1',a:1,b:3,R:R[0]},{id:'R2',a:2,b:4,R:R[1]},{id:'T3',a:3,b:4,R:TR},{id:'T4',a:4,b:5,R:TR},{id:'R3',a:5,b:6,R:R[2]},{id:'T2',a:6,b:0,R:TR},{id:'T5',a:5,b:7,R:TR}],
+  apply:applyStd,start:{red:'T5',black:'Neg'},
+  pads:{R1a:[110,175,1,'R1 top (+)'],R2a:[230,175,2,'R2 top'],R1b:[110,270,3,'R1 bottom'],R2b:[230,270,4,'R2 bottom'],R3b:[370,270,5,'R3 bottom'],R3a:[370,175,6,'R3 top'],Neg:[480,150,0,'Trace 2 (−)'],T5:[470,300,7,'Trace 5 test pad']},
+  draw:R=>redW([[110,96],[110,175]])+blkW([[480,100],[480,150]])+B.trace([[110,175],[110,150],[230,150],[230,175]],'TRACE 1',[170,140])+B.trace([[370,175],[370,150],[480,150]],'TRACE 2',[415,140])+
+    B.trace([[110,270],[110,300],[230,300],[230,270]],'TRACE 3',[170,318])+B.trace([[230,300],[370,300],[370,270]],'TRACE 4',[300,318])+B.trace([[370,300],[470,300]],'TRACE 5',[420,318])+
+    bandR([110,175],[110,270],'R1',R[0])+bandR([230,175],[230,270],'R2',R[1])+bandR([370,175],[370,270],'R3',R[2])};
+const TS_HOW='<p>The probes start on the board, and that first reading is free. The black (−) probe stays on the supply\'s negative terminal; tap a solder pad to move the red (+) probe there. The voltmeter reads the voltage from the red probe to the black one. Like a real meter it has a small error, but it is accurate enough to find every fault. Read the resistor values from their colour bands. The supply\'s own voltage and current displays are always visible and cost nothing.</p><p><b>Scoring:</b> each board starts at 12 points, and each new red-probe position costs 1 point. Select the fault and choose <b>Grade item</b>: a correct answer earns the points that remain, a wrong answer earns 0. There are 10 boards, and your score is your points out of 120. A perfect 120 is only possible by guessing, so aim to find each fault with as few readings as you can. After each board you can see the normal and faulty voltages.</p>';
 const tsMod=(id,title,sub,def,txt,sch)=>({id,title,icon:'wrench',sub,intro:CC.introPage({text:`<div class="cols2" style="align-items:center"><div><p>${TXT.tsIntro}</p>${txt}</div><div class="diagram">${sch}</div></div>`,how:TS_HOW}),
-  run:(el,s)=>CC.trouble(el,s,{count:10,points:10,build:boardFactory(def)})});
+  run:(el,s)=>CC.trouble(el,s,{count:10,points:12,fixedBlack:true,rawPoints:true,build:boardFactory(def)})});
 
 DCK._ts={SER,PAR,SPB,boardFactory};
 DCK._dc={solve,answers,pickCircuit,netSolve};
@@ -1481,8 +1468,8 @@ const lab3=['R1','R2','R3'];
 CC.App.init({
   id:'dc',title:'DC Circuits Challenge',tagline:'Interactive DC exercises · offline edition',
   blurb:'Fifteen hands-on exercises. Twelve circuit worksheets cover series, parallel, series-parallel and two-source networks; three virtual circuit boards let you practice troubleshooting with a voltmeter. Every run uses new values.',
-  footer:'Based on DC Circuits Challenge © 1993, 2001 ETCAI Products. Offline HTML edition.',pass:80,hero,
-  manual:`<h2>About this program</h2><p>DC Circuits Challenge is a set of practice exercises that goes alongside your textbook, lectures and lab work. It does not teach the topics from scratch. Instead it gives you plenty of practice with instant feedback, hints when you get stuck, and a worked solution for every answer.</p><p>There are fifteen exercises. Twelve are circuit worksheets on series, parallel, series-parallel and two-source circuits. Three are virtual troubleshooting boards (series, parallel and series-parallel) where you find a fault by taking voltmeter readings. Every run uses new values, so you can repeat an exercise as often as you like.</p><p>Each exercise opens with a short introduction and the key formulas. Choose <b>Begin</b> to start. The program times each exercise. When you finish, you can print a certificate showing the exercise, your name and ID, the date and time, your score, your time and a validity code. Instructors can use <b>Check validity</b> to confirm that a certificate has not been changed.</p><h2>Suggestions for use</h2><p>While you are learning a topic, practice without worrying about your score or time. As your skills grow, aim for a perfect score in less time. You can report progress by handing in certificates, by sharing the grade file, or by completing an exercise while your instructor watches.</p>`,
+  footer:'Based on DC Circuits Challenge © 1993, 2001 ETCAI Products. Offline HTML edition.',pass:false,hero,
+  manual:`<h2>About this program</h2><p>DC Circuits Challenge is a set of practice exercises that goes alongside your textbook, lectures and lab work. It does not teach the topics from scratch. Instead it gives you plenty of practice with instant feedback, hints when you get stuck, and a worked solution for every answer.</p><p>There are fifteen exercises. Twelve are circuit worksheets on series, parallel, series-parallel and two-source circuits, scored out of 100. Three are virtual troubleshooting boards (series, parallel and series-parallel) where you find a fault by taking voltmeter readings, scored out of 120 points. Every run uses new values, so you can repeat an exercise as often as you like.</p><p>Each exercise opens with a short introduction and the key formulas. Choose <b>Begin</b> to start. The program times each exercise. When you finish, you can print a certificate showing the exercise, your name and ID, the date and time, your score, your time and a validity code. Instructors can use <b>Check validity</b> to confirm that a certificate has not been changed.</p><h2>Suggestions for use</h2><p>While you are learning a topic, practice without worrying about your score or time. As your skills grow, aim for a perfect score in less time. You can report progress by handing in certificates, by sharing the grade file, or by completing an exercise while your instructor watches.</p>`,
   groups:[
     {title:'Series circuits',items:[
       wsMod('ser1','Series One','res','resistors and source known','ser',3,'known',TXT.serTop,TXT.ser1),
@@ -1495,18 +1482,17 @@ CC.App.init({
     {title:'Series-parallel circuits',items:[
       wsMod('sp1','Series-Parallel I','res','three resistors, source known','sp3',3,'known',TXT.spTop,TXT.sp1),
       wsMod('sp2','Series-Parallel II','res','three resistors, source unknown','sp3',3,'src',TXT.spTop,TXT.sp2),
-      wsMod('sp3','Series-Parallel III','res','one resistor unknown','sp3',3,'rx',TXT.spTop,TXT.sp3),
+      wsMod('sp3','Series-Parallel III','res','R1 unknown','sp3',3,'rx',TXT.spTop,TXT.sp3),
       wsMod('sp4','Series-Parallel IV','res','four resistors, source known','sp4',4,'known',TXT.spTop,TXT.sp4),
-      wsMod('sp5','Series-Parallel V','res','four resistors, source unknown','sp4',4,'src',TXT.spTop,TXT.sp5)]},
+      wsMod('sp5','Series-Parallel V','res','four resistors, R1 unknown','sp4',4,'rx',TXT.spTop,TXT.sp5)]},
     {title:'Networks',items:[
       {id:'net',title:'Basic Networks',icon:'power',sub:'two source network',intro:CC.introPage({text:`<div class="cols2" style="align-items:center"><div>${TXT.net}</div><div class="diagram">${K.net(false,true)}</div></div>`,
         formulas:[{cap:'Node voltage (nodal analysis)',tex:'V_A=\\frac{\\frac{E_1}{R_1}+\\frac{E_2}{R_2}}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{R_3}}',where:'E is +V when the source\'s positive plate is on top, −V when it is on the bottom'},{cap:'Branch currents',tex:'I_{R1}=\\frac{E_1-V_A}{R_1}\\qquad I_{R2}=\\frac{E_2-V_A}{R_2}\\qquad I_{R3}=\\frac{V_A}{R_3}'}],
-        how:'<p>Type each answer in the unit shown (mA or V). Enter <b>magnitudes only</b>: current direction is not graded, but the worked solutions show it. Answers within <b>±2%</b> are correct.</p><p><b>Scoring:</b> your score is the percentage of answers correct when you choose <b>Grade</b>. A wrong <b>✓</b> check costs 2 points; opening <b>?</b> help costs 3 points.</p>'}),run:(el,s)=>CC.worksheet(el,s,network())}]},
+        how:'<p>Type each answer in the unit shown (A or V). Enter <b>magnitudes only</b>: current direction is not graded, but the worked solutions show it. Answers within <b>±5%</b> are correct.</p><p><b>Scoring:</b> each of the six items is worth 16 points (the remaining 4 are free). A right <b>✓</b> check locks the answer in; a wrong one takes 2 points off that item. Help is not available for this exercise and costs nothing. When you choose <b>Grade</b>, you keep the points left on every right item; wrong or blank items score 0.</p>'}),run:(el,s)=>CC.worksheet(el,s,network())}]},
     {title:'Troubleshooting',items:[
       tsMod('tss','Troubleshooting Series Circuits','four resistors on a PC board',SER,TXT.tsSer,DIA.ser(['R1','R2','R3','R4'],'VS')),
       tsMod('tsp','Troubleshooting Parallel Circuits','three branches on a PC board',PAR,TXT.tsPar,DIA.par(lab3,'VS')),
-      tsMod('tssp','Troubleshooting Series-Parallel Circuits','four resistor combination',SPB,TXT.tsSp,K.wrap(380,200,
-        S.line([[40,30],[80,30]])+S.hSym('R',110,30,'R1')+S.line([[140,30],[300,30],[300,70]])+S.line([[220,30],[220,70]])+S.vSym('R',220,100,'R2')+S.vSym('R',300,100,'R3')+S.line([[220,130],[220,170],[140,170]])+S.line([[300,130],[300,170],[220,170]])+S.hSym('R',110,170,'R4',{below:true})+S.line([[80,170],[40,170],[40,130]])+S.line([[40,30],[40,70]])+K.bat(40,100,'VS')+S.dot(220,30)+S.dot(220,170)))]}
+      tsMod('tssp','Troubleshooting Series-Parallel Circuits','three resistor combination',SPB,TXT.tsSp,K.spB(lab3,'VS'))]}
   ]
 });
 })();
