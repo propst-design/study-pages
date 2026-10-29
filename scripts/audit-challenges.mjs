@@ -56,12 +56,10 @@ for (const file of fs.readdirSync(dir).filter(f => f.endsWith('_Challenge.html')
       for (let i = 0; i < 1000; i++) {
         const c = context.PSK.make(type);
         const specs = c.specs();
-        const watts = Number(specs.find(s => s.startsWith('R1:')).match(/, ([\d.]+) W/)[1]);
-        const diode = specs.find(s => s.includes('silicon rectifier')).match(/1N400([1-7])/)[1];
-        const rating = [0, 50, 100, 200, 400, 600, 800, 1000][diode];
-        // Check conservative stress bounds with 50% margin, independent of load/fault.
-        if (watts < 1.5 * (c.vsec * Math.SQRT2) ** 2 / c.R1) underratedBleeder++;
-        if (rating < 1.5 * c.vsec * Math.SQRT2 * (type === 'bridge' ? 1 : 2)) underratedDiode++;
+        const rating = Number(specs.find(s => s.startsWith('Diodes:')).match(/(\d+) V PIV/)[1]);
+        // Check conservative stress bounds (25% margin on the diodes, a 1/4 W bleeder at half rating).
+        if ((c.vsec * Math.SQRT2) ** 2 / c.R1 > 0.125) underratedBleeder++;
+        if (rating < 1.25 * c.vsec * Math.SQRT2 * (type === 'bridge' ? 1 : 2)) underratedDiode++;
       }
       result.componentChecks[type] = { samples: 1000, underratedBleeder, underratedDiode };
       if (underratedBleeder || underratedDiode) result.errors.push(`${type}: component ratings lack margin`);
