@@ -1223,7 +1223,7 @@ ts1:`<p>The red probe goes on pad A, B or C; the black probe on pad D, E or F. T
 <table class="t small"><thead><tr><th>Probes</th><th>Path measured</th><th>Normal reading</th></tr></thead><tbody>
 <tr><td>A–F</td><td>SW1, fuse</td><td>fuse resistance (fraction of an ohm) with SW1 ON; ∞ with SW1 OFF</td></tr>
 <tr><td>A–E</td><td>SW1, trace 2</td><td>near 0 Ω with SW1 ON; ∞ with SW1 OFF</td></tr>
-<tr><td>A–D</td><td>SW1, trace 2, lamp</td><td>lamp resistance (about 10 Ω) with SW1 ON; ∞ with SW1 OFF</td></tr>
+<tr><td>A–D</td><td>SW1, trace 2, lamp</td><td>lamp resistance (a few ohms to about 20 Ω; the cold value is listed with each board) with SW1 ON; ∞ with SW1 OFF</td></tr>
 <tr><td>B–F</td><td>trace 3, fuse</td><td>fuse resistance</td></tr>
 <tr><td>B–E</td><td>trace 3, trace 2</td><td>near 0 Ω</td></tr>
 <tr><td>B–D</td><td>trace 3, trace 2, lamp</td><td>lamp resistance</td></tr>
@@ -1349,7 +1349,7 @@ const TS1_WHY=['Every path through the fuse (A–F with SW1 ON, B–F, C–F) re
   'Paths from pad A read low even with SW1 OFF.',
   'Every path to pads E and D reads ∞, but A–F, B–F and C–F are normal. Trace 2 is common to every E and D path.',
   'Every path from pad B reads ∞, while A–F (SW1 ON) and C–F are normal.',
-  'Every reading is normal: the switch works in both positions, the lamp is about 10 Ω, the fuse reads a fraction of an ohm and R1 is within ±10%.'];
+  'Every reading is normal: the switch works in both positions, the lamp reads close to its listed cold value of {lamp} Ω, the fuse reads a fraction of an ohm and R1 is within ±10%.'];
 const P1={A:[40,150],B:[40,210],C:[40,270],D:[500,85],E:[500,150],F:[500,210]};
 function board1Svg(st,Rm=1000){
   const on=st.sw==='ON';
@@ -1365,7 +1365,8 @@ function board1Svg(st,Rm=1000){
 const tolLine=(Rm,v)=>{const lo=0.9*Rm,hi=1.1*Rm;return `>C–E reads ${fo(v)}. R1 is marked ${fmt(Rm)} Ω ± 10%, so a good R1 reads between ${fmt(lo)} Ω and ${fmt(hi)} Ω${isFinite(v)?` (this one is ${fmt(v/Rm*100,3)}% of the marked value)`:''}.`;};
 function board1Item(force){
   const ans=force??ri(0,9),f=TS1_OPTS[ans];
-  const Rm=eVal(22,4700),lamp=+rnd(9,11).toFixed(2),fuseR=rnd(0.05,0.3);
+  // the cold lamp is a few ohms, far above the fuse (under 0.3 Ω) and far below an open (∞), so its value never hides a fault
+  const lampNom=pick([5,8,10,12,15,20]),Rm=eVal(22,4700),lamp=+(lampNom*rnd(0.9,1.1)).toFixed(2),fuseR=rnd(0.05,0.3);
   // a good resistor is kept well inside ±10% so that meter error can't push it across a limit
   let Ra=Rm*rnd(0.95,1.05);if(f.includes('Below'))Ra=Rm*rnd(0.6,0.84);if(f.includes('Above'))Ra=Rm*rnd(1.16,1.5);if(f.includes('Resistor Open'))Ra=Infinity;
   const net=st=>{const on=st.sw==='ON';let sw=(on&&!f.includes('Always Open'))||f.includes('Always Closed')?0.02:Infinity;
@@ -1376,10 +1377,10 @@ function board1Item(force){
   const work=()=>{const on={sw:'ON'},off={sw:'OFF'};
     const rows=[['A','F'],['A','E'],['A','D']].map(([a,b])=>`<tr><td>${a}–${b}</td><td>${fo(meas(a,b,on))}</td><td>${fo(meas(a,b,off))}</td></tr>`).join('')+
       [['B','F'],['B','E'],['B','D'],['C','F'],['C','E'],['C','D']].map(([a,b])=>`<tr><td>${a}–${b}</td><td colspan="2">${fo(meas(a,b,on))}</td></tr>`).join('');
-    return ['>Readings for this board (no meter error shown):',`><table class="t small"><thead><tr><th>Probes</th><th>SW1 ON</th><th>SW1 OFF</th></tr></thead><tbody>${rows}</tbody></table>`,tolLine(Rm,meas('C','E',on)),`><b>${esc(f)}</b>: ${TS1_WHY[ans]}`];};
+    return ['>Readings for this board (no meter error shown):',`><table class="t small"><thead><tr><th>Probes</th><th>SW1 ON</th><th>SW1 OFF</th></tr></thead><tbody>${rows}</tbody></table>`,tolLine(Rm,meas('C','E',on)),`><b>${esc(f)}</b>: ${TS1_WHY[ans].replace('{lamp}',CC.fmt(lampNom))}`];};
   return {svg:st=>board1Svg(st,Rm),pads,unit:'ohm',options:TS1_OPTS,answer:ans,controls:[{id:'sw',label:'SW1',options:['ON','OFF'],value:pick(['ON','OFF'])}],work,
     measure:meas,hint:'The red probe goes on pad A, B or C and the black probe on pad D, E or F. Tap a pad to move that probe. Use the ON and OFF buttons to operate the switch.',
-    params:`<table class="t"><tr><td>R1 resistor</td><td><b>${CC.fmt(Rm)} Ω ± 10%</b></td></tr><tr><td>L1 lamp (cold)</td><td><b>10 Ω</b></td></tr><tr><td>F1 fuse</td><td>a fraction of an ohm</td></tr><tr><td>Traces</td><td>near 0 Ω</td></tr></table>`};
+    params:`<table class="t"><tr><td>R1 resistor</td><td><b>${CC.fmt(Rm)} Ω ± 10%</b></td></tr><tr><td>L1 lamp (cold)</td><td><b>about ${CC.fmt(lampNom)} Ω</b></td></tr><tr><td>F1 fuse</td><td>a fraction of an ohm</td></tr><tr><td>Traces</td><td>near 0 Ω</td></tr></table>`};
 }
 const TS3_OPTS=['SW1, Switch Always Open','SW1, Switch Always Closed','Relay Coil Open','Relay Contacts Defective','D1, Diode Open','D1, Diode Shorted','R1, Resistor Open','R1, Resistor Out of Tolerance','L1, Inductor Open','No Defect'];
 const TS3_WHY=['Every path from pad A reads ∞ even with the switch ON, while the coil, inductor and resistor read normally through pad C.',

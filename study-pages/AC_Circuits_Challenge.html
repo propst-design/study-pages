@@ -1292,8 +1292,8 @@ function transformerSet(el,s){
 function makeMeter(){return CC.meterErr();}
 const openMsg=(vs,a,b,f)=>[`>The supply current is 0 mA, so the circuit is open somewhere. With no current, every good part drops 0 V and the full supply voltage appears across the break.`,`>The meter reads about ${fmt(vs,3)} V only across <b>${a}</b> to <b>${b}</b>, so the fault is <b>${f}</b>.`];
 function seriesBoard(){
-  // series loop: J1-F1-T1-C1-T2-R1-T3-L1-T4-J2, driven at 1 kHz
-  const Vs=10,F=1000,w=TP*F;
+  // series loop: J1-F1-T1-C1-T2-R1-T3-L1-T4-J2; the supply voltage and frequency change from item to item
+  const Vs=pick([5,10,12,15,20]),F=pick([500,1000,2000,5000]),w=TP*F;
   let R,C,L;
   do{R=eVal(330,3300);C=capFor(F,R*rnd(0.5,1.6));L=indFor(F,R*rnd(0.5,1.6));}while(!L_OK(L)||L<10e-3||!C_OK(C));
   const tol=()=>1+rnd(-0.2,0.2);
@@ -1316,7 +1316,7 @@ function seriesBoard(){
     const r=vm(v);return {value:r,text:CC.lcd(r)+' V'};};
   const P={J1:[60,150],F1a:[100,150],F1b:[190,150],C1a:[250,150],C1b:[340,150],R1a:[470,175],R1b:[470,285],L1a:[360,300],L1b:[250,300],J2:[60,300]};
   const svg=()=>B.svg(540,340,
-    B.supply(20,8,200,70,'AC POWER SUPPLY',Vs+' VAC @ 1 kHz')+B.pcb(20,110,505,220)+
+    B.supply(20,8,200,70,'AC POWER SUPPLY',Vs+' VAC @ '+fF(F))+B.pcb(20,110,505,220)+
     B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,100],[34,100],[34,300],[60,300]],'#222')+
     B.trace([P.J1,P.F1a])+B.trace([P.F1b,P.C1a],'TRACE 1',[220,140])+B.trace([P.C1b,[470,150],P.R1a],'TRACE 2',[410,140])+B.trace([P.R1b,[470,300],P.L1a],'TRACE 3',[415,318])+B.trace([P.L1b,P.J2],'TRACE 4',[150,318])+
     B.part('F',P.F1a,P.F1b,'F1')+B.part('C',P.C1a,P.C1b,'C1')+B.part('R',P.R1a,P.R1b,'R1')+B.part('L',P.L1b,P.L1a,'L1')+
@@ -1332,12 +1332,12 @@ function seriesBoard(){
     if(openAt>=0)st.push(...openMsg(Vsup,names[pads[openAt]],names[pads[openAt+1]],f));
     else if(f==='No Faults')st.push(`>The supply current (${fmt(Cx.abs(I)*1e3,3)} mA) and every part voltage are close to the expected values, allowing for the 20% part tolerance. There is no fault.`);
     else{const part=f.slice(0,2),k=map[f][0];
-      st.push(`>Current flows (${fmt(Cx.abs(I)*1e3,3)} mA), so nothing is open. A shorted part drops 0 V. The reading across <b>${names[pads[k]]}</b> to <b>${names[pads[k+1]]}</b> is 0 V instead of the few volts expected, so <b>${part} is shorted</b>.`,
+      st.push(`>Current flows (${fmt(Cx.abs(I)*1e3,3)} mA), so nothing is open. A shorted part drops 0 V. The reading across <b>${names[pads[k]]}</b> to <b>${names[pads[k+1]]}</b> is 0 V, but a good part there would drop about ${fmt(k===3?In*XCn:k===5?In*R:In*XLn,3)} V, so <b>${part} is shorted</b>.`,
         '>Shorting one reactance changes the net reactance, so the current can go up or down. The 0 V reading, not the current, is what identifies the part.');}
     return st;};
   return {svg,pads:padsArr,faults,answer:ans,measure,work,
     meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Cx.abs(I)*1000),1)}],
-    info:()=>`Marked values: R1 = ${fR(R)}, C1 = ${fC(C)}, L1 = ${fL(L)}. The supply is ${Vs} V at 1 kHz. Parts can be 20% off their marked values and the meters up to 5% off.`};
+    info:()=>`Marked values: R1 = ${fR(R)}, C1 = ${fC(C)}, L1 = ${fL(L)}. The supply is ${Vs} V at ${fF(F)}. Parts can be 20% off their marked values and the meters up to 5% off.`};
 }
 function xfmrBoard(){
   // modeled on the ETCAI board: 120 V line, a step-down transformer with its secondary voltage stated, a power resistor and an
@@ -1471,7 +1471,7 @@ CC.App.init({
       wsModule('pres','Parallel Resonance','wave','resonant frequency, tank current',parallelRes,T.pR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad I_T=I_R\\quad \\theta=0°'},{cap:'Branch currents',tex:'I_L=I_C=\\frac{V_S}{X_L}'},F.ZP],pc(['R','L','C']),sketch.pR,'At resonance θ is 0°.'),
     ]},
     {title:'Troubleshooting',items:[
-      {id:'ts1',title:'Troubleshooting Simple Circuits',icon:'wrench',sub:'series RLC on a PC board',intro:CC.introPage({text:`<p>A fuse, capacitor, resistor and inductor are wired in series on a PC board, driven by a 10 V, 1 kHz supply. Any one part can be open or shorted, any of the four copper traces can be open, or the board can be working. Use the voltmeter to find out which.</p>
+      {id:'ts1',title:'Troubleshooting Simple Circuits',icon:'wrench',sub:'series RLC on a PC board',intro:CC.introPage({text:`<p>A fuse, capacitor, resistor and inductor are wired in series on a PC board, driven by an AC supply. The supply voltage (5 to 20 V), its frequency (500 Hz to 5 kHz) and the part values change from problem to problem and are shown with the board. Any one part can be open or shorted, any of the four copper traces can be open, or the board can be working. Use the voltmeter to find out which.</p>
         <p><b>A good strategy:</b></p><ul><li>Look at the supply current first. <b>0 mA</b> means the loop is open. With no current, good parts drop 0 V and the full supply voltage appears across the break, so look for the one spot that reads the full voltage.</li><li>If current flows, nothing is open. A <b>shorted</b> part drops 0 V, so look for a part with no voltage across it.</li><li>If every part has a reasonable voltage, the board has no fault.</li></ul>
         <p>Remember that in a series RLC circuit the capacitor or inductor voltage can be larger than the supply voltage. Review series RLC circuits before you start.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:12,build:seriesBoard})},
       {id:'ts2',title:'Troubleshooting Transformer Circuits',icon:'xfmr',sub:'120 V line, fuse, R1 and L1',intro:CC.introPage({text:`<p>A fuse and a step-down transformer feed a load made of a power resistor and an inductor in series. The supply is a 120 V line; the secondary voltage (6 to 24 V) and the values of R1 and L1 change from problem to problem and are shown with the board. One common trace ties the primary, the secondary and the load to the supply's − terminal (J2). Any part can be faulty: the fuse blown, either transformer winding open, R1 open, L1 open or shorted, or one of the three numbered copper traces open. The board can also be working.</p>

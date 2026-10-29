@@ -936,8 +936,12 @@ PS.make=function(type,fault){
   const vac=120*rnd(0.98,1.02);
   const drop=type==='bridge'?1.4:0.7;
   let vsec,vreg,il;
-  for(;;){vsec=pick([12.6,18,24]);vreg=pick([5,9,12,15]);il=pick([0.2,0.25,0.3,0.4,0.5]);const vp=vsec*Math.SQRT2-drop;const rip=il/((type==='half'?60:120)*4700e-6);if(vp-rip>vreg+3&&vp<35)break;}
-  const c={type,fault:fault||null,vac,vsec,vreg,il,C:4700e-6,R1:pick([1000,1500,2200]),rload:vreg/il};
+  // C1 is a standard size; the ripple stays under 2.5 V and the valleys stay at least 3 V above the regulator output
+  let cuF,vp;
+  for(;;){vsec=pick([12.6,18,24]);vreg=pick([5,9,12,15]);il=pick([0.2,0.25,0.3,0.4,0.5]);cuF=pick([2200,3300,4700,6800]);vp=vsec*Math.SQRT2-drop;const rip=il/((type==='half'?60:120)*cuF*1e-6);if(vp-rip>vreg+3&&rip<2.5)break;}
+  // working voltage: the smallest standard rating with at least 20% margin over the peak C1 can charge to
+  const cV=[16,25,35,50].find(r=>r>=1.2*vsec*Math.SQRT2);
+  const c={type,fault:fault||null,vac,vsec,vreg,il,C:cuF*1e-6,cuF,cV,R1:pick([1000,1500,2200]),rload:vreg/il};
   c.ok=n=>c.fault!==n;
   c.diodeOK=d=>c.fault!=='Diode '+d;
   const lineOK=c.ok('Switch')&&c.ok('Fuse');
@@ -988,7 +992,7 @@ PS.make=function(type,fault){
     const d=part.replace('Diode ','');if(!c.diodeOK(d))return 'OL';return rev?'OL':fmt(rnd(0.55,0.7),2)+' kΩ';};
   // 24 V rms can require about 68 V PIV and 1.1 W in a 1 kΩ bleeder.
   // Use 400 V rectifiers and 2 W resistors to cover every generated combination.
-  c.specs=()=>[`T1: 120 V primary, ${vsec} V secondary${type==='full'?' (center tapped, each half)':''}`,`${PS.TYPES[type].diodes.join(', ')}: 1N4004 silicon rectifier diode${type==='half'?'':'s'}`,'C1: 4700 µF, 35 V electrolytic filter capacitor',`R1: ${fmt(c.R1/1000)} kΩ, 2 W bleeder resistor`,`U1: 78${String(vreg).padStart(2,'0')} +${vreg} V regulator · load ${fmt(il*1000)} mA`,'F1: 1 A slow-blow fuse · S1: SPST power switch'];
+  c.specs=()=>[`T1: 120 V primary, ${vsec} V secondary${type==='full'?' (center tapped, each half)':''}`,`${PS.TYPES[type].diodes.join(', ')}: 1N4004 silicon rectifier diode${type==='half'?'':'s'}`,`C1: ${cuF} µF, ${cV} V electrolytic filter capacitor`,`R1: ${fmt(c.R1/1000)} kΩ, 2 W bleeder resistor`,`U1: 78${String(vreg).padStart(2,'0')} +${vreg} V regulator · load ${fmt(il*1000)} mA`,'F1: 1 A slow-blow fuse · S1: SPST power switch'];
   return c;
 };
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
@@ -1049,7 +1053,7 @@ PS.board=function(type,pads){
   if(type==='half')g+=diode(P.D1a,P.D1k,'D1');
   if(type==='full')g+=diode(P.D1a,P.D1k,'D1')+diode(P.D2a,P.D2k,'D2');
   if(type==='bridge')g+=diode(P.D1a,P.D1k,'D1')+diode(P.D3a,P.D3k,'D3')+diode(P.D2a,P.D2k,'D2')+diode(P.D4a,P.D4k,'D4');
-  g+=`<rect x="512" y="85" width="46" height="140" rx="20" fill="#1a7a8a" stroke="#0d4a55"/><rect x="512" y="85" width="12" height="140" fill="#cfe9ee" opacity=".6"/>`+lbl(540,160,'4700µF',{s:10,f:'#e0f7fa',r:-90})+lbl(548,105,'+',{s:14,f:'#ffeb3b'})+lbl(565,235,'C1',{a:'start'});
+  g+=`<rect x="512" y="85" width="46" height="140" rx="20" fill="#1a7a8a" stroke="#0d4a55"/><rect x="512" y="85" width="12" height="140" fill="#cfe9ee" opacity=".6"/>`+lbl(540,160,(pads.cuF||4700)+'µF',{s:10,f:'#e0f7fa',r:-90})+lbl(548,105,'+',{s:14,f:'#ffeb3b'})+lbl(565,235,'C1',{a:'start'});
   g+=`<g transform="translate(585,155)"><rect x="-8" y="-36" width="16" height="72" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/><rect x="-8" y="-22" width="16" height="5" fill="#6d4c41"/><rect x="-8" y="-10" width="16" height="5" fill="#111"/><rect x="-8" y="2" width="16" height="5" fill="#c62828"/><rect x="-8" y="20" width="16" height="5" fill="#c9a227"/></g>`+lbl(596,180,'R1',{a:'start'});
   g+=`<rect x="640" y="95" width="34" height="90" rx="3" fill="#333"/><rect x="664" y="95" width="16" height="90" fill="#bbb"/><circle cx="672" cy="140" r="5" fill="#888"/>`+lbl(657,90,'U1')+lbl(640,124,'IN',{s:8,f:'#ddd',a:'start'})+lbl(640,186,'OUT',{s:8,f:'#ddd',a:'start'});
   [['L1',P.L1],['L2',P.L2],['G',P.G]].forEach(([l,p])=>{g+=`<rect x="${p[0]-14}" y="${p[1]-14}" width="28" height="28" rx="4" fill="#c9c9c9" stroke="#666"/>`+lbl(p[0],p[1]-18,l);});
@@ -1118,7 +1122,7 @@ PS.run=function(root,s,o){
     const c=PS.make(type,fault);CC._last={c,parts,answer:parts.indexOf(fault)};
     let pts=PTS,tries=0,probe=null,done=false;
     const st={gain:5,pos:0,ac:false,dmmAC:false,ohmRev:false};
-    const brd=PS.board(type,{});
+    const brd=PS.board(type,{cuF:c.cuF});
     const padIds=Object.keys(brd.P);
     CC.$('#pn',w).textContent=practice?`${PS.TYPES[type].name} power supply · practice, no faults`:`Power supply ${k+1} of ${N}`;
     const upd=()=>{if(practice)return;CC.$('#pp',w).textContent=`${pts} point${pts===1?'':'s'} available`;CC.$('#pp',w).className='pill'+(pts<6?' bad':'');};upd();
