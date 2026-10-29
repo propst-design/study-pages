@@ -933,23 +933,14 @@ const TP=2*Math.PI;
 
 /* ---------- value helpers ---------- */
 const fR=r=>r>=1e6?fmt(r/1e6)+' MΩ':r>=1000?fmt(r/1000)+' kΩ':fmt(r)+' Ω';
-const fC=c=>{const u=c*1e6;return u>=0.001?fmt(u,3)+' µF':fmt(c*1e12,3)+' pF';};
-const fL=l=>l>=1?fmt(l,3)+' H':fmt(l*1000,3)+' mH';
 const fF=f=>f>=1000?fmt(f/1000)+' kHz':fmt(f)+' Hz';
-const pickV=()=>pick([5,6,9,10,12,15,18,20,24,30]);
-const pickF=()=>pick([60,100,200,400,500,1000,2000,2500,5000,10000]);
-const capFor=(F,X)=>eNear(1/(TP*F*X)*1e6)*1e-6;          // farads, E12 rounded
-const indFor=(F,X)=>eNear(X/(TP*F));                      // henries, E12 rounded
-/* realistic part ranges used by every generator */
-const C_OK=c=>c>=1e-9&&c<=10e-6;     // 1 nF … 10 µF (non-polarized)
-const L_OK=l=>l>=1e-3&&l<=1;         // 1 mH … 1 H
 
 /* ---------- TeX helpers for worked solutions (numbers formatted exactly as CC.fmt shows them) ---------- */
 const n=(x,s=4)=>fmt(x,s).replace(/,/g,'\\,');
 const UT={'Ω':'\\,\\Omega','°':'°','':''};
 const q=(x,u,s=4)=>n(x,s)+(u in UT?UT[u]:'\\,\\text{'+u+'}');
-const capF=C=>`${n(C*1e6,3)}\\times10^{-6}\\,\\text{F}`;
-const indH=L=>L>=1?`${n(L,3)}\\,\\text{H}`:`${n(L*1e3,3)}\\times10^{-3}\\,\\text{H}`;
+const capF=C=>`${n(C*1e6,4)}\\times10^{-6}\\,\\text{F}`;
+const indH=L=>L>=1?`${n(L,4)}\\,\\text{H}`:`${n(L*1e3,4)}\\times10^{-3}\\,\\text{H}`;
 const amp=I=>`${n(I)}\\,\\text{A}`;
 const toMA=I=>`I=${amp(I)}=${q(I*1e3,'mA')}`;
 
@@ -965,32 +956,37 @@ const H={
   ptP:['$P_T=V_S I_R','Only the resistor branch dissipates power. Volts times milliamperes gives mW.','<b>Common mistake:</b> using the total current. That gives apparent power.'],
 };
 const it=(sym,name,unit,value,help,work,extra={})=>Object.assign({sym,name,unit,value,help,work},extra);
-const PH_TOL={absTol:0.6};
+// the original's tolerances: under 5% on the worksheets and the C/L totals, under 6% on conversions and transformers (θ too is relative)
+const TOL5=0.0499,TOL6=0.0599;
+/* the original picks round currents (mA, one decimal) and works the source voltage and the part values back from them,
+   so the givens are odd numbers: V to 5 significant figures, L and C to 4 */
+const WS_F=[50,60,100,120,200,300];
+const rmA=(a,b)=>ri(a*10,b*10)/1e4;                 // a round current in amperes
+const sg=(x,k)=>+x.toPrecision(k);
+const fC4=c=>fmt(c*1e6,4)+' µF',fL4=l=>l>=1?fmt(l,4)+' H':fmt(l*1000,4)+' mH';
 
 /* ---------- intro / how-it-works text ---------- */
-const TOLNOTE='An answer is accepted when it is within 2% of the exact value, so rounding to three or four significant figures is fine. Phase angles are also accepted within 0.6°.';
+const TOLNOTE='An answer is accepted when it is within 5% of the exact value, so rounding to three significant figures is fine. The phase angle θ is checked the same way.';
 const PHASE=`<p><b>Phase angle sign.</b> In a series circuit θ is the impedance angle: the angle by which the source voltage leads the current. It is <b>positive</b> for an inductive circuit (current lags the voltage) and <b>negative</b> for a capacitive circuit (current leads the voltage).</p>`;
 const PHASE_P=`<p><b>Phase angle sign.</b> In a parallel circuit θ is the angle of the total current, measured from the source voltage. It is <b>negative</b> for an inductive circuit (the current lags the voltage) and <b>positive</b> for a capacitive circuit (the current leads the voltage). This is the opposite sign to the impedance angle used on the series sheets.</p>`;
 const howWS=signNote=>`<p>One circuit is shown with its values. Work out every quantity in the list and type each answer in the unit shown beside its box. You can type plain numbers or use prefixes such as <span class="kbd">4.7k</span>.</p>
-<ul><li><b>✓ (Check)</b> tests a single answer. A right answer costs nothing; a wrong one costs 2 points.</li>
-<li><b>? (Help)</b> shows the formula and method for that item. It costs 3 points the first time you open it for an item.</li>
-<li><b>Grade</b> marks the whole sheet. Your score is the percentage of answers that are right, minus any deductions. Blank answers count as wrong.</li></ul>
-<p>${TOLNOTE} ${signNote}</p><p>After grading, every item shows a worked solution with this circuit's numbers. Each run picks new values, so you can practice as often as you like. A score of 80% or more is a pass.</p>`;
-const SIGN_FREE='For θ in this exercise, either sign is accepted.';
+<ul><li>Each item is worth 10 points (8 points on the twelve-item sheets, which also give 4 points free).</li>
+<li><b>✓ (Check)</b> tests a single answer. A right answer locks that item; a wrong one takes 2 points off that item.</li>
+<li><b>? (Help)</b> shows the formula and method for that item. Each time you open it, 3 points come off that item. No item drops below 0.</li>
+<li><b>Grade</b> marks the whole sheet at once. A right item keeps the points it has left; a wrong or blank item scores 0. <b>Maximum possible score</b> shows the best you can still get.</li></ul>
+<p>${TOLNOTE} ${signNote}</p><p>After grading, every item shows a worked solution with this circuit's numbers. Each run picks new values, so you can practice as often as you like.</p>`;
 const SIGN_GRADED='For θ in this exercise the sign is graded: positive if the circuit is inductive, negative if it is capacitive.';
 const SIGN_GRADED_P='For θ in this exercise the sign is graded: negative if the circuit is inductive (current lags), positive if it is capacitive (current leads).';
 
 /* ---------- series RC / RL / RLC worksheets ---------- */
 function seriesWS(type){
   const hasC=type!=='RL',hasL=type!=='RC',rlc=hasC&&hasL;
-  const span=rlc?[0.3,3]:[0.4,2.5];
   let V,F,R,C=null,L=null,XC=0,XL=0,X,Z,I;
   for(;;){
-    V=pickV();F=pickF();R=eVal(470,10000);
-    C=hasC?capFor(F,R*rnd(...span)):null;L=hasL?indFor(F,R*rnd(...span)):null;
-    XC=hasC?1/(TP*F*C):0;XL=hasL?TP*F*L:0;X=XL-XC;Z=Math.hypot(R,X);I=V/Z;
-    if(hasC&&!C_OK(C))continue;if(hasL&&!L_OK(L))continue;
-    if(I<0.2e-3||I>50e-3)continue;
+    F=pick(WS_F);R=rlc?eVal(330,1500):eVal(560,1500);const I0=rmA(1,10);
+    C=hasC?sg(1/(TP*F*R*rnd(0.4,rlc?3.5:2.5)),4):null;L=hasL?sg(R*rnd(0.4,rlc?3.5:2.5)/(TP*F),4):null;
+    XC=hasC?1/(TP*F*C):0;XL=hasL?TP*F*L:0;X=XL-XC;Z=Math.hypot(R,X);V=sg(I0*Z,5);I=V/Z;
+    if(hasL&&L>5)continue;if(V>30)continue;
     if(rlc&&Math.abs(X)<0.15*R)continue;
     break;
   }
@@ -1016,13 +1012,13 @@ function seriesWS(type){
     thHelp=['$\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)',`Keep the sign of ${m('X_L-X_C')}. If ${m('X_L')} is larger the circuit is inductive and θ is positive; if ${m('X_C')} is larger it is capacitive and θ is negative.`,'Set your calculator to degrees. <b>The sign is graded in this exercise.</b>'];
     thWork=['\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(XL,'Ω')}-${q(XC,'Ω')}}{${q(R,'Ω')}}\\right)`,`\\theta=${n(th)}°`,`>${X>0?`${m('X_L')} is larger, so the circuit is inductive and θ is positive (the current lags the source voltage).`:`${m('X_C')} is larger, so the circuit is capacitive and θ is negative (the current leads the source voltage).`}`];
   } else if(hasC){
-    thHelp=['$\\theta=-\\arctan\\left(\\frac{X_C}{R}\\right)',`The arctangent of ${m('\\frac{X_C}{R}')} gives the size of the angle. A series RC circuit is capacitive, so its impedance angle lies between 0° and −90°.`,'Set your calculator to degrees. '+SIGN_FREE];
-    thWork=['\\theta=-\\arctan\\left(\\frac{X_C}{R}\\right)',`\\theta=-\\arctan\\left(\\frac{${q(XC,'Ω')}}{${q(R,'Ω')}}\\right)`,`\\theta=${n(th)}°`,'>Negative because the circuit is capacitive: the current leads the source voltage. Either sign was accepted.'];
+    thHelp=['$\\theta=-\\arctan\\left(\\frac{X_C}{R}\\right)',`The arctangent of ${m('\\frac{X_C}{R}')} gives the size of the angle. A series RC circuit is capacitive, so its impedance angle lies between 0° and −90°.`,'Set your calculator to degrees. '+SIGN_GRADED];
+    thWork=['\\theta=-\\arctan\\left(\\frac{X_C}{R}\\right)',`\\theta=-\\arctan\\left(\\frac{${q(XC,'Ω')}}{${q(R,'Ω')}}\\right)`,`\\theta=${n(th)}°`,'>Negative because the circuit is capacitive: the current leads the source voltage.'];
   } else {
-    thHelp=['$\\theta=\\arctan\\left(\\frac{X_L}{R}\\right)',`The arctangent of ${m('\\frac{X_L}{R}')} gives the angle. A series RL circuit is inductive, so its impedance angle lies between 0° and +90°.`,'Set your calculator to degrees. '+SIGN_FREE];
+    thHelp=['$\\theta=\\arctan\\left(\\frac{X_L}{R}\\right)',`The arctangent of ${m('\\frac{X_L}{R}')} gives the angle. A series RL circuit is inductive, so its impedance angle lies between 0° and +90°.`,'Set your calculator to degrees. '+SIGN_GRADED];
     thWork=['\\theta=\\arctan\\left(\\frac{X_L}{R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(XL,'Ω')}}{${q(R,'Ω')}}\\right)`,`\\theta=${n(th)}°`,'>Positive because the circuit is inductive: the current lags the source voltage.'];
   }
-  items.push(it('\\theta','Phase angle','°',th,thHelp,thWork,Object.assign({signFree:!rlc},PH_TOL)));
+  items.push(it('\\theta','Phase angle','°',th,thHelp,thWork));
   const vw=(s,x,xs)=>[`${s}=I_T ${xs}`,`${s}=${amp(I)}\\times${q(x,'Ω')}`,`${s}=${q(I*x,'V')}`];
   items.push(it('V_R','Voltage across resistor','V',VR,['$V_R=I_T R',`Use the current in amperes and the resistance in ohms. (Milliamperes times kilohms also gives volts.)`],vw('V_R',R,'R')));
   if(hasC){const w=vw('V_C',XC,'X_C');if(!hasL)w.push('>Check: the voltages add at 90°, not directly.',`\\sqrt{V_R^2+V_C^2}=\\sqrt{(${n(VR)})^2+(${n(VC)})^2}=${q(V,'V')}=V_S`);
@@ -1030,32 +1026,30 @@ function seriesWS(type){
   if(hasL){const w=vw('V_L',XL,'X_L');if(!hasC)w.push('>Check: the voltages add at 90°, not directly.',`\\sqrt{V_R^2+V_L^2}=\\sqrt{(${n(VR)})^2+(${n(VL)})^2}=${q(V,'V')}=V_S`);
     else w.push(`>${m('V_L')} and ${m('V_C')} are 180° apart, so either one can be larger than the source voltage. Check:`,`\\sqrt{V_R^2+(V_L-V_C)^2}=${q(V,'V')}=V_S`);
     items.push(it('V_L','Voltage across inductor','V',VL,['$V_L=I_T X_L','Use the reactance, not the impedance.'+(hasC?' In a series RLC circuit this voltage can be larger than the source.':'')],w));}
-  items.push(it('P_T','True power','mW',PT*1e3,H.ptS,['P_T=I_T^2 R',`P_T=(${amp(I)})^2\\times${q(R,'Ω')}=${n(PT)}\\,\\text{W}=${q(PT*1e3,'mW')}`]));
+  if(!rlc)items.push(it('P_T','True power','mW',PT*1e3,H.ptS,['P_T=I_T^2 R',`P_T=(${amp(I)})^2\\times${q(R,'Ω')}=${n(PT)}\\,\\text{W}=${q(PT*1e3,'mW')}`]));
   items.push(it('P_A','Apparent power','mVA',PA*1e3,H.pa,['P_A=V_S I_T',`P_A=${q(V,'V')}\\times${q(mA,'mA')}=${q(PA*1e3,'mVA')}`,`>The power factor is ${m(`\\frac{P_T}{P_A}=\\cos\\theta=${n(Math.cos(CC.rad(th)),3)}`)}.`]));
   const name={RC:'Series RC circuit',RL:'Series RL circuit',RLC:'Series RLC circuit'}[type];
   const comps=[{t:'R',label:'R'}];if(hasC)comps.push({t:'C',label:'C'});if(hasL)comps.push({t:'L',label:'L'});
-  const givens=[{k:'Source voltage',v:V+' V'},{k:'Frequency',v:fF(F)},{k:'R',v:fR(R)}];if(hasC)givens.push({k:'C',v:fC(C)});if(hasL)givens.push({k:'L',v:fL(L)});
+  const givens=[{k:'Source voltage',v:fmt(V,5)+' V'},{k:'Frequency',v:fF(F)},{k:'R',v:fR(R)}];if(hasC)givens.push({k:'C',v:fC4(C)});if(hasL)givens.push({k:'L',v:fL4(L)});
   const vecs=[{x:R,y:0,label:'R',color:'var(--brand)',ldy:X>0?16:-8}];
   if(hasL)vecs.push({x:0,y:XL,label:'XL',color:'var(--ink2)',ldx:-18});
   if(hasC)vecs.push({x:0,y:-XC,label:'XC',color:'var(--ink2)',ldx:-18});
   vecs.push({x:R,y:X,label:'Z',ldx:X>0?-12:12});
   return {title:name,diagram:S.series(comps,{srcLabel:'VS'}),givens,
-    note:rlc?'θ is the impedance angle: positive if the circuit is inductive, negative if it is capacitive. The sign is graded.':'θ is the impedance angle (positive = inductive, negative = capacitive). Either sign is accepted here.',
+    note:rlc?'θ is the impedance angle: positive if the circuit is inductive, negative if it is capacitive. The sign is graded.':'θ is the impedance angle (positive = inductive, negative = capacitive). The sign is graded.',
     items,after:x=>phasorCard(x,vecs,th,'Impedance vector diagram',`θ = ${fmt(th,3)}° (${th>0?'inductive':'capacitive'})`)};
 }
 
 /* ---------- parallel RC / RL / RLC worksheets ---------- */
 function parallelWS(type){
   const hasC=type!=='RL',hasL=type!=='RC',rlc=hasC&&hasL;
-  const span=rlc?[0.3,3]:[0.4,2.5];
   let V,F,R,C=null,L=null,XC=0,XL=0,IR,IC,IL,Bn,IT,Z;
   for(;;){
-    V=pickV();F=pickF();R=eVal(470,10000);
-    C=hasC?capFor(F,R*rnd(...span)):null;L=hasL?indFor(F,R*rnd(...span)):null;
+    F=pick(WS_F);R=eVal(560,1500);V=sg(rmA(1,10)*R,5);
+    C=hasC?sg(rmA(1,10)/(TP*F*V),4):null;L=hasL?sg(V/(rmA(1,10)*TP*F),4):null;
     XC=hasC?1/(TP*F*C):0;XL=hasL?TP*F*L:0;
     IR=V/R;IC=hasC?V/XC:0;IL=hasL?V/XL:0;Bn=IL-IC;IT=Math.hypot(IR,Bn);Z=V/IT;
-    if(hasC&&!C_OK(C))continue;if(hasL&&!L_OK(L))continue;
-    if(IT>100e-3)continue;
+    if(hasL&&L>5)continue;
     if(rlc&&Math.abs(Bn)<0.15*IR)continue;
     break;
   }
@@ -1077,77 +1071,73 @@ function parallelWS(type){
     thHelp=['$\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)',`θ is the angle of the total current. If ${m('I_C')} is larger the circuit is capacitive: the total current leads and θ is positive. If ${m('I_L')} is larger it is inductive: the total current lags and θ is negative.`,'<b>The sign is graded in this exercise.</b> The series sheets use the impedance angle, which has the opposite sign.'];
     thWork=['\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(IC*1e3,'mA')}-${q(IL*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>${Bn>0?`${m('I_L')} is larger, so the circuit is inductive: the total current lags the source voltage by ${fmt(lead,3)}° and θ is negative.`:`${m('I_C')} is larger, so the circuit is capacitive: the total current leads the source voltage by ${fmt(lead,3)}° and θ is positive.`}`];
   } else if(hasC){
-    thHelp=['$\\theta=\\arctan\\left(\\frac{I_C}{I_R}\\right)',`The arctangent of ${m('\\frac{I_C}{I_R}')} gives the angle by which the total current leads the source voltage. A leading current has a positive angle.`,SIGN_FREE];
-    thWork=['\\theta=\\arctan\\left(\\frac{I_C}{I_R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(IC*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>The total current leads the source voltage by ${fmt(lead,3)}°, so θ is positive. Either sign was accepted.`];
+    thHelp=['$\\theta=\\arctan\\left(\\frac{I_C}{I_R}\\right)',`The arctangent of ${m('\\frac{I_C}{I_R}')} gives the angle by which the total current leads the source voltage. A leading current has a positive angle.`,SIGN_GRADED_P];
+    thWork=['\\theta=\\arctan\\left(\\frac{I_C}{I_R}\\right)',`\\theta=\\arctan\\left(\\frac{${q(IC*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>The total current leads the source voltage by ${fmt(lead,3)}°, so θ is positive.`];
   } else {
-    thHelp=['$\\theta=-\\arctan\\left(\\frac{I_L}{I_R}\\right)',`The arctangent of ${m('\\frac{I_L}{I_R}')} gives the angle by which the total current lags the source voltage. A lagging current has a negative angle.`,SIGN_FREE];
-    thWork=['\\theta=-\\arctan\\left(\\frac{I_L}{I_R}\\right)',`\\theta=-\\arctan\\left(\\frac{${q(IL*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>The total current lags the source voltage by ${fmt(lead,3)}°, so θ is negative. Either sign was accepted.`];
+    thHelp=['$\\theta=-\\arctan\\left(\\frac{I_L}{I_R}\\right)',`The arctangent of ${m('\\frac{I_L}{I_R}')} gives the angle by which the total current lags the source voltage. A lagging current has a negative angle.`,SIGN_GRADED_P];
+    thWork=['\\theta=-\\arctan\\left(\\frac{I_L}{I_R}\\right)',`\\theta=-\\arctan\\left(\\frac{${q(IL*1e3,'mA')}}{${q(IR*1e3,'mA')}}\\right)`,`\\theta=${n(th)}°`,`>The total current lags the source voltage by ${fmt(lead,3)}°, so θ is negative.`];
   }
-  items.push(it('\\theta','Phase angle','°',th,thHelp,thWork,Object.assign({signFree:!rlc},PH_TOL)));
+  items.push(it('\\theta','Phase angle','°',th,thHelp,thWork));
   const vs=s=>['>Every branch is connected directly across the source.',`${s}=V_S=${q(V,'V')}`];
   items.push(it('V_R','Voltage across resistor','V',V,H.vsame('V_R'),vs('V_R')));
   if(hasC)items.push(it('V_C','Voltage across capacitor','V',V,H.vsame('V_C'),vs('V_C')));
   if(hasL)items.push(it('V_L','Voltage across inductor','V',V,H.vsame('V_L'),vs('V_L')));
-  items.push(it('P_T','True power','mW',PT*1e3,H.ptP,['P_T=V_S I_R',`P_T=${q(V,'V')}\\times${q(IR*1e3,'mA')}=${q(PT*1e3,'mW')}`]));
+  if(!rlc)items.push(it('P_T','True power','mW',PT*1e3,H.ptP,['P_T=V_S I_R',`P_T=${q(V,'V')}\\times${q(IR*1e3,'mA')}=${q(PT*1e3,'mW')}`]));
   items.push(it('P_A','Apparent power','mVA',PA*1e3,H.pa,['P_A=V_S I_T',`P_A=${q(V,'V')}\\times${q(IT*1e3,'mA')}=${q(PA*1e3,'mVA')}`,`>The power factor is ${m(`\\frac{P_T}{P_A}=\\cos\\theta=${n(Math.cos(CC.rad(th)),3)}`)}.`]));
   const name={RC:'Parallel RC circuit',RL:'Parallel RL circuit',RLC:'Parallel RLC circuit'}[type];
   const comps=[{t:'R',label:'R'}];if(hasL)comps.push({t:'L',label:'L'});if(hasC)comps.push({t:'C',label:'C'});
-  const givens=[{k:'Source voltage',v:V+' V'},{k:'Frequency',v:fF(F)},{k:'R',v:fR(R)}];if(hasC)givens.push({k:'C',v:fC(C)});if(hasL)givens.push({k:'L',v:fL(L)});
+  const givens=[{k:'Source voltage',v:fmt(V,5)+' V'},{k:'Frequency',v:fF(F)},{k:'R',v:fR(R)}];if(hasC)givens.push({k:'C',v:fC4(C)});if(hasL)givens.push({k:'L',v:fL4(L)});
   const k=1e3,net=(IC-IL)*k;
   const vecs=[{x:IR*k,y:0,label:'IR',color:'var(--brand)',ldy:net<0?-8:16}];
   if(hasC)vecs.push({x:0,y:IC*k,label:'IC',color:'var(--ink2)',ldx:-18});
   if(hasL)vecs.push({x:0,y:-IL*k,label:'IL',color:'var(--ink2)',ldx:-18});
   vecs.push({x:IR*k,y:net,label:'IT',ldx:net>0?-14:14});
   return {title:name,diagram:S.parallel(comps,{srcLabel:'VS'}),givens,
-    note:rlc?'θ is the angle of the total current: negative if the circuit is inductive (current lags), positive if it is capacitive (current leads). The sign is graded.':'θ is the angle of the total current (negative = lagging, inductive; positive = leading, capacitive). Either sign is accepted here.',
+    note:rlc?'θ is the angle of the total current: negative if the circuit is inductive (current lags), positive if it is capacitive (current leads). The sign is graded.':'θ is the angle of the total current (negative = lagging, inductive; positive = leading, capacitive). The sign is graded.',
     items,after:x=>phasorCard(x,vecs,th,'Current vector diagram (mA)',`${m('I_T')} ${th>0?'leads':'lags'} ${m('V_S')} by ${fmt(lead,3)}°, so θ = ${fmt(th,3)}° (${th<0?'inductive':'capacitive'})`)};
 }
 
-/* ---------- resonance worksheets ---------- */
-function resValues(){
-  for(;;){const L=eVal(1e-3,100e-3),C=eVal(0.001e-6,1e-6);const Fr=1/(TP*Math.sqrt(L*C));
-    if(Fr>=200&&Fr<=100000)return {L,C,Fr,X:TP*Fr*L};}
+/* ---------- resonance worksheets ----------
+   As in the original: the source frequency is given and is already the resonant frequency (low audio frequencies),
+   and the sheet asks the same twelve quantities as the RLC sheets, with apparent power rather than true power. */
+function resValues(R,lo,hi){
+  for(;;){const F=pick([100,120,150,180,200]),X=R*rnd(lo,hi),L=sg(X/(TP*F),4),C=sg(1/(TP*F*X),4);
+    if(L<=5)return {F,L,C,XL:TP*F*L,XC:1/(TP*F*C)};}
 }
-const frWork=(L,C,Fr)=>['F_R=\\frac{1}{2\\pi\\sqrt{L C}}',`F_R=\\frac{1}{2\\pi\\sqrt{${indH(L)}\\times${capF(C)}}}`,`F_R=${q(Fr,'Hz')}`];
-const frHelp=['Find the resonant frequency first; every reactance in this sheet is calculated at that frequency.','$F_R=\\frac{1}{2\\pi\\sqrt{L C}}','Use henries and farads. The answer is in hertz, so do not convert it to kHz.','<b>Common mistake:</b> forgetting to take the square root before dividing.'];
+const resGivens=(V,F,R,C,L)=>[{k:'Source voltage',v:fmt(V,4)+' V'},{k:'Frequency (resonant)',v:fF(F)},{k:'R',v:fR(R)},{k:'C',v:fC4(C)},{k:'L',v:fL4(L)}];
+const resX=(F,C,L,XL,XC)=>[it('X_C','Capacitive reactance','Ω',XC,['$X_C=\\frac{1}{2\\pi F C}','The source frequency is the resonant frequency, so use it directly.',`At resonance ${m('X_C')} equals ${m('X_L')}, which makes a good check on your arithmetic.`],['X_C=\\frac{1}{2\\pi F C}',`X_C=\\frac{1}{2\\pi\\times${q(F,'Hz')}\\times${capF(C)}}`,`X_C=${q(XC,'Ω')}`]),
+  it('X_L','Inductive reactance','Ω',XL,['$X_L=2\\pi F L','Use henries: 500 mH is 0.5 H.'],['X_L=2\\pi F L',`X_L=2\\pi\\times${q(F,'Hz')}\\times${indH(L)}`,`X_L=${q(XL,'Ω')}`,'>It matches X_C, as it must at resonance.'])];
+const resTh=(par)=>it('\\theta','Phase angle','°',0,[par?'$\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)':'$\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)',par?'The reactive currents cancel, so the circuit acts like a pure resistance.':'With the reactances equal, the circuit acts like a pure resistance.'],[(par?'\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)':'\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)')+'=\\arctan(0)=0°','>Current and voltage are in phase.']);
 function seriesRes(){
-  let L,C,Fr,X,R,V,I;
-  for(;;){({L,C,Fr,X}=resValues());R=eNear(X*rnd(0.05,0.4));V=pick([1,2,3,5,6,10]);I=V/R;
-    if(R>=10&&I>=0.5e-3&&I<=50e-3&&I*X<=60)break;}
-  const mA=I*1e3,Q=X/R;
+  const R=eVal(330,1500),{F,L,C,XL,XC}=resValues(R,1,3),V=sg(rmA(0.5,10)*R,4),I=V/R,mA=I*1e3,Q=XL/R;
+  const same=x=>it(x,{I_R:'Resistor current',I_C:'Capacitor current',I_L:'Inductor current',I_T:'Total current'}[x],'mA',mA,[...H.same(x),'Because Z equals R at resonance, the current is as large as it can be.',H.ma],[`${x}=I_T=\\frac{V_S}{Z}=\\frac{${q(V,'V')}}{${q(R,'Ω')}}=${amp(I)}=${q(mA,'mA')}`]);
   return {title:'Series resonant circuit',diagram:S.series([{t:'R',label:'R'},{t:'C',label:'C'},{t:'L',label:'L'}],{srcLabel:'VS'}),
-    givens:[{k:'Source voltage',v:V+' V'},{k:'R',v:fR(R)},{k:'C',v:fC(C)},{k:'L',v:fL(L)}],
+    givens:resGivens(V,F,R,C,L),
     note:'The source is set to the resonant frequency of the circuit. θ is the impedance angle.',
-    items:[it('F_R','Resonant frequency','Hz',Fr,frHelp,frWork(L,C,Fr)),
-      it('X_L','Inductive reactance','Ω',X,['$X_L=2\\pi F_R L','Use the resonant frequency you just found.'],['X_L=2\\pi F_R L',`X_L=2\\pi\\times${q(Fr,'Hz')}\\times${indH(L)}`,`X_L=${q(X,'Ω')}`]),
-      it('X_C','Capacitive reactance','Ω',X,['$X_C=\\frac{1}{2\\pi F_R C}',`At resonance ${m('X_C')} equals ${m('X_L')}, which makes a good check on your arithmetic.`],['X_C=\\frac{1}{2\\pi F_R C}',`X_C=\\frac{1}{2\\pi\\times${q(Fr,'Hz')}\\times${capF(C)}}`,`X_C=${q(X,'Ω')}=X_L`]),
+    items:[...resX(F,C,L,XL,XC),
       it('Z','Impedance','Ω',R,['$Z=\\sqrt{R^2+(X_L-X_C)^2}','At resonance the reactances cancel, leaving only the resistance.'],['Z=\\sqrt{R^2+(X_L-X_C)^2}',`Z=\\sqrt{(${q(R,'Ω')})^2+0^2}=${q(R,'Ω')}`,'>A series resonant circuit has its lowest impedance, equal to R.']),
-      it('I_T','Total current','mA',mA,['$I_T=\\frac{V_S}{Z}','Because Z equals R at resonance, the current is as large as it can be.',H.ma],['I_T=\\frac{V_S}{Z}',`I_T=\\frac{${q(V,'V')}}{${q(R,'Ω')}}=${amp(I)}=${q(mA,'mA')}`]),
-      it('\\theta','Phase angle','°',0,['$\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)','With the reactances equal, the circuit acts like a pure resistance.'],['\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)=\\arctan(0)=0°','>Current and voltage are in phase.'],PH_TOL),
+      same('I_R'),same('I_C'),same('I_L'),same('I_T'),resTh(false),
       it('V_R','Voltage across resistor','V',V,['$V_R=I_T R','All of the source voltage appears across R.'],['V_R=I_T R',`V_R=${amp(I)}\\times${q(R,'Ω')}=${q(V,'V')}`]),
-      it('V_L','Voltage across inductor','V',I*X,['$V_L=I_T X_L',`This can be much larger than the source voltage: it is Q times ${m('V_S')}, where ${m('Q=\\frac{X_L}{R}')}.`],['V_L=I_T X_L',`V_L=${amp(I)}\\times${q(X,'Ω')}=${q(I*X,'V')}`,`>That is ${m(`Q=\\frac{X_L}{R}=${n(Q,3)}`)} times the source voltage.`]),
-      it('V_C','Voltage across capacitor','V',I*X,['$V_C=I_T X_C',`${m('V_C')} equals ${m('V_L')}; the two are 180° apart and cancel.`],['V_C=I_T X_C',`V_C=${amp(I)}\\times${q(X,'Ω')}=${q(I*X,'V')}`,'>It equals the inductor voltage, and the two cancel each other.']),
-      it('P_T','True power','mW',I*I*R*1e3,['$P_T=I_T^2 R=V_S I_T','At resonance true power equals apparent power. Volts times milliamperes gives mW.'],['P_T=I_T^2 R',`P_T=(${amp(I)})^2\\times${q(R,'Ω')}=${q(I*I*R*1e3,'mW')}`])],
-    after:x=>phasorCard(x,[{x:0,y:X,label:'XL',color:'var(--ink2)',ldx:-18},{x:0,y:-X,label:'XC',color:'var(--ink2)',ldx:-18},{x:R*3,y:0,label:'R = Z',color:'var(--brand)',ldy:-8}],0,'At resonance the reactances cancel','θ = 0°')};
+      it('V_C','Voltage across capacitor','V',I*XC,['$V_C=I_T X_C',`${m('V_C')} equals ${m('V_L')}; the two are 180° apart and cancel.`],['V_C=I_T X_C',`V_C=${amp(I)}\\times${q(XC,'Ω')}=${q(I*XC,'V')}`,'>It equals the inductor voltage, and the two cancel each other.']),
+      it('V_L','Voltage across inductor','V',I*XL,['$V_L=I_T X_L',`This can be much larger than the source voltage: it is Q times ${m('V_S')}, where ${m('Q=\\frac{X_L}{R}')}.`],['V_L=I_T X_L',`V_L=${amp(I)}\\times${q(XL,'Ω')}=${q(I*XL,'V')}`,`>That is ${m(`Q=\\frac{X_L}{R}=${n(Q,3)}`)} times the source voltage.`]),
+      it('P_A','Apparent power','mVA',V*I*1e3,[...H.pa,'At resonance the circuit is purely resistive, so the apparent power equals the true power.'],['P_A=V_S I_T',`P_A=${q(V,'V')}\\times${q(mA,'mA')}=${q(V*I*1e3,'mVA')}`])],
+    after:x=>phasorCard(x,[{x:0,y:XL,label:'XL',color:'var(--ink2)',ldx:-18},{x:0,y:-XC,label:'XC',color:'var(--ink2)',ldx:-18},{x:R*3,y:0,label:'R = Z',color:'var(--brand)',ldy:-8}],0,'At resonance the reactances cancel','θ = 0°')};
 }
 function parallelRes(){
-  let L,C,Fr,X,R,V,IR,IX;
-  for(;;){({L,C,Fr,X}=resValues());R=eNear(X*rnd(2.5,20));V=pick([5,6,9,10,12,15,20]);IR=V/R;IX=V/X;
-    if(R<=1e6&&IR>=0.1e-3&&IX<=100e-3)break;}
+  const R=eVal(560,1500),{F,L,C,XL,XC}=resValues(R,0.3,1),V=sg(rmA(1,10)*R,4),IR=V/R,IL=V/XL,IC=V/XC;
+  const vs=x=>it(x,{V_R:'Voltage across resistor',V_C:'Voltage across capacitor',V_L:'Voltage across inductor'}[x],'V',V,H.vsame(x),['>Every branch is connected directly across the source.',`${x}=V_S=${q(V,'V')}`]);
   return {title:'Parallel resonant circuit',diagram:S.parallel([{t:'R',label:'R'},{t:'L',label:'L'},{t:'C',label:'C'}],{srcLabel:'VS'}),
-    givens:[{k:'Source voltage',v:V+' V'},{k:'R',v:fR(R)},{k:'C',v:fC(C)},{k:'L',v:fL(L)}],
+    givens:resGivens(V,F,R,C,L),
     note:'The source is set to the resonant frequency of the circuit. Assume ideal components (no coil resistance). θ is the angle of the total current.',
-    items:[it('F_R','Resonant frequency','Hz',Fr,frHelp,frWork(L,C,Fr)),
-      it('X_L','Inductive reactance','Ω',X,['$X_L=2\\pi F_R L','Use the resonant frequency you just found.'],['X_L=2\\pi F_R L',`X_L=2\\pi\\times${q(Fr,'Hz')}\\times${indH(L)}`,`X_L=${q(X,'Ω')}`]),
-      it('X_C','Capacitive reactance','Ω',X,['$X_C=\\frac{1}{2\\pi F_R C}',`At resonance ${m('X_C')} equals ${m('X_L')}.`],['X_C=\\frac{1}{2\\pi F_R C}',`X_C=\\frac{1}{2\\pi\\times${q(Fr,'Hz')}\\times${capF(C)}}`,`X_C=${q(X,'Ω')}=X_L`]),
-      it('I_R','Resistor current','mA',IR*1e3,['$I_R=\\frac{V_S}{R}',H.ma],['I_R=\\frac{V_S}{R}',`I_R=\\frac{${q(V,'V')}}{${q(R,'Ω')}}=${amp(IR)}=${q(IR*1e3,'mA')}`]),
-      it('I_L','Inductor current','mA',IX*1e3,['$I_L=\\frac{V_S}{X_L}',H.ma],['I_L=\\frac{V_S}{X_L}',`I_L=\\frac{${q(V,'V')}}{${q(X,'Ω')}}=${amp(IX)}=${q(IX*1e3,'mA')}`]),
-      it('I_C','Capacitor current','mA',IX*1e3,['$I_C=\\frac{V_S}{X_C}',`Equal to ${m('I_L')} because the reactances are equal.`],['I_C=\\frac{V_S}{X_C}',`I_C=\\frac{${q(V,'V')}}{${q(X,'Ω')}}=${q(IX*1e3,'mA')}=I_L`]),
-      it('I_T','Total current','mA',IR*1e3,['$I_T=\\sqrt{I_R^2+(I_L-I_C)^2}','The inductor and capacitor currents are equal and 180° apart, so they cancel. Only the resistor current is left.','<b>Common mistake:</b> adding all three branch currents.'],['I_T=\\sqrt{I_R^2+(I_L-I_C)^2}',`I_T=\\sqrt{(${q(IR*1e3,'mA')})^2+0^2}=${q(IR*1e3,'mA')}`,`>The current circulating between L and C (${fmt(IX*1e3,3)} mA) is ${fmt(IX/IR,3)} times the source current.`]),
+    items:[...resX(F,C,L,XL,XC),
       it('Z','Impedance','Ω',R,['$Z=\\frac{V_S}{I_T}','A parallel resonant circuit has its highest impedance, equal to R here.'],['Z=\\frac{V_S}{I_T}',`Z=\\frac{${q(V,'V')}}{${amp(IR)}}=${q(R,'Ω')}`]),
-      it('\\theta','Phase angle','°',0,['$\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)','The reactive currents cancel, so the circuit acts like a pure resistance.'],['\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)=\\arctan(0)=0°'],PH_TOL),
-      it('P_T','True power','mW',IR*V*1e3,['$P_T=V_S I_R','Volts times milliamperes gives mW.'],['P_T=V_S I_R',`P_T=${q(V,'V')}\\times${q(IR*1e3,'mA')}=${q(IR*V*1e3,'mW')}`])],
-    after:x=>phasorCard(x,[{x:0,y:IX*1e3,label:'IC',color:'var(--ink2)',ldx:-18},{x:0,y:-IX*1e3,label:'IL',color:'var(--ink2)',ldx:-18},{x:IR*1e3*Math.max(1,IX/IR/3),y:0,label:'IR = IT',color:'var(--brand)',ldy:-8}],0,'At resonance the reactive currents cancel','θ = 0°')};
+      it('I_R','Resistor current','mA',IR*1e3,['$I_R=\\frac{V_S}{R}',H.ma],['I_R=\\frac{V_S}{R}',`I_R=\\frac{${q(V,'V')}}{${q(R,'Ω')}}=${amp(IR)}=${q(IR*1e3,'mA')}`]),
+      it('I_C','Capacitor current','mA',IC*1e3,['$I_C=\\frac{V_S}{X_C}',H.ma],['I_C=\\frac{V_S}{X_C}',`I_C=\\frac{${q(V,'V')}}{${q(XC,'Ω')}}=${amp(IC)}=${q(IC*1e3,'mA')}`]),
+      it('I_L','Inductor current','mA',IL*1e3,['$I_L=\\frac{V_S}{X_L}',`Equal to ${m('I_C')} because the reactances are equal.`],['I_L=\\frac{V_S}{X_L}',`I_L=\\frac{${q(V,'V')}}{${q(XL,'Ω')}}=${q(IL*1e3,'mA')}`]),
+      it('I_T','Total current','mA',IR*1e3,['$I_T=\\sqrt{I_R^2+(I_L-I_C)^2}','The inductor and capacitor currents are equal and 180° apart, so they cancel. Only the resistor current is left.','<b>Common mistake:</b> adding all three branch currents.'],['I_T=\\sqrt{I_R^2+(I_L-I_C)^2}',`I_T=\\sqrt{(${q(IR*1e3,'mA')})^2+0^2}=${q(IR*1e3,'mA')}`,`>The current circulating between L and C (${fmt(IL*1e3,3)} mA) is ${fmt(IL/IR,3)} times the source current.`]),
+      resTh(true),vs('V_R'),vs('V_C'),vs('V_L'),
+      it('P_A','Apparent power','mVA',V*IR*1e3,[...H.pa,'At resonance the total current equals the resistor current.'],['P_A=V_S I_T',`P_A=${q(V,'V')}\\times${q(IR*1e3,'mA')}=${q(V*IR*1e3,'mVA')}`])],
+    after:x=>phasorCard(x,[{x:0,y:IC*1e3,label:'IC',color:'var(--ink2)',ldx:-18},{x:0,y:-IL*1e3,label:'IL',color:'var(--ink2)',ldx:-18},{x:IR*1e3*Math.max(1,IL/IR/3),y:0,label:'IR = IT',color:'var(--brand)',ldy:-8}],0,'At resonance the reactive currents cancel','θ = 0°')};
 }
 function phasorCard(x,vecs,thDraw,title,caption){x.appendChild(CC.el(`<div class="card"><h3 style="margin-top:0">${title}</h3><div class="diagram">${S.phasor(vecs,{theta:thDraw,w:300,h:230})}</div><p class="small muted center">${caption}</p></div>`));}
 
@@ -1166,7 +1156,7 @@ const two=(a,b)=>`<div class="cols2" style="align-items:center"><div>${a}</div><
 function wsModule(id,title,icon,sub,gen,text,formulas,diag,vec,signNote){
   return {id,title,icon,sub,
     intro:CC.introPage({diagram:null,text:two(text,diag+vec),formulas,how:howWS(signNote)}),
-    run:(el,s)=>{const g=gen();CC.worksheet(el,s,g);}};
+    run:(el,s)=>{const g=gen();CC.worksheet(el,s,Object.assign(g,{itemScore:true,tol:TOL5}));}};
 }
 const F={
   XC:{cap:'Capacitive reactance',tex:'X_C=\\frac{1}{2\\pi F C}'},XL:{cap:'Inductive reactance',tex:'X_L=2\\pi F L'},
@@ -1179,7 +1169,7 @@ const F={
 const T={
   rcS:`<p>In a capacitor the current reaches its peak 90° before the voltage does. In a resistor current and voltage are in phase. So in a series RC circuit the resistance and the capacitive reactance add at right angles, like the two short sides of a right triangle. The long side is the impedance Z, the total opposition to current.</p><p>The same current flows through both parts. The resistor and capacitor voltages are also 90° apart, so they add as vectors to give the source voltage.</p>${PHASE}<p>A series RC circuit is capacitive, so θ lies between 0° and −90°.</p>`,
   rlS:`<p>In an inductor the voltage reaches its peak 90° before the current does. In a resistor current and voltage are in phase. So in a series RL circuit the resistance and the inductive reactance add at right angles, like the two short sides of a right triangle. The long side is the impedance Z.</p><p>The same current flows through both parts, and the resistor and inductor voltages add as vectors to give the source voltage.</p>${PHASE}<p>A series RL circuit is inductive, so θ lies between 0° and +90°.</p>`,
-  rcP:`<p>In a parallel circuit every branch has the full source voltage across it, so start with each branch current. The capacitor current leads the voltage by 90° while the resistor current is in phase, so the two branch currents add at right angles to give the total current.</p><p>Once you know the total current, Ohm's law gives the impedance. In a parallel circuit Z is smaller than either branch opposition.</p>${PHASE_P}<p>In a parallel RC circuit the total current leads the source voltage, so θ lies between 0° and +90°. Either sign is accepted on the RC and RL sheets.</p>`,
+  rcP:`<p>In a parallel circuit every branch has the full source voltage across it, so start with each branch current. The capacitor current leads the voltage by 90° while the resistor current is in phase, so the two branch currents add at right angles to give the total current.</p><p>Once you know the total current, Ohm's law gives the impedance. In a parallel circuit Z is smaller than either branch opposition.</p>${PHASE_P}<p>In a parallel RC circuit the total current leads the source voltage, so θ lies between 0° and +90°.</p>`,
   rlP:`<p>In a parallel circuit every branch has the full source voltage across it, so start with each branch current. The inductor current lags the voltage by 90° while the resistor current is in phase, so the two branch currents add at right angles to give the total current.</p><p>Once you know the total current, Ohm's law gives the impedance. In a parallel circuit Z is smaller than either branch opposition.</p>${PHASE_P}<p>In a parallel RL circuit the total current lags the source voltage, so θ lies between 0° and −90°.</p>`,
   rlcS:`<p>A capacitor's current leads its voltage by 90° and an inductor's current lags by 90°, so their reactances point in opposite directions and partly cancel. Subtract them to get the net reactance, then combine that with the resistance at 90° to get the impedance.</p><p>Because the reactive voltages cancel each other, the voltage across the inductor or the capacitor can be larger than the source voltage.</p>${PHASE}<p>In a series RLC circuit θ lies between −90° and +90°. It is positive when ${m('X_L')} is larger and negative when ${m('X_C')} is larger. <b>On this sheet the sign is graded.</b></p>`,
   rlcP:`<p>Each branch has the full source voltage across it, so find the three branch currents first. The capacitor and inductor currents are 180° apart and partly cancel. Subtract them to get the net reactive current, then combine that with the resistor current at 90° to get the total current. Ohm's law then gives the impedance.</p><p>Because the reactive currents cancel, the total current can be smaller than a single branch current.</p>${PHASE_P}<p>In a parallel RLC circuit θ is positive (capacitive, current leads) when ${m('I_C')} is larger and negative (inductive, current lags) when ${m('I_L')} is larger. <b>On this sheet the sign is graded.</b> Watch out: this is the opposite sign to the series RLC sheet.</p>`,
@@ -1187,14 +1177,15 @@ const T={
   pR:`<p>Resonance happens at the one frequency where the inductive and capacitive reactances are equal. In a parallel circuit the inductor and capacitor currents are then equal and opposite, so they cancel. Only the resistor current flows from the source, the phase angle is 0°, and the impedance is at its highest.</p><p>The vector diagram shows the reactive currents canceling, leaving the total current on top of the resistor current.</p><p>A large current still circulates back and forth between the inductor and the capacitor. It can be many times larger than the current drawn from the source.</p>`
 };
 
-/* ---------- AC voltage conversions (11 problems) ---------- */
+/* ---------- AC voltage conversions (11 problem sets, as in the original: an rms value with one decimal, the given form shown to 3 decimals) ---------- */
 const VC_LAB=['Effective or rms voltage','Peak voltage','Peak to peak voltage','Average voltage during one half cycle'];
 const VC_SYM=['V_{rms}','V_P','V_{PP}','V_{avg}'];
 function conversions(el,s){
-  CC.problemSet(el,s,{count:11,gen:()=>{
-    let kind,given,vp;
-    do{kind=ri(0,3);given=+(pick([1,2,5,10,20,50,100])*rnd(1,9.9)).toPrecision(3);vp=[given*Math.SQRT2,given,given/2,given*Math.PI/2][kind];}while(vp<1||vp>400);
-    const vals=[vp/Math.SQRT2,vp,vp*2,vp*2/Math.PI];vals[kind]=given;
+  CC.problemSet(el,s,{count:11,tol:TOL6,gen:()=>{
+    const kind=ri(0,3),rms=ri(100,1200)/10,vp0=rms*1.414;
+    const given=+[rms,vp0,vp0*2,vp0*0.637][kind].toFixed(3);
+    const vp=[given*1.414,given,given/2,given*1.571][kind];
+    const vals=[vp*0.707,vp,vp*2,vp*0.637];vals[kind]=given;
     const g=VC_SYM[kind];
     const work=[];
     if(kind===0)work.push('>First convert the rms value to peak.',`V_P=V_{rms}\\times1.414=${n(given)}\\times1.414=${q(vp,'V')}`);
@@ -1205,9 +1196,9 @@ function conversions(el,s){
     if(kind!==2)work.push(`V_{PP}=V_P\\times2=${n(vp)}\\times2=${q(vals[2],'V')}`);
     if(kind!==3)work.push(`V_{avg}=V_P\\times0.637=${n(vp)}\\times0.637=${q(vals[3],'V')}`);
     work.push('>Check: the order from largest to smallest is always peak-to-peak, peak, rms, average.');
-    return {title:'Voltage conversion',prompt:`<p>The meter shows <b>${fmt(given)} V ${['rms','peak','peak to peak','average'][kind]}</b>. Calculate the other three voltages.</p>`,
+    return {title:'Voltage conversion',prompt:`<p>The meter shows <b>${given.toFixed(3)} V ${['rms','peak','peak to peak','average'][kind]}</b>. Calculate the other three voltages.</p>`,
       diagram:sineSVG(vp,kind),
-      fields:VC_LAB.map((l,i)=>({key:'v'+i,label:l,unit:'V',value:vals[i],given:i===kind})),
+      fields:VC_LAB.map((l,i)=>({key:'v'+i,label:l,unit:'V',value:vals[i],given:i===kind,show:i===kind?given.toFixed(3):undefined})),
       explain:convFormulas,work};
   }});
 }
@@ -1226,15 +1217,16 @@ function spProblems(kind){ // kind 'C' or 'L'
   const types=shuffle([0,0,0,1,1,1,2,2,2,3,3,3]);// 0:2 par,1:3 par,2:2 ser,3:3 ser
   return types.map(t=>{
     const nn=t%2?3:2,par=t<2;
-    const vals=Array.from({length:nn},()=>kind==='C'?eVal(0.01,100):eVal(1,1000));
-    const unit=kind==='C'?'µF':'mH';
+    // the original draws E6/E12 values: capacitors 2.2–1000 in µF or in pF (its "µµF"), inductors 5.6–1000 mH
+    const vals=Array.from({length:nn},()=>kind==='C'?eVal(2.2,1000):eVal(5.6,1000));
+    const unit=kind==='C'?pick(['µF','pF']):'mH';
     const sum=(kind==='C')===par;
     const total=sum?vals.reduce((a,b)=>a+b,0):1/vals.reduce((a,b)=>a+1/b,0);
     const comps=vals.map((v,i)=>({t:kind,label:kind+(i+1)}));
     const dia=par?S.parallel(comps,{gap:76,first:84}):S.series(comps);
     const sym=kind+'_T';const parts=vals.map((_,i)=>kind+'_'+(i+1));
     const form=sum?sym+'='+parts.join('+'):sym+'=\\frac{1}{'+parts.map(p=>'\\frac{1}{'+p+'}').join('+')+'}';
-    const u=unit==='µF'?'\\,\\text{µF}':'\\,\\text{mH}';
+    const u='\\,\\text{'+unit+'}';
     const work=[form];
     if(sum)work.push(`${sym}=${vals.map(v=>n(v)).join('+')}=${n(total)}${u}`);
     else{const rec=vals.reduce((a,b)=>a+1/b,0);
@@ -1247,6 +1239,10 @@ function spProblems(kind){ // kind 'C' or 'L'
       explain:`<p class="small">${sum?'Values in '+(par?'parallel':'series')+' simply add.':'Use the reciprocal formula.'}</p>${M(form)}${tip}`,work};
   });
 }
+// the original refuses to grade a blank or non-numeric total ("Please correct error in number format.")
+const spRun=kind=>(el,s)=>{el.addEventListener?.('click',e=>{const b=e.target.closest&&e.target.closest('#pg');if(!b||b.dataset.done)return;const inp=CC.$('#pf input',el);
+    if(inp&&isNaN(CC.parse(inp.value,false))){e.stopImmediatePropagation();e.preventDefault();CC.modal('<p>Please correct error in number format.</p>');}},true);
+  CC.problemSet(el,s,{tol:TOL5,list:()=>spProblems(kind)});};
 function spIntro(kind){
   const C=kind==='C';
   const txt=C?`<p>Capacitors are connected in parallel to get more capacitance, and in series to get a higher voltage rating (or a smaller value). Capacitors combine the <b>opposite</b> way to resistors:</p><ul><li><b>Parallel:</b> the capacitances simply add.</li><li><b>Series:</b> use the reciprocal formula. The total is always smaller than the smallest capacitor.</li></ul>`
@@ -1255,10 +1251,10 @@ function spIntro(kind){
   const sumG=k+'_T='+k+'_1+'+k+'_2+'+k+'_3+\\cdots+'+k+'_n';const recG=k+'_T=\\frac{1}{\\frac{1}{'+k+'_1}+\\frac{1}{'+k+'_2}+\\cdots+\\frac{1}{'+k+'_n}}';
   const par=C?[sumT(2),sumT(3),sumG]:[recT(2),recT(3),recG], ser=C?[recT(2),recT(3),recG]:[sumT(2),sumT(3),sumG];
   return CC.introPage({text:txt,extra:`<div class="cols2 mt"><div class="formula"><b>Parallel ${C?'capacitors':'inductors'}</b>${par.map(t=>M(t)).join('')}</div><div class="formula"><b>Series ${C?'capacitors':'inductors'}</b>${ser.map(t=>M(t)).join('')}</div></div>`,
-    how:`<p>You get 12 problems in random order: two or three ${C?'capacitors':'inductors'}, in series or in parallel. Type the total in ${C?'µF':'mH'} and choose <b>Grade answers</b>, then <b>Next problem</b>. Keep every value in ${C?'µF':'mH'}; there is no need to convert to ${C?'farads':'henries'}.</p><p>Your score is the percentage of problems right. ${TOLNOTE.split('.')[0]}. Each graded problem shows a worked solution.</p>`});
+    how:`<p>You get 12 problems in random order: two or three ${C?'capacitors':'inductors'}, in series or in parallel. ${C?'Each problem is in µF or in pF (picofarads, which older books write as µµF). ':''}Type the total in the unit shown and choose <b>Grade answers</b>, then <b>Next problem</b>. Keep every value in that unit; there is no need to convert to ${C?'farads':'henries'}.</p><p>Each problem is graded once. A blank or non-numeric answer is not graded: fix it first. Your score is the percentage of problems right. An answer is accepted when it is within 5% of the exact value. Each graded problem shows a worked solution.</p>`});
 }
 
-/* ---------- Transformers (10 problems) ---------- */
+/* ---------- Transformers (8 problems with small whole-number values, as in the original) ---------- */
 const XF_DIAG=(R)=>{const g=`<rect x="10" y="40" width="80" height="54" fill="none"/><text x="50" y="71" font-size="11" text-anchor="middle" stroke="none" fill="currentColor">AC SOURCE</text>
   <polyline points="90,52 130,52 130,40 150,40 150,48"/><polyline points="90,82 130,82 130,94 150,94 150,86"/>
   ${[0,1,2,3].map(i=>`<path d="M150,${48+i*9.5} a4.75,4.75 0 0 1 0,9.5"/>`).join('')}
@@ -1270,32 +1266,38 @@ const XF_DIAG=(R)=>{const g=`<rect x="10" y="40" width="80" height="54" fill="no
   <text x="180" y="38" font-size="10" stroke="none" fill="currentColor">S1</text><text x="180" y="108" font-size="10" stroke="none" fill="currentColor">S2</text>
   <text x="272" y="64" font-size="11" stroke="none" fill="currentColor" font-weight="700">LOAD</text><text x="272" y="79" font-size="11" stroke="none" fill="currentColor">${R?esc(R):''}</text>
   <text x="164" y="125" font-size="10" text-anchor="middle" stroke="none" fill="currentColor">TRANSFORMER</text>`;return S.wrap(330,135,g);};
+// every set of three givens that fixes the other three (the load resistance is always shown)
+const XF_KNOWN=[[0,1,2],[0,1,3],[0,1,4],[0,1,5],[0,2,3],[0,2,4],[0,2,5],[0,3,4],[0,4,5],[1,2,3],[1,2,4],[1,2,5],[1,3,4],[1,4,5]];
+const XF_RATIO=[[2,1],[3,1],[4,1],[5,1],[6,1],[8,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,8]];
 function transformerSet(el,s){
-  CC.problemSet(el,s,{count:10,gen:()=>{
-    let Tp,Ts,Vp,R,Vs,Is,Ip;
-    do{Tp=pick([100,200,250,400,500,600,800,1000,1200,1500,2000,2400]);Ts=pick([20,25,40,50,60,100,120,150,200,250,400,500,1000,2000,3000,4000]);Vp=pick([6,12,24,48,110,115,120,220,240]);
-      Vs=Vp*Ts/Tp;R=eVal(10,10000);Is=Vs/R;Ip=Is*Ts/Tp;}while(Ts===Tp||Vs<1||Vs>500||Is<0.01||Is>5||Ip<0.01||Ip>10||Vs*Is>500);
-    const combos=[[0,1,2],[0,1,3],[0,2,3],[1,2,3],[0,2,5],[1,2,5]];
-    const known=pick(combos);
-    // the student only sees the rounded givens, so solve from exactly those
-    const shown=v=>CC.parse(fmt(v),false);
-    const g={};known.forEach(i=>{g[i]=shown([Tp,Ts,Vp,Vs,Ip,Is][i]);});
-    const w=[];
-    let tp=g[0],ts=g[1],vp=g[2],vs=g[3],is=g[5];
-    if(is!==undefined){vs=is*R;w.push('>Start with Ohm\'s law on the load to get the secondary voltage.','V_s=I_s R',`V_s=${amp(is)}\\times${q(R,'Ω')}=${q(vs,'V')}`);}
-    if(vs===undefined){vs=vp*ts/tp;w.push('>The voltage ratio equals the turns ratio.','V_s=V_p\\times\\frac{N_s}{N_p}',`V_s=${q(vp,'V')}\\times\\frac{${n(ts)}}{${n(tp)}}=${q(vs,'V')}`);}
-    if(vp===undefined){vp=vs*tp/ts;w.push('>The voltage ratio equals the turns ratio.','V_p=V_s\\times\\frac{N_p}{N_s}',`V_p=${q(vs,'V')}\\times\\frac{${n(tp)}}{${n(ts)}}=${q(vp,'V')}`);}
-    if(ts===undefined){ts=tp*vs/vp;w.push('>The turns ratio equals the voltage ratio.','N_s=N_p\\times\\frac{V_s}{V_p}',`N_s=${n(tp)}\\times\\frac{${q(vs,'V')}}{${q(vp,'V')}}=${n(ts)}`);}
-    if(tp===undefined){tp=ts*vp/vs;w.push('>The turns ratio equals the voltage ratio.','N_p=N_s\\times\\frac{V_p}{V_s}',`N_p=${n(ts)}\\times\\frac{${q(vp,'V')}}{${q(vs,'V')}}=${n(tp)}`);}
-    if(is===undefined){is=vs/R;w.push('>Ohm\'s law on the load gives the secondary current.','I_s=\\frac{V_s}{R}',`I_s=\\frac{${q(vs,'V')}}{${q(R,'Ω')}}=${amp(is)}`);}
-    const ip=is*ts/tp;
-    w.push(`>Current changes the opposite way to voltage: a step-${ts>tp?'up':'down'} transformer steps current ${ts>tp?'down':'up'}.`,'I_p=I_s\\times\\frac{N_s}{N_p}',`I_p=${amp(is)}\\times\\frac{${n(ts)}}{${n(tp)}}=${amp(ip)}`,
-      `>Check: input power equals output power, ${m(`V_p I_p=V_s I_s=${q(vs*is,'W',3)}`)}.`);
-    const vals=[tp,ts,vp,vs,ip,is];
+  CC.problemSet(el,s,{count:8,tol:TOL6,gen:()=>{
+    let Tp,Ts,Vp,Vs,Ip,Is,R,known;
+    for(;;){const [a,b]=pick(XF_RATIO),k=ri(3,72);Tp=a*k;Ts=b*k;Is=ri(3,32);R=ri(1,64);Vs=Is*R;Vp=Vs*a/b;Ip=Is*b/a;known=pick(XF_KNOWN);
+      if(Tp<15||Ts<15||Tp>432||Ts>432||Vs<8||Vs>240||Vp<8||Vp>240||Vp%1)continue;
+      if(known.includes(4)&&Ip%1)continue;break;}
+    // solve from the givens, one relationship at a time, writing each step
+    const v=[];known.forEach(i=>{v[i]=[Tp,Ts,Vp,Vs,Ip,Is][i];});const w=[];const U=['','','V','V','A','A'];
+    const fq=(i,x)=>U[i]?q(x,U[i]):n(x),SY=['N_p','N_s','V_p','V_s','I_p','I_s'];
+    const rules=[
+      [5,[3],()=>v[3]/R,'>Ohm\'s law on the load gives the secondary current.','I_s=\\frac{V_s}{R}',()=>`I_s=\\frac{${q(v[3],'V')}}{${q(R,'Ω')}}`],
+      [3,[5],()=>v[5]*R,'>Ohm\'s law on the load gives the secondary voltage.','V_s=I_s R',()=>`V_s=${q(v[5],'A')}\\times${q(R,'Ω')}`],
+      [3,[2,1,0],()=>v[2]*v[1]/v[0],'>The voltage ratio equals the turns ratio.','V_s=V_p\\times\\frac{N_s}{N_p}',()=>`V_s=${q(v[2],'V')}\\times\\frac{${n(v[1])}}{${n(v[0])}}`],
+      [2,[3,0,1],()=>v[3]*v[0]/v[1],'>The voltage ratio equals the turns ratio.','V_p=V_s\\times\\frac{N_p}{N_s}',()=>`V_p=${q(v[3],'V')}\\times\\frac{${n(v[0])}}{${n(v[1])}}`],
+      [1,[0,3,2],()=>v[0]*v[3]/v[2],'>The turns ratio equals the voltage ratio.','N_s=N_p\\times\\frac{V_s}{V_p}',()=>`N_s=${n(v[0])}\\times\\frac{${q(v[3],'V')}}{${q(v[2],'V')}}`],
+      [0,[1,2,3],()=>v[1]*v[2]/v[3],'>The turns ratio equals the voltage ratio.','N_p=N_s\\times\\frac{V_p}{V_s}',()=>`N_p=${n(v[1])}\\times\\frac{${q(v[2],'V')}}{${q(v[3],'V')}}`],
+      [4,[5,1,0],()=>v[5]*v[1]/v[0],'>Current changes the opposite way to voltage.','I_p=I_s\\times\\frac{N_s}{N_p}',()=>`I_p=${q(v[5],'A')}\\times\\frac{${n(v[1])}}{${n(v[0])}}`],
+      [5,[4,0,1],()=>v[4]*v[0]/v[1],'>Current changes the opposite way to voltage.','I_s=I_p\\times\\frac{N_p}{N_s}',()=>`I_s=${q(v[4],'A')}\\times\\frac{${n(v[0])}}{${n(v[1])}}`],
+      [1,[0,4,5],()=>v[0]*v[4]/v[5],'>The turns ratio is the inverse of the current ratio.','N_s=N_p\\times\\frac{I_p}{I_s}',()=>`N_s=${n(v[0])}\\times\\frac{${q(v[4],'A')}}{${q(v[5],'A')}}`],
+      [0,[1,5,4],()=>v[1]*v[5]/v[4],'>The turns ratio is the inverse of the current ratio.','N_p=N_s\\times\\frac{I_s}{I_p}',()=>`N_p=${n(v[1])}\\times\\frac{${q(v[5],'A')}}{${q(v[4],'A')}}`],
+      [3,[2,4],()=>Math.sqrt(v[2]*v[4]*R),'>Power in equals power out, and the load takes '+m('\\frac{V_s^2}{R}')+', so '+m('V_p I_p=\\frac{V_s^2}{R}')+'.','V_s=\\sqrt{V_p I_p R}',()=>`V_s=\\sqrt{${q(v[2],'V')}\\times${q(v[4],'A')}\\times${q(R,'Ω')}}`],
+      [4,[3,5,2],()=>v[3]*v[5]/v[2],'>Power in equals power out.','I_p=\\frac{V_s I_s}{V_p}',()=>`I_p=\\frac{${q(v[3],'V')}\\times${q(v[5],'A')}}{${q(v[2],'V')}}`],
+    ];
+    for(let go=true;go;){go=false;for(const [o,ins,f,why,tex,num] of rules)if(v[o]===undefined&&ins.every(i=>v[i]!==undefined)){v[o]=f();w.push(why,tex,`${num()}=${fq(o,v[o])}`);go=true;}}
+    w.push(`>Check: input power equals output power, ${m(`V_p I_p=V_s I_s=${q(v[3]*v[5],'W',3)}`)}.`);
     const L=[['Number of primary turns, Np',''],['Number of secondary turns, Ns',''],['Primary voltage, Vp','V'],['Secondary voltage, Vs','V'],['Primary current, Ip','A'],['Secondary current, Is','A']];
     return {title:'Transformer problem',prompt:`<p>The blue boxes are known. Calculate the three empty yellow boxes. You will also need the load resistance shown on the schematic. Assume an ideal transformer.</p>`,
       diagram:XF_DIAG('R = '+fR(R)),
-      fields:L.map((f,i)=>({key:'x'+i,label:f[0],unit:f[1],value:known.includes(i)?g[i]:vals[i],given:known.includes(i)})),
+      fields:L.map((f,i)=>({key:'x'+i,label:f[0],unit:f[1],value:v[i],given:known.includes(i)})),
       explain:`<div class="formulas"><div>${M('\\frac{V_s}{V_p}=\\frac{N_s}{N_p}')}</div><div>${M('\\frac{I_p}{I_s}=\\frac{N_s}{N_p}')}</div><div>${M('I_s=\\frac{V_s}{R}')}</div></div>`,work:w};
   }});
 }
@@ -1304,10 +1306,10 @@ function transformerSet(el,s){
 function makeMeter(){return CC.meterErr();}
 const openMsg=(vs,a,b,f)=>[`>The supply current is 0 mA, so the circuit is open somewhere. With no current, every good part drops 0 V and the full supply voltage appears across the break.`,`>The meter reads about ${fmt(vs,3)} V only across <b>${a}</b> to <b>${b}</b>, so the fault is <b>${f}</b>.`];
 function seriesBoard(){
-  // series loop: J1-F1-T1-C1-T2-R1-T3-L1-T4-J2, driven at 1 kHz
-  const Vs=10,F=1000,w=TP*F;
-  let R,C,L;
-  do{R=eVal(330,3300);C=capFor(F,R*rnd(0.5,1.6));L=indFor(F,R*rnd(0.5,1.6));}while(!L_OK(L)||L<10e-3||!C_OK(C));
+  // series loop: J1-F1-T1-C1-T2-R1-T3-L1-T4-J2. As in the original, every item has a new 12, 18 or 24 V, 60 Hz supply
+  // and new marked values printed on the board: R1 90–320 Ω, C1 5.5–19.5 µF, L1 318–1007 mH
+  const Vs=pick([12,18,24]),F=60,w=TP*F;
+  const R=ri(90,320),C=ri(55,195)/1e7,L=ri(3180,10070)/1e4;
   const tol=()=>1+rnd(-0.2,0.2);
   const Ra=R*tol(),Ca=C*tol(),La=L*tol();
   const faults=['Fuse Blown','C1 Open','C1 Shorted','R1 Open','R1 Shorted','L1 Open','L1 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','No Faults'];
@@ -1318,7 +1320,7 @@ function seriesBoard(){
   const Z=[Cx.c(0),Cx.c(0.1),Cx.c(0),Cx.c(0,-1/(w*Ca)),Cx.c(0),Cx.c(Ra),Cx.c(0),Cx.c(La*w*0.03,La*w),Cx.c(0)];
   const map={'Fuse Blown':[1,OPEN],'C1 Open':[3,OPEN],'C1 Shorted':[3,Cx.c(0)],'R1 Open':[5,OPEN],'R1 Shorted':[5,Cx.c(0)],'L1 Open':[7,OPEN],'L1 Shorted':[7,Cx.c(0)],'Trace 1 Open':[2,OPEN],'Trace 2 Open':[4,OPEN],'Trace 3 Open':[6,OPEN],'Trace 4 Open':[8,OPEN]};
   let openAt=-1;if(map[f]){if(map[f][1]===OPEN)openAt=map[f][0];else Z[map[f][0]]=map[f][1];}
-  const Vsup=Vs*rnd(0.99,1.01);
+  const Vsup=Vs;
   const Ztot=Z.reduce((a,b)=>Cx.add(a,b),Cx.c(0));
   const I=openAt>=0?Cx.c(0):Cx.div(Cx.c(Vsup),Ztot);
   const vm=makeMeter(),am=makeMeter();
@@ -1327,8 +1329,8 @@ function seriesBoard(){
     else{let z=Cx.c(0);for(let k=i;k<j;k++)z=Cx.add(z,Z[k]);v=Cx.abs(Cx.mul(I,z));}
     const r=vm(v);return {value:r,text:CC.lcd(r)+' V'};};
   const P={J1:[60,150],F1a:[100,150],F1b:[190,150],C1a:[250,150],C1b:[340,150],R1a:[470,175],R1b:[470,285],L1a:[360,300],L1b:[250,300],J2:[60,300]};
-  const svg=()=>B.svg(540,340,
-    B.supply(20,8,200,70,'AC POWER SUPPLY',Vs+' VAC @ 1 kHz')+B.pcb(20,110,505,220)+
+  const svg=()=>B.svg(540,360,
+    B.supply(20,8,200,70,'AC POWER SUPPLY',Vs+' VAC @ 60 Hz')+B.pcb(20,110,505,220)+B.label(272,350,`C1 = ${fmt(C*1e6)} µF    R1 = ${R} Ω    L1 = ${fmt(L*1e3)} mH`,{size:12})+
     B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,100],[34,100],[34,300],[60,300]],'#222')+
     B.trace([P.J1,P.F1a])+B.trace([P.F1b,P.C1a],'TRACE 1',[220,140])+B.trace([P.C1b,[470,150],P.R1a],'TRACE 2',[410,140])+B.trace([P.R1b,[470,300],P.L1a],'TRACE 3',[415,318])+B.trace([P.L1b,P.J2],'TRACE 4',[150,318])+
     B.part('F',P.F1a,P.F1b,'F1')+B.part('C',P.C1a,P.C1b,'C1')+B.part('R',P.R1a,P.R1b,'R1')+B.part('L',P.L1b,P.L1a,'L1')+
@@ -1347,18 +1349,19 @@ function seriesBoard(){
       st.push(`>Current flows (${fmt(Cx.abs(I)*1e3,3)} mA), so nothing is open. A shorted part drops 0 V. The reading across <b>${names[pads[k]]}</b> to <b>${names[pads[k+1]]}</b> is 0 V instead of the few volts expected, so <b>${part} is shorted</b>.`,
         '>Shorting one reactance changes the net reactance, so the current can go up or down. The 0 V reading, not the current, is what identifies the part.');}
     return st;};
-  return {svg,pads:padsArr,faults,answer:ans,measure,work,
-    meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Cx.abs(I)*1000),1)}],
-    info:()=>`Marked values: R1 = ${fR(R)}, C1 = ${fC(C)}, L1 = ${fL(L)}. The supply is ${Vs} V at 1 kHz. Parts can be 20% off their marked values and the meters up to 5% off.`};
+  return {svg,pads:padsArr,faults,answer:ans,measure,work,start:{red:'L1b',black:'J2'},
+    meters:()=>[{label:'Supply AC volts @ 60 Hz',text:String(Vs)},{label:'Supply AC mA',text:CC.lcd(am(Cx.abs(I)*1000),3)}],
+    info:()=>`Marked values: R1 = ${R} Ω, C1 = ${fmt(C*1e6)} µF, L1 = ${fmt(L*1e3)} mH. The supply is ${Vs} V at 60 Hz. Parts can be 20% off their marked values and the meters up to 5% off.`};
 }
 function xfmrBoard(){
-  // modeled on the ETCAI board: 120 V line, 10:1 transformer (12 V secondary), R1 = 8 Ω and L1 = 21.2 mH (X_L ≈ R at 60 Hz),
-  // and one common trace tying the primary, the secondary and the load to the supply's − terminal (J2)
-  const w=TP*60,ratio=10,Vline=120,Vsec=Vline/ratio,R=8,L=21.2e-3;
+  // the ETCAI board: one common trace ties the primary, the secondary and the load to the supply's − terminal (J2).
+  // Every item has a new line voltage (106–124 V), a 12, 18 or 24 V secondary and new R1 (6–20 Ω) and L1 (about 16–74 mH),
+  // with X_L usually equal to R1 at 60 Hz
+  const w=TP*60,Vline=120,Vsec=pick([12,18,24]),ratio=Vline/Vsec,R=ri(6,20),L=Math.round((Math.random()<0.6?R:ri(6,28))/w*1e4)/1e4;
   const tol=()=>1+rnd(-0.2,0.2);const Ra=R*tol(),La=L*tol();
   const faults=['Fuse Blown','Primary Open','Secondary Open','R1 Open','L1 Open','L1 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','No Faults'];
   const ans=ri(0,faults.length-1),f=faults[ans];
-  const Vsup=Vline*rnd(0.9,1.05); // line voltage sags and swells
+  const Vsup=ri(106,124); // the line voltage, in whole volts
   // primary chain: J1 –wire– F1a –F1– F1b –trace 1– P1 –primary winding– common
   const priPads=['J1','F1a','F1b','P1'];
   let priOpen=({'Fuse Blown':1,'Trace 1 Open':2,'Primary Open':3})[f];if(priOpen===undefined)priOpen=-1;
@@ -1371,7 +1374,7 @@ function xfmrBoard(){
   const Zt=Zs.reduce((a,b)=>Cx.add(a,b),Cx.c(0.4)); // 0.4 Ω winding resistance
   const Is=(secOpen>=0||E===0)?Cx.c(0):Cx.div(Cx.c(E),Zt);
   // magnetizing current: drawn whenever the primary is energized, lags the supply by 90°
-  const Imag=rnd(0.009,0.012)*Vsup/Vline;
+  const Imag=rnd(0.0125,0.0295)*Vsup/Vline;
   const Ip=priOpen>=0?0:Cx.abs(Cx.c(Is.re/ratio,Is.im/ratio-Imag));
   // node voltages to common; the secondary is in phase with the primary
   const node=id=>{const i=priPads.indexOf(id),j=secPads.indexOf(id);
@@ -1383,8 +1386,8 @@ function xfmrBoard(){
   const measure=(a,b)=>{const d=Cx.sub(node(a),node(b));const r=vm(Cx.abs(d));return {value:r,text:CC.lcd(r)+' V'};};
   const P={J1:[60,150],F1a:[90,150],F1b:[170,150],P1:[205,175],P2:[205,280],S1:[285,175],S2:[285,280],R1a:[370,150],R1b:[480,150],L1a:[480,200],L1b:[480,280],J2:[60,300]};
   const names={J1:'J1 (supply +)',F1a:'F1 left',F1b:'F1 right',P1:'Primary P1',P2:'Primary P2',S1:'Secondary S1',S2:'Secondary S2',R1a:'R1 left',R1b:'R1 right',L1a:'L1 top',L1b:'L1 bottom',J2:'J2 (supply −, common)'};
-  const svg=()=>B.svg(540,340,
-    B.supply(20,8,200,70,'AC POWER SUPPLY',Vline+' VAC @ 60 Hz')+B.pcb(20,110,505,220)+
+  const svg=()=>B.svg(540,360,
+    B.supply(20,8,200,70,'AC POWER SUPPLY',Vsup+' VAC @ 60 Hz')+B.pcb(20,110,505,220)+B.label(272,350,`R1 = ${R} Ω    L1 = ${fmt(L*1e3)} mH`,{size:12})+
     B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,100],[34,100],[34,300],[60,300]],'#222')+
     B.trace([P.J1,P.F1a])+B.trace([P.F1b,[205,150],P.P1],'TRACE 1',[188,140])+
     B.trace([P.S1,[285,150],P.R1a],'TRACE 2',[325,140])+B.trace([P.R1b,[505,150],[505,200],P.L1a],'TRACE 3',[517,180,90])+
@@ -1398,7 +1401,7 @@ function xfmrBoard(){
   const work=()=>{
     const st=[`>Expected values from the markings, with the line at ${Vline} V: the secondary gives ${q(Vsec,'V',3)}, and the load should draw about ${fmt(Inom,3)} A:`,
       `X_L=2\\pi F L=${q(XLn,'Ω',3)}`,`Z=\\sqrt{R^2+X_L^2}=${q(Zn,'Ω',3)}`,`I_s=\\frac{V_s}{Z}=${q(Inom*1e3,'mA',3)}`,
-      `I_p\\approx\\frac{I_s}{${ratio}}=${q(Inom/ratio*1e3,'mA',3)}`,`>The supply current is this reflected load current plus about 10 mA of magnetizing current. The line here is ${fmt(Vsup,3)} V, so everything scales by ${fmt(Vsup/Vline,3)}.`,
+      `I_p\\approx\\frac{I_s}{${n(ratio,3)}}=${q(Inom/ratio*1e3,'mA',3)}`,`>The supply current is this reflected load current plus a magnetizing current of roughly 12 to 30 mA. The line here is ${Vsup} V, so everything scales by ${fmt(Vsup/Vline,3)}.`,
       '>Leave the black probe on J2 (common) and move only the red probe: each reading is then that point\'s voltage to common.'];
     if(priOpen>=0){st.push(`>The supply current is 0 mA: the primary circuit is open, so not even the transformer's small magnetizing current flows. With no current, every point before the break sits at the full supply voltage and every point after it at 0 V.`,
       `>${names[priPads[priOpen]]} reads ${rd(priPads[priOpen])}${priOpen<3?` but ${names[priPads[priOpen+1]]} reads ${rd(priPads[priOpen+1])}`:', yet the secondary reads 0 V'}, so the fault is <b>${f}</b>.`);}
@@ -1410,11 +1413,11 @@ function xfmrBoard(){
     else st.push(`>The supply current is higher than expected, so the load impedance is too low. L1 top reads ${rd('L1a')}: a shorted part drops 0 V, so <b>L1 is shorted</b> and R1 has the whole secondary voltage.`);
     return st;};
   return {svg,pads:padsArr,faults,answer:ans,measure,work,start:{red:'L1b',black:'J2'},
-    meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Ip*1000),1)}],
-    info:()=>`T1 steps the ${Vline} V line down to ${Vsec} V. R1 = ${fR(R)}, L1 = ${fL(L)}. The common trace ties P2, S2, L1 bottom and the supply's − terminal (J2) together. Parts can be 20% off their marked values and the meters up to 5% off.`};
+    meters:()=>[{label:'Supply AC volts @ 60 Hz',text:String(Vsup)},{label:'Supply AC mA',text:CC.lcd(am(Ip*1000),1)}],
+    info:()=>`T1 steps the line (${Vline} V nominal) down to ${Vsec} V. R1 = ${R} Ω, L1 = ${fmt(L*1e3)} mH. The common trace ties P2, S2, L1 bottom and the supply's − terminal (J2) together. Parts can be 20% off their marked values and the meters up to 5% off.`};
 }
-const TS_HOW=`<p>Tap a solder pad to move the highlighted probe. If the probes start off the board, your first two taps place red, then black. After that the highlighted probe stays selected until you pick the other with the probe buttons. The voltmeter shows the AC voltage between the two probes. The panel also shows the supply voltage and current, which are free to read.</p>
-<ul><li>There are 10 problems. Each starts with 12 points, and every new voltmeter reading costs 1 point. Where the probes start on the board, that first reading is free.</li><li>Select the fault and choose <b>Grade item</b>. A right answer earns the points left; a wrong answer earns 0.</li><li>Your score is the percentage of the 120 possible points. After each item you can open a step-by-step explanation.</li></ul>
+const TS_HOW=`<p>The black (−) probe stays on J2, the supply's − terminal. Tap a solder pad to move the red (+) probe there; the voltmeter shows the AC voltage from that pad to J2. Both probes start on the board, and that first reading is free. The panel also shows the supply voltage and current, which are free to read.</p>
+<ul><li>There are 10 problems. Each starts with 12 points, and every new voltmeter reading costs 1 point. Tapping the pad the red probe is already on is free.</li><li>Select the fault and choose <b>Grade item</b>. A right answer earns the points left; a wrong answer earns 0.</li><li>Your score is the number of points you earn, out of 120. After each item you can open a step-by-step explanation.</li></ul>
 <p>The parts can be up to 20% off their marked values and the meter up to 5% off, so look for clear differences, such as 0 V where you expect a reading or the full supply voltage across one spot, rather than small ones.</p>`;
 
 /* ---------- home hero: transformer demo ---------- */
@@ -1449,44 +1452,45 @@ function hero(slot){
 
 /* ---------- assemble ---------- */
 const sc=t=>S.series(t.map(x=>({t:x,label:x})),{srcLabel:'VS'}),pc=t=>S.parallel(t.map(x=>({t:x,label:x})),{srcLabel:'VS'});
-const PS_HOW=(nProb,what)=>`<p>You get ${nProb} problems, one at a time. ${what} Type each answer in the unit shown, choose <b>Grade answers</b>, then <b>Next problem</b>. Blank boxes count as wrong.</p><p>Your score is the percentage of answers right. Answers within 2% of the exact value are accepted, so normal rounding is fine. Each graded problem shows a worked solution.</p>`;
+const PS_HOW=(nProb,what)=>`<p>You get ${nProb} problem sets, one at a time. ${what} Type each answer in the unit shown, choose <b>Grade answers</b>, then <b>Next problem</b>. Each set is graded once, and blank boxes count as wrong.</p><p>Your score is the percentage of answers right. Answers within 6% of the exact value are accepted, so normal rounding is fine. Each graded problem shows a worked solution.</p>`;
 CC.App.init({
   id:'ac',title:'AC Circuits Challenge',tagline:'Interactive AC exercises · offline edition',
   blurb:'Fourteen practice exercises on AC voltage, transformers, capacitors and inductors, RC, RL and RLC circuits, resonance, and two virtual troubleshooting boards. Every run uses new values.',
   footer:'Based on AC Circuits Challenge © 1993, 2001 ETCAI Products. Offline HTML edition.',
-  pass:80,hero,
+  pass:false,hero,
   manual:`<h2>About this program</h2><p>AC Circuits Challenge is a set of practice exercises to use alongside a textbook or course. It gives you instant feedback on every answer, help and worked solutions when you need them, and a score for every exercise.</p>
-  <p>There are fourteen exercises:</p><ul><li><b>Fundamentals:</b> voltage conversions (rms, peak, peak-to-peak, average), transformers, and capacitors and inductors in series and parallel.</li><li><b>Series and parallel AC circuits:</b> RC, RL and RLC worksheets.</li><li><b>Resonance:</b> series and parallel resonant circuits.</li><li><b>Troubleshooting:</b> find the fault on a series RLC board and on a 120 V transformer board (12 V secondary, common return) using a virtual voltmeter. Each problem starts with 12 points.</li></ul>
-  <p>Every run picks new values, so you can practice an exercise as often as you like. Each exercise starts with a short page of key ideas and formulas; choose <b>Begin</b> when you are ready. The program times each exercise. When you finish, you can print a certificate with your name, ID, score, time and a validity code that an instructor can confirm with <b>Check validity</b>.</p>
-  <h2>Conventions used</h2><p>On the series sheets θ is the impedance angle: the angle by which the source voltage leads the current. It is positive for inductive circuits and negative for capacitive circuits. On the parallel sheets θ is the angle of the total current, measured from the source voltage. It is negative for inductive circuits (the current lags) and positive for capacitive circuits (the current leads). The RC and RL sheets accept either sign; the RLC sheets grade the sign.</p><p>Inductor and capacitor values are those you would find in a parts catalog (1 mH to 1 H, 1 nF to 10 µF), and the troubleshooting parts have a 20% tolerance.</p>`,
+  <p>There are fourteen exercises:</p><ul><li><b>Fundamentals:</b> voltage conversions (rms, peak, peak-to-peak, average), transformers, and capacitors and inductors in series and parallel.</li><li><b>Series and parallel AC circuits:</b> RC, RL and RLC worksheets.</li><li><b>Resonance:</b> series and parallel resonant circuits.</li><li><b>Troubleshooting:</b> find the fault on a series RLC board and on a transformer board (12, 18 or 24 V secondary, common return) using a virtual voltmeter whose black probe stays on J2. Each problem starts with 12 points, and the score is the points earned out of 120.</li></ul>
+  <p>Every run picks new values, so you can practice an exercise as often as you like. There is no pass mark: each exercise simply reports your score. Each exercise starts with a short page of key ideas and formulas; choose <b>Begin</b> when you are ready. The program times each exercise. When you finish, you can print a certificate with your name, ID, score, time and a validity code that an instructor can confirm with <b>Check validity</b>.</p>
+  <h2>Conventions used</h2><p>On the series sheets θ is the impedance angle: the angle by which the source voltage leads the current. It is positive for inductive circuits and negative for capacitive circuits. On the parallel sheets θ is the angle of the total current, measured from the source voltage. It is negative for inductive circuits (the current lags) and positive for capacitive circuits (the current leads). The sign of θ is graded on every sheet.</p><p>As in the original program, the worksheet circuits are built from round branch or series currents, so the source voltage and the inductor and capacitor values come out as odd numbers rather than catalog values. The troubleshooting parts have a 20% tolerance.</p>`,
   groups:[
     {title:'Fundamentals',items:[
       {id:'conv',title:'Voltage Conversions',icon:'wave',sub:'rms, peak, peak-to-peak, average',intro:CC.introPage({text:two(`<p>An AC voltage can be described four ways. <b>Rms</b> (effective) voltage is what most meters show, and it lets you use Ohm's law and power formulas just as with DC. <b>Peak</b> voltage is the highest point of the wave and matters for rectifiers and part ratings. <b>Peak-to-peak</b> is the full height from the lowest to the highest point, which is what you read on an oscilloscope. <b>Average</b> voltage is the mean over one half cycle.</p><p>For a sine wave the four are linked by fixed factors. The easiest method is to convert the given value to peak first, then from peak to each of the others.</p>`,sineSVG(55,0)),extra:convFormulas,how:PS_HOW('eleven','Each gives one rms, peak, peak-to-peak or average voltage; find the other three.')}),run:conversions},
       {id:'xfmr',title:'Transformers',icon:'xfmr',sub:'turns, voltage and current ratios',intro:CC.introPage({text:two(`<p>A transformer steps AC voltage up or down. The source connects to the primary winding and the load to the secondary winding. If the secondary has more turns than the primary, the voltage is stepped up; if it has fewer, the voltage is stepped down.</p><p>An ideal transformer delivers the same power it takes in, so current changes the opposite way to voltage: stepping voltage up steps current down. Use Ohm's law on the load to find the secondary current.</p>`,XF_DIAG('')),formulas:[{cap:'Voltage ratio',tex:'\\frac{V_s}{V_p}=\\frac{N_s}{N_p}'},{cap:'Current ratio',tex:'\\frac{I_p}{I_s}=\\frac{N_s}{N_p}'},{cap:'Secondary current (Ohm\'s law)',tex:'I_s=\\frac{V_s}{R}'}],
-        how:PS_HOW('ten','Each shows three known values in blue boxes; find the three yellow boxes. You will also need the load resistance on the schematic. N is the number of turns, p means primary and s means secondary.')}),run:transformerSet},
-      {id:'spc',title:'Series and Parallel C',icon:'cap',sub:'total capacitance',intro:spIntro('C'),run:(el,s)=>CC.problemSet(el,s,{list:()=>spProblems('C')})},
-      {id:'spl',title:'Series and Parallel L',icon:'ind',sub:'total inductance',intro:spIntro('L'),run:(el,s)=>CC.problemSet(el,s,{list:()=>spProblems('L')})},
+        how:PS_HOW('eight','Each shows three known values in blue boxes; find the three yellow boxes. You will also need the load resistance on the schematic. N is the number of turns, p means primary and s means secondary.')}),run:transformerSet},
+      {id:'spc',title:'Series and Parallel C',icon:'cap',sub:'total capacitance',intro:spIntro('C'),run:spRun('C')},
+      {id:'spl',title:'Series and Parallel L',icon:'ind',sub:'total inductance',intro:spIntro('L'),run:spRun('L')},
     ]},
     {title:'Series and parallel AC circuits',items:[
-      wsModule('rcs','RC Series Circuits','res','reactance, impedance, phase',()=>seriesWS('RC'),T.rcS,[F.XC,F.ZRC,F.IT,F.thRC,F.VR,{cap:'Capacitor voltage',tex:'V_C=I_T X_C'},F.PTs,F.PA],sc(['R','C']),sketch.rcS,SIGN_FREE),
-      wsModule('rls','RL Series Circuits','ind','reactance, impedance, phase',()=>seriesWS('RL'),T.rlS,[F.XL,F.ZRL,F.IT,F.thRL,F.VR,{cap:'Inductor voltage',tex:'V_L=I_T X_L'},F.PTs,F.PA],sc(['R','L']),sketch.rlS,SIGN_FREE),
-      wsModule('rlcs','RLC Series Circuits','wave','13 quantities',()=>seriesWS('RLC'),T.rlcS,[F.XC,F.XL,F.ZRLC,F.IT,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)'},{cap:'Part voltages',tex:'V_R=I_T R\\quad V_C=I_T X_C\\quad V_L=I_T X_L'},F.PTs,F.PA],sc(['R','C','L']),sketch.rlcS,SIGN_GRADED),
-      wsModule('rcp','RC Parallel Circuits','cap','branch currents, phase',()=>parallelWS('RC'),T.rcP,[F.XC,{cap:'Branch currents',tex:'I_R=\\frac{V_S}{R}\\quad I_C=\\frac{V_S}{X_C}'},{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+I_C^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{I_C}{I_R}\\right)'},F.PTp,F.PA],pc(['R','C']),sketch.rcP,SIGN_FREE),
-      wsModule('rlp','RL Parallel Circuits','ind','branch currents, phase',()=>parallelWS('RL'),T.rlP,[F.XL,{cap:'Branch currents',tex:'I_R=\\frac{V_S}{R}\\quad I_L=\\frac{V_S}{X_L}'},{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+I_L^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=-\\arctan\\left(\\frac{I_L}{I_R}\\right)'},F.PTp,F.PA],pc(['R','L']),sketch.rlP,SIGN_FREE),
-      wsModule('rlcp','RLC Parallel Circuits','wave','13 quantities',()=>parallelWS('RLC'),T.rlcP,[F.XC,F.XL,{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+(I_L-I_C)^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)'},F.PTp,F.PA],pc(['R','L','C']),sketch.rlcP,SIGN_GRADED_P),
+      wsModule('rcs','RC Series Circuits','res','reactance, impedance, phase',()=>seriesWS('RC'),T.rcS,[F.XC,F.ZRC,F.IT,F.thRC,F.VR,{cap:'Capacitor voltage',tex:'V_C=I_T X_C'},F.PTs,F.PA],sc(['R','C']),sketch.rcS,SIGN_GRADED),
+      wsModule('rls','RL Series Circuits','ind','reactance, impedance, phase',()=>seriesWS('RL'),T.rlS,[F.XL,F.ZRL,F.IT,F.thRL,F.VR,{cap:'Inductor voltage',tex:'V_L=I_T X_L'},F.PTs,F.PA],sc(['R','L']),sketch.rlS,SIGN_GRADED),
+      wsModule('rlcs','RLC Series Circuits','wave','12 quantities',()=>seriesWS('RLC'),T.rlcS,[F.XC,F.XL,F.ZRLC,F.IT,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{X_L-X_C}{R}\\right)'},{cap:'Part voltages',tex:'V_R=I_T R\\quad V_C=I_T X_C\\quad V_L=I_T X_L'},F.PTs,F.PA],sc(['R','C','L']),sketch.rlcS,SIGN_GRADED),
+      wsModule('rcp','RC Parallel Circuits','cap','branch currents, phase',()=>parallelWS('RC'),T.rcP,[F.XC,{cap:'Branch currents',tex:'I_R=\\frac{V_S}{R}\\quad I_C=\\frac{V_S}{X_C}'},{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+I_C^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{I_C}{I_R}\\right)'},F.PTp,F.PA],pc(['R','C']),sketch.rcP,SIGN_GRADED_P),
+      wsModule('rlp','RL Parallel Circuits','ind','branch currents, phase',()=>parallelWS('RL'),T.rlP,[F.XL,{cap:'Branch currents',tex:'I_R=\\frac{V_S}{R}\\quad I_L=\\frac{V_S}{X_L}'},{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+I_L^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=-\\arctan\\left(\\frac{I_L}{I_R}\\right)'},F.PTp,F.PA],pc(['R','L']),sketch.rlP,SIGN_GRADED_P),
+      wsModule('rlcp','RLC Parallel Circuits','wave','12 quantities',()=>parallelWS('RLC'),T.rlcP,[F.XC,F.XL,{cap:'Total current',tex:'I_T=\\sqrt{I_R^2+(I_L-I_C)^2}'},F.ZP,{cap:'Phase angle',tex:'\\theta=\\arctan\\left(\\frac{I_C-I_L}{I_R}\\right)'},F.PTp,F.PA],pc(['R','L','C']),sketch.rlcP,SIGN_GRADED_P),
     ]},
     {title:'Resonance',items:[
-      wsModule('sres','Series Resonance','wave','resonant frequency, Q effects',seriesRes,T.sR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad Z=R\\quad \\theta=0°'},F.IT,{cap:'Reactive voltages',tex:'V_L=V_C=I_T X_L'}],sc(['R','C','L']),sketch.sR,'At resonance θ is 0°.'),
-      wsModule('pres','Parallel Resonance','wave','resonant frequency, tank current',parallelRes,T.pR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad I_T=I_R\\quad \\theta=0°'},{cap:'Branch currents',tex:'I_L=I_C=\\frac{V_S}{X_L}'},F.ZP],pc(['R','L','C']),sketch.pR,'At resonance θ is 0°.'),
+      wsModule('sres','Series Resonance','wave','at resonance, Q effects',seriesRes,T.sR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad Z=R\\quad \\theta=0°'},F.IT,{cap:'Reactive voltages',tex:'V_L=V_C=I_T X_L'}],sc(['R','C','L']),sketch.sR,'The source frequency shown is the resonant frequency. At resonance θ is 0°.'),
+      wsModule('pres','Parallel Resonance','wave','at resonance, tank current',parallelRes,T.pR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad I_T=I_R\\quad \\theta=0°'},{cap:'Branch currents',tex:'I_L=I_C=\\frac{V_S}{X_L}'},F.ZP],pc(['R','L','C']),sketch.pR,'The source frequency shown is the resonant frequency. At resonance θ is 0°.'),
     ]},
     {title:'Troubleshooting',items:[
-      {id:'ts1',title:'Troubleshooting Simple Circuits',icon:'wrench',sub:'series RLC on a PC board',intro:CC.introPage({text:`<p>A fuse, capacitor, resistor and inductor are wired in series on a PC board, driven by a 10 V, 1 kHz supply. Any one part can be open or shorted, any of the four copper traces can be open, or the board can be working. Use the voltmeter to find out which.</p>
+      {id:'ts1',title:'Troubleshooting Simple Circuits',icon:'wrench',sub:'series RLC on a PC board, 60 Hz',intro:CC.introPage({text:`<p>A fuse, capacitor, resistor and inductor are wired in series on a PC board, driven by a 60 Hz supply. Each problem has a new supply voltage (12, 18 or 24 V) and new part values, which are printed on the board. Any one part can be open or shorted, any of the four copper traces can be open, or the board can be working: twelve different problems in all. Use the voltmeter to find out which.</p>
+        <p>The meter starts with its black probe on J2 (the supply's − terminal) and its red probe on L1. That first reading is free. The black probe stays on J2; you move the red one.</p>
         <p><b>A good strategy:</b></p><ul><li>Look at the supply current first. <b>0 mA</b> means the loop is open. With no current, good parts drop 0 V and the full supply voltage appears across the break, so look for the one spot that reads the full voltage.</li><li>If current flows, nothing is open. A <b>shorted</b> part drops 0 V, so look for a part with no voltage across it.</li><li>If every part has a reasonable voltage, the board has no fault.</li></ul>
-        <p>Remember that in a series RLC circuit the capacitor or inductor voltage can be larger than the supply voltage. Review series RLC circuits before you start.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:12,build:seriesBoard})},
-      {id:'ts2',title:'Troubleshooting Transformer Circuits',icon:'xfmr',sub:'120 V to 12 V, fuse, R1 and L1',intro:CC.introPage({text:`<p>A fuse and a step-down transformer (120 V to 12 V) feed a load made of an 8 Ω power resistor and a 21.2 mH inductor in series. One common trace ties the primary, the secondary and the load to the supply's − terminal (J2). Any part can be faulty: the fuse blown, either transformer winding open, R1 open, L1 open or shorted, or one of the three numbered copper traces open. The board can also be working.</p>
-        <p>The meter starts with its black probe on J2 (common) and its red probe on the bottom of L1. That first reading is free.</p>
-        <p><b>A good strategy:</b></p><ul><li>Leave the black probe on common and move only the red probe. Each reading is then that point's voltage to common.</li><li>Look at the supply current first. <b>0 mA</b> means the primary circuit is open (fuse, trace 1 or the primary winding). Points before the break read the full supply voltage and points after it read 0 V.</li><li>An energized transformer always draws a small <b>magnetizing current</b> (about 10 mA here), even with nothing connected to its secondary. If that is all the supply draws, no load current is flowing: either the secondary winding is open (S1 reads 0 V) or the load circuit is open (S1 reads the secondary voltage, and it drops to 0 V just past the break).</li><li>If more current than normal flows, look for a shorted part: it drops 0 V.</li></ul>
-        <p>The line voltage varies, so use the supply voltmeter reading rather than exactly 120 V.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:12,build:xfmrBoard})},
+        <p>Remember that in a series RLC circuit the capacitor or inductor voltage can be larger than the supply voltage. Review series RLC circuits before you start.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:12,fixedBlack:true,rawPoints:true,build:seriesBoard})},
+      {id:'ts2',title:'Troubleshooting Transformer Circuits',icon:'xfmr',sub:'step-down transformer, fuse, R1 and L1',intro:CC.introPage({text:`<p>A fuse and a step-down transformer feed a load made of a power resistor and an inductor in series. Each problem has a new line voltage (106 to 124 V), a new secondary voltage (12, 18 or 24 V, printed above the board) and new R1 and L1 values (printed below it). One common trace ties the primary, the secondary and the load to the supply's − terminal (J2). Any part can be faulty: the fuse blown, either transformer winding open, R1 open, L1 open or shorted, or one of the three numbered copper traces open. The board can also be working.</p>
+        <p>The meter starts with its black probe on J2 (common) and its red probe on the bottom of L1. That first reading is free. The black probe stays on J2; you move the red one.</p>
+        <p><b>A good strategy:</b></p><ul><li>Each reading is the red probe's point measured to common.</li><li>Look at the supply current first. <b>0 mA</b> means the primary circuit is open (fuse, trace 1 or the primary winding). Points before the break read the full supply voltage and points after it read 0 V.</li><li>An energized transformer always draws a small <b>magnetizing current</b> (roughly 12 to 30 mA here), even with nothing connected to its secondary. If that is all the supply draws, no load current is flowing: either the secondary winding is open (S1 reads 0 V) or the load circuit is open (S1 reads the secondary voltage, and it drops to 0 V just past the break).</li><li>If more current than normal flows, look for a shorted part: it drops 0 V.</li></ul>
+        <p>The line voltage varies, so use the supply voltmeter reading rather than exactly 120 V.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:12,fixedBlack:true,rawPoints:true,build:xfmrBoard})},
     ]}
   ]
 });
