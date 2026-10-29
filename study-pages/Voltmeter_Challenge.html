@@ -845,8 +845,10 @@ CC.trouble=function(root,s,spec){
     };
     const tap=id=>{
       if(card.dataset.graded)return;
-      probe[probe.active]=id;
-      setActive(probe.active==='red'?'black':'red');
+      // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
+      probe[which]=id;
+      setActive(!probe[other]?other:first?'red':which);
       if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
         const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
         $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
@@ -1037,7 +1039,7 @@ K.lab=function(root,s,spec){
       $('#kpr',card).onclick=()=>setA('red');$('#kpk',card).onclick=()=>setA('black');}
     const setA=a=>{pr.active=a;if(both){$('#kpr',card).classList.toggle('blue',a==='red');$('#kpk',card).classList.toggle('blue',a==='black');}};
     setA(pr.active);
-    $('#khint',card).textContent=it.hint||(it.blackFixed?'Tap a test point to move the red probe. The black probe can\'t be moved in this activity.':both?'Tap a test point to move the active probe; the other probe becomes active next. Use the buttons to choose a probe.':'Tap a test point to move a probe.');
+    $('#khint',card).textContent=it.hint||(it.blackFixed?'Tap a test point to move the red probe. The black probe can\'t be moved in this activity.':both?'Tap a test point to move the selected probe. It stays selected until you pick the other probe with the buttons.':'Tap a test point to move a probe.');
     let cur=null;
     const reading=()=>{
       if(!pr.red||!pr.black)return null;
@@ -1062,9 +1064,11 @@ K.lab=function(root,s,spec){
       let which=p.side||(it.blackFixed?'red':it.redFixed?'black':pr.active);
       if(which==='red'&&it.redFixed)return;if(which==='black'&&it.blackFixed)return;
       if(pr[which]===id)return;
+      const other=which==='red'?'black':'red',first=!pr[which];
       pr[which]=id;
       if(!graded&&cost){moves++;if(moves>free)pts=Math.max(0,pts-cost);updP();}
-      if(both)setA(which==='red'?'black':'red');
+      // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      if(both)setA(!pr[other]?other:first?'red':which);
       draw();
       if(pr.red&&pr.black){const nm=q=>{const pp=it.pads.find(z=>z.id===q);return pp&&pp.label||q;};
         log.unshift(`<span style="color:#d32f2f">+${esc(nm(pr.red))}</span> / −${esc(nm(pr.black))}${it.controls?` <span class="muted">(${it.controls.map(c=>st[c.id]).join(', ')})</span>`:''}: <b>${meterText()}</b>`);

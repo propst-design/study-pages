@@ -845,8 +845,10 @@ CC.trouble=function(root,s,spec){
     };
     const tap=id=>{
       if(card.dataset.graded)return;
-      probe[probe.active]=id;
-      setActive(probe.active==='red'?'black':'red');
+      // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
+      probe[which]=id;
+      setActive(!probe[other]?other:first?'red':which);
       if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
         const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
         $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
@@ -976,7 +978,7 @@ SK.ohmBench=function(root,s,spec){
     };
     const tap=id=>{
       if(b.pads.length===2){[pr.red,pr.black]=[pr.black,pr.red];}
-      else{pr[pr.active]=id;setA(pr.active==='red'?'black':'red');}
+      else{const which=pr.active,other=which==='red'?'black':'red',first=!pr[which];pr[which]=id;setA(!pr[other]?other:first?'red':which);}
       draw();
     };
     if($('#rev',card))$('#rev',card).onclick=()=>{[pr.red,pr.black]=[pr.black,pr.red];draw();};
@@ -1527,7 +1529,7 @@ CC.App.init({
         run:(el,s)=>SK.ohmBench(el,s,{count:11,noun:'Diode',build:diodeBuild})},
       {id:'trans',title:'Basic Transistor Testing',icon:'trans',sub:'identify NPN/PNP, base lead, faults',
         intro:CC.introPage({text:two(`<p>You can find most failed bipolar transistors with an ohmmeter, because a transistor behaves like two diodes that share the base. In an NPN transistor the base is P-type and the emitter and collector are N-type; in a PNP transistor it is the other way round. A transistor is good when:</p><ol><li>The base-emitter junction tests like a good diode.</li><li>The base-collector junction tests like a good diode.</li><li>Emitter to collector reads high (OL) with the probes either way round.</li></ol><p>Most failed transistors have a <b>shorted</b> junction (low both ways) or an <b>open</b> junction (high both ways).</p><p>To find the base, look for the one lead that reads low to <i>both</i> other leads with the same probe on it. If that probe is the <b>red (+)</b> one, current flows into a P-type base: the transistor is <b>NPN</b>. If it is the <b>black (−)</b> one, the base is N-type: the transistor is <b>PNP</b>. For example, with the black probe on lead A, touching the red probe to either other lead reads low. Then A is the base of a PNP transistor. It is good if both readings go to OL when the probes are reversed and the other two leads read OL to each other.</p><p>A systematic order of measurements gets you there fastest.</p>`,SK.wrap(250,110,SK.bjt(60,55,{label:'NPN'}).svg+SK.bjt(180,55,{pnp:true,label:'PNP'}).svg)),
-          how:'<p>Analyze twelve transistors. Tap a lead to move the highlighted probe there; the highlight then switches to the other probe. You can also choose which probe to move with the probe buttons. Pick one of the eight answers and press <b>Grade selected answer</b>.</p><p><b>Scoring.</b> Each transistor is either right or wrong, and readings are free. Your score is the percent you identify correctly. If you are wrong, the right answer is highlighted with an explanation, and you can keep measuring before moving on.</p>'}),
+          how:'<p>Analyze twelve transistors. Tap a lead to move the highlighted probe there. It stays selected until you pick the other probe with the probe buttons. Pick one of the eight answers and press <b>Grade selected answer</b>.</p><p><b>Scoring.</b> Each transistor is either right or wrong, and readings are free. Your score is the percent you identify correctly. If you are wrong, the right answer is highlighted with an explanation, and you can keep measuring before moving on.</p>'}),
         run:(el,s)=>SK.ohmBench(el,s,{count:12,noun:'Transistor',build:transistorBuild})},
     ]},
     {title:'Small-signal amplifiers',items:[

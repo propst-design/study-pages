@@ -845,8 +845,10 @@ CC.trouble=function(root,s,spec){
     };
     const tap=id=>{
       if(card.dataset.graded)return;
-      probe[probe.active]=id;
-      setActive(probe.active==='red'?'black':'red');
+      // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
+      probe[which]=id;
+      setActive(!probe[other]?other:first?'red':which);
       if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
         const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
         $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
