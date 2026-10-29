@@ -807,7 +807,7 @@ CC.problemSet=function(root,s,spec){
 };
 
 /* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
-/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}]}} */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}}} */
 CC.trouble=function(root,s,spec){
   const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
@@ -830,6 +830,9 @@ CC.trouble=function(root,s,spec){
     const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
     const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
     $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    // probes that start on the board give a free first reading
+    if(b.start){probe.red=b.start.red;probe.black=b.start.black;lastKey=probe.red+'|'+probe.black;
+      readings.push(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${b.measure(probe.red,probe.black).text}</b> <span class="muted">(starting position, free)</span>`);}
     const meterHTML=()=>{
       const ms=(b.meters?b.meters():[]).map(m=>`<div class="meterbox"><span class="ml">${m.label}</span><span class="lcd">${m.text}</span></div>`).join('');
       let main='----';
@@ -854,6 +857,7 @@ CC.trouble=function(root,s,spec){
         $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
       draw();
     };
+    if(readings.length)$('#rlog',card).innerHTML=readings.join('<br>');
     draw();
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
