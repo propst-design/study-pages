@@ -575,7 +575,7 @@ App.route=function(){
   if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
   App.home(v);
 };
-App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;const f=x=>x.score/(x.max||100);g.forEach(x=>{if(x.mid===id&&(b===null||f(x)>f(b)))b=x;});return b;};
 App.home=function(v){
   const c=App.cfg;
   v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
@@ -586,7 +586,7 @@ App.home=function(v){
   c.groups.forEach(g=>{
     v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
     const m=el('<div class="menu"></div>');
-    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b.max?`${b.score}/${b.max}`:b.score+'%'}</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
     v.appendChild(m);
   });
   v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
@@ -736,13 +736,13 @@ CC.worksheet=function(root,s,spec){
   spec.items.forEach((it,i)=>{
     const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
       <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong${byItem?', taken from this item':''}." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points${byItem?' from this item each time':''}." aria-label="Help">?</button></div><div class="fb">${byItem?`<span class="muted">${worth} points</span>`:''}</div></div>`);
-    it._row=r;const inp=$('input',r);
+    it._row=r;const inp=$('input',r);if(byItem)r.classList.add('info');
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
     $('[data-a=c]',r).onclick=()=>{
       const val=CC.parse(inp.value,!CC.prefixed(it.unit));
       if(isNaN(val)){CC.toast('Type a number first.');return;}
       if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';
-        if(byItem){inp.readOnly=true;$('[data-a=c]',r).hidden=true;}}
+        if(byItem){inp.readOnly=true;$('[data-a=c]',r).style.display='none';}}
       else{charge(it,checkCost);r.className='wrow bad';$('.fb',r).textContent=byItem?`Not right. This item is now worth ${left(it)} point${left(it)===1?'':'s'}.`:`Not right — ${checkCost} points deducted.`;}
     };
     $('[data-a=h]',r).onclick=async()=>{
