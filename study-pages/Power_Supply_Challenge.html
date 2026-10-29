@@ -575,7 +575,7 @@ App.route=function(){
   if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
   App.home(v);
 };
-App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;const f=x=>x.score/(x.max||100);g.forEach(x=>{if(x.mid===id&&(b===null||f(x)>f(b)))b=x;});return b;};
 App.home=function(v){
   const c=App.cfg;
   v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
@@ -586,7 +586,7 @@ App.home=function(v){
   c.groups.forEach(g=>{
     v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
     const m=el('<div class="menu"></div>');
-    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b.max?`${b.score}/${b.max}`:b.score+'%'}</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
     v.appendChild(m);
   });
   v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
@@ -616,18 +616,20 @@ class Session{
   every(fn,ms){const t=setInterval(fn,ms);this.timers.push(t);return t;}
   cleanup(){this.timers.forEach(clearInterval);}
   restart(){location.hash='#/run/'+this.m.id;App.route();}
-  finish(score,summary){
+  /* o.max: score is points out of o.max instead of a percentage (the ETCAI troubleshooting boards) */
+  finish(score,summary,o={}){
     if(this.done)return;this.done=true;this.cleanup();
-    score=Math.max(0,Math.min(100,Math.round(score)));
+    const max=o.max||100;score=Math.max(0,Math.min(max,Math.round(score)));
     const st=App.student();
     const time=CC.fmtTime(this.elapsed());
     const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const rec={mid:this.m.id,title:this.m.title,score,time,date,ts:d.getTime(),name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    const rec={mid:this.m.id,title:this.m.title,score,...(o.max?{max}:{}),time,date,ts:d.getTime(),name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
     if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
     App.last=rec;
-    const pass=App.cfg.pass||80;
+    // pass:false means the program has no pass mark: show the score without a pass/fail colour
+    const pass=App.cfg.pass,verdict=pass===false?'':score/max*100>=(pass||80)?'ok':'bad';
     const certOk=App.opts().certs&&rec.id;
-    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${score>=pass?'ok':'bad'}">Score: ${score}%</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
+    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${verdict}">Score: ${CC.scoreText(rec)}</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
       [{label:'Main menu',value:'menu'},{label:'Review',value:'review'},...(certOk?[{label:'Certificate',value:'cert'}]:[]),{label:'Try again',primary:true,value:'again'}],{noEscape:false}).then(v=>{
         if(v==='menu')location.hash='#/';
         else if(v==='cert')location.hash='#/cert';
@@ -636,6 +638,7 @@ class Session{
   }
 }
 CC.Session=Session;
+CC.scoreText=r=>r.max?`${r.score} of ${r.max} points`:`${r.score}%`;
 
 App.certificate=function(v){
   const r=App.last;
@@ -643,7 +646,7 @@ App.certificate=function(v){
   const code=CC.validity(App.cfg.id,r.name,r.id,r.title,r.score,r.time,r.date);
   v.appendChild(el(`<div><div class="cert"><div style="font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:#7a5b10">Certificate of Completion</div>
   <h2>${esc(App.cfg.title)}</h2><p>This certifies that</p><div class="big">${esc(r.name)}</div><p>has completed the exercise</p><div class="big" style="font-size:1.3rem">${esc(r.title)}</div>
-  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${r.score}%</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
+  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${CC.scoreText(r)}</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
   <div class="row end mt noprint"><a class="btn" href="#/">Main menu</a><button class="btn primary" onclick="window.print()">Print certificate</button></div></div>`));
 };
 App.validityView=function(v){
@@ -663,10 +666,10 @@ App.validityView=function(v){
 };
 App.grades=function(v){
   const g=store.get(App.key('grades'),[]);
-  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
+  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${CC.scoreText(r)}</b></td><td>${esc(r.time)}</td></tr>`).join('');
   v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored in this browser${window.Acct&&Acct.user()?' and synced to the account <b>'+esc(Acct.user())+'</b>':'. Use <b>Sync across browsers</b> on the main menu to keep them in step on other browsers and devices'}.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
   <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
-  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,CC.scoreText(r),r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
   $('#gclr',v).onclick=async()=>{if(await CC.confirm(window.Acct&&Acct.user()?'Delete every grade stored for this program, here and in the sync account?':'Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
 };
@@ -707,49 +710,60 @@ CC.workHTML=function(steps,label='Show worked solution'){
   return `<details class="work"><summary>${label}</summary>${body}</details>`;
 };
 /* ---------- Worksheet: one circuit, many answers, Check (-2) Help (-3) Grade ---------- */
+/* spec.itemScore (the ETCAI rule): each item is worth ⌊100/N⌋ points (any remainder is free). A wrong
+   check and every opening of help take points from that item only, never below 0; a right check locks
+   the item. Grade keeps what is left on right items; wrong items score 0. */
 CC.worksheet=function(root,s,spec){
   CC._last=spec;
   const checkCost=spec.checkCost??2, helpCost=spec.helpCost??3, N=spec.items.length;
+  const byItem=!!spec.itemScore, worth=Math.floor(100/N), spare=100-N*worth;
   let pen=0;const helped=new Set();
+  spec.items.forEach(it=>{it._ded=0;});
+  const left=it=>worth-it._ded;
+  const maxScore=()=>spare+spec.items.reduce((a,it)=>a+left(it),0);
   const w=el(`<div>
-    <div class="statusbar"><span class="pill" id="wpen">Deductions: 0</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
+    <div class="statusbar"><span class="pill" id="wpen">${byItem?`Maximum possible score: ${100}`:'Deductions: 0'}</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
     <div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title||'Circuit')}</h2><div class="diagram">${spec.diagram||''}</div><div class="givens">${spec.givens.map(g=>`<div class="given"><div class="k">${g.k}</div><div class="v">${g.v}</div></div>`).join('')}</div>${spec.note?`<p class="small muted">${spec.note}</p>`:''}</div><div id="wextra"></div></div>
     <div><div class="card"><h2 style="margin-top:0">Find</h2><div class="ws" id="ws"></div>
     <div class="row end mt"><button class="btn primary" id="wgrade">Grade</button></div></div></div></div></div>`);
   root.appendChild(w);
   const wsEl=$('#ws',w);
-  const upd=()=>{$('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  const upd=()=>{if(byItem){const m=maxScore();$('#wpen',w).textContent='Maximum possible score: '+m;$('#wpen',w).className='pill'+(m<100?' bad':'');return;}
+    $('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  const charge=(it,c)=>{pen+=c;it._ded=Math.min(worth,it._ded+c);upd();};
   s.every(()=>{$('#wtime',w).textContent=CC.fmtTime(s.elapsed());},1000);
   const ok=(it,val)=>{if(it.signFree)return CC.close(Math.abs(val),Math.abs(it.value),it.tol??spec.tol??0.02,it.absTol??null);return CC.close(val,it.value,it.tol??spec.tol??0.02,it.absTol??null);};
   spec.items.forEach((it,i)=>{
     const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
-      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points." aria-label="Help">?</button></div><div class="fb"></div></div>`);
-    it._row=r;const inp=$('input',r);
+      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong${byItem?', taken from this item':''}." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points${byItem?' from this item each time':''}." aria-label="Help">?</button></div><div class="fb">${byItem?`<span class="muted">${worth} points</span>`:''}</div></div>`);
+    it._row=r;const inp=$('input',r);if(byItem)r.classList.add('info');
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
     $('[data-a=c]',r).onclick=()=>{
       const val=CC.parse(inp.value,!CC.prefixed(it.unit));
       if(isNaN(val)){CC.toast('Type a number first.');return;}
-      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';}
-      else{pen+=checkCost;r.className='wrow bad';$('.fb',r).textContent=`Not right — ${checkCost} points deducted.`;upd();}
+      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';
+        if(byItem){inp.readOnly=true;$('[data-a=c]',r).style.display='none';}}
+      else{charge(it,checkCost);r.className='wrow bad';$('.fb',r).textContent=byItem?`Not right. This item is now worth ${left(it)} point${left(it)===1?'':'s'}.`:`Not right — ${checkCost} points deducted.`;}
     };
     $('[data-a=h]',r).onclick=async()=>{
       const first=!helped.has(i);
-      if(first){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. It costs ${helpCost} points, charged once per item.</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
-        if(go!==true)return;helped.add(i);pen+=helpCost;upd();}
+      if(first||byItem){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. ${byItem?`Each time you open it, ${helpCost} points come off this item (it is worth ${left(it)} now).`:`It costs ${helpCost} points, charged once per item.`}</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
+        if(go!==true)return;helped.add(i);charge(it,helpCost);
+        if(byItem&&!r.classList.contains('ok'))$('.fb',r).textContent=`This item is now worth ${left(it)} point${left(it)===1?'':'s'}.`;}
       CC.modal(`<h3>${CC.m(it.sym)}${it.name?` — ${esc(it.name)}`:''}</h3>${(it.help||[]).map(h=>typeof h==='string'&&h.startsWith('$')?CC.M(h.slice(1)):`<p>${h}</p>`).join('')}`);
     };
     wsEl.appendChild(r);
   });
   $('#wgrade',w).onclick=async()=>{
     const blanks=spec.items.filter(it=>!$('input',it._row).value.trim()).length;
-    if(blanks&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
-    let right=0;
-    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good)right++;inp.disabled=true;
+    if(blanks&&!byItem&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
+    let right=0,kept=spare;
+    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good){right++;kept+=left(it);}inp.disabled=true;
       it._row.className='wrow '+(good?'ok':'bad');$('.fb',it._row).innerHTML=(good?'Right! ':'')+`Correct answer: <b>${CC.fmt(it.value)} ${esc(it.unit||'')}</b>`+CC.workHTML(typeof it.work==='function'?it.work():it.work);$$('button',it._row).forEach(b=>b.disabled=true);});
     $('#wgrade',w).disabled=true;
-    const raw=right/N*100;const score=raw-pen;
+    const raw=right/N*100;const score=byItem?kept:raw-pen;
     if(spec.after)spec.after($('#wextra',w));
-    s.finish(score,`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
+    s.finish(score,byItem?`${right} of ${N} answers correct. Each item was worth ${worth} points${spare?` (plus ${spare} free)`:''}; checks and help took ${spec.items.reduce((a,it)=>a+it._ded,0)} points off the items they were used on.`:`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
     const again=el('<div class="row end mt noprint"><button class="btn primary">New problem</button></div>');$('button',again).onclick=()=>s.restart();$('#wgrade',w).parentNode.after(again);
   };
 };
@@ -807,7 +821,9 @@ CC.problemSet=function(root,s,spec){
 };
 
 /* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
-/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}} */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}}
+   spec.fixedBlack (or b.blackFixed for one board): the black probe stays on b.start.black and every tap moves the red one (the ETCAI boards).
+   spec.points out of count*points are reported as points, not a percentage, when spec.rawPoints is set. */
 CC.trouble=function(root,s,spec){
   const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
@@ -816,22 +832,22 @@ CC.trouble=function(root,s,spec){
   // like a real meter, the readings float a little: redraw them every 0.7 s
   let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
-    const b=spec.build(k);let pts=P;CC._last=b;
+    const b=spec.build(k);let pts=P;CC._last=b;const fixB=!!(spec.fixedBlack||b.blackFixed);
     if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
     $('#tn',w).textContent=`Problem ${k+1} of ${N}`;
     const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for this item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};
     updP();
     const body=$('#tbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
-      <div class="row mt" style="justify-content:space-between"><div class="row">${b.blackFixed?`<span class="small muted">Tap a pad to move the red probe. The black probe stays on ${esc(b.padName(b.start.black))}.</span><span class="hide"><button id="pr"></button><button id="pk"></button></span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row">${fixB?`<span class="small muted">Tap a pad to move the red (+) probe. The black (−) probe stays on ${esc(b.padName(b.start.black))}.</span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
       <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
       <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
       <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
     body.appendChild(card);
     $('#info',card).innerHTML=b.info?b.info():'';
     const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
-    const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
-    $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    const setActive=a=>{if(fixB)a='red';probe.active=a;if(fixB)return;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
+    if(!fixB){$('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');}setActive('red');
     // probes that start on the board give a free first reading
     if(b.start){probe.red=b.start.red;probe.black=b.start.black;lastKey=probe.red+'|'+probe.black;
       readings.push(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${b.measure(probe.red,probe.black).text}</b> <span class="muted">(starting position, free)</span>`);}
@@ -848,10 +864,10 @@ CC.trouble=function(root,s,spec){
       $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
       $('#mt',card).innerHTML=meterHTML();
     };
+    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     const tap=id=>{
       if(card.dataset.graded)return;
       // the selected probe stays selected; only the first placement hands over to the probe not yet placed
-      if(b.blackFixed)probe.active='red';
       const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
       probe[which]=id;
       setActive(!probe[other]?other:first?'red':which);
@@ -861,7 +877,6 @@ CC.trouble=function(root,s,spec){
       draw();
     };
     if(readings.length)$('#rlog',card).innerHTML=readings.join('<br>');
-    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     draw();
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
@@ -877,7 +892,7 @@ CC.trouble=function(root,s,spec){
       btn.textContent=k+1<N?'Continue':'Finish';
     };
   };
-  const end=()=>{const score=earned/(N*P)*100;s.finish(score,`${earned} of ${N*P} possible points.`);};
+  const end=()=>{if(spec.rawPoints)s.finish(earned,`${earned} of ${N*P} possible points.`,{max:N*P});else s.finish(earned/(N*P)*100,`${earned} of ${N*P} possible points.`);};
   next();
 };
 
@@ -936,17 +951,17 @@ try{const st=document.createElement('style');st.textContent=`
 const W=2*Math.PI*60;
 /* ---------- circuit model ---------- */
 PS.TYPES={half:{name:'Half-Wave',diodes:['D1']},full:{name:'Full-Wave',diodes:['D1','D2']},bridge:{name:'Bridge',diodes:['D1','D2','D3','D4']}};
-PS.parts=type=>['Switch','Fuse','Transformer primary','Transformer secondary','Capacitor C1','Resistor R1','Regulator U1',...PS.TYPES[type].diodes.map(d=>'Diode '+d)];
+// As in the original, the list always offers all 11 parts, whatever the rectifier type
+PS.parts=()=>['Switch','Fuse','Transformer primary','Transformer secondary','Capacitor C1','Resistor R1','Regulator U1','Diode D1','Diode D2','Diode D3','Diode D4'];
+// Faults the original draws: never R1, only the diodes on the board, and the regulator in two forms (dead, or output = input)
+PS.pool=type=>['Switch','Fuse','Transformer primary','Transformer secondary','Capacitor C1','Regulator U1','Regulator U1',...PS.TYPES[type].diodes.map(d=>'Diode '+d)];
 PS.make=function(type,fault){
-  const vac=120*rnd(0.98,1.02);
+  const vac=rnd(111,126);
   const drop=type==='bridge'?1.4:0.7;
-  let vsec,vreg,il;
-  // C1 is a standard size; the ripple stays under 2.5 V and the valleys stay at least 3 V above the regulator output
-  let cuF,vp;
-  for(;;){vsec=pick([12.6,18,24]);vreg=pick([5,9,12,15]);il=pick([0.2,0.25,0.3,0.4,0.5]);cuF=pick([2200,3300,4700,6800]);vp=vsec*Math.SQRT2-drop;const rip=il/((type==='half'?60:120)*cuF*1e-6);if(vp-rip>vreg+3&&rip<2.5)break;}
-  // working voltage: the smallest standard rating with at least 20% margin over the peak C1 can charge to
-  const cV=[16,25,35,50].find(r=>r>=1.2*vsec*Math.SQRT2);
-  const c={type,fault:fault||null,vac,vsec,vreg,il,C:cuF*1e-6,cuF,cV,R1:pick([1000,1500,2200]),rload:vreg/il};
+  // original values: 9-12 V secondary, LM7805-LM7808, 4700 µF, 4.7 kΩ bleeder
+  const vsec=pick([9,10,11,12]),vreg=pick([5,6,7,8]);let il;
+  for(;;){il=pick([0.1,0.15,0.2,0.25]);const vp=vsec*Math.SQRT2-drop;const rip=il/((type==='half'?60:120)*4700e-6);if(vp-rip>vreg+2)break;}
+  const c={type,fault:fault||null,vac,vsec,vreg,il,C:4700e-6,R1:4700,rload:vreg/il,regThrough:fault==='Regulator U1'&&Math.random()<0.5};
   c.ok=n=>c.fault!==n;
   c.diodeOK=d=>c.fault!=='Diode '+d;
   const lineOK=c.ok('Switch')&&c.ok('Fuse');
@@ -961,9 +976,9 @@ PS.make=function(type,fault){
     if(type==='half')return c.diodeOK('D1')?Math.max(0,x-0.7):0;
     if(type==='full')return Math.max(0,c.diodeOK('D1')?x-0.7:0,c.diodeOK('D2')?-x-0.7:0);
     return Math.max(0,(c.diodeOK('D1')&&c.diodeOK('D4'))?x-1.4:0,(c.diodeOK('D2')&&c.diodeOK('D3'))?-x-1.4:0);};
-  const regOut=vin=>!regOK?0:Math.max(0,Math.min(vreg,vin-2));
+  const regOut=vin=>!regOK?(c.regThrough?vin:0):Math.max(0,Math.min(vreg,vin-2));
   for(let n=0;n<Ntot;n++){const t=n*dt;const r=c.rect(t);
-    if(capOK){const vo=regOut(v);const i=(regOK?vo/c.rload:0)+v/bleed+0.004;v=Math.max(r,v-i/c.C*dt);if(v<0)v=0;}
+    if(capOK){const vo=regOut(v);const i=vo/c.rload+v/bleed+0.004;v=Math.max(r,v-i/c.C*dt);if(v<0)v=0;}
     else v=r;
     if(n>=Ntot-keep){ts.push(t-(Ntot-keep)*dt);bus.push(v);out.push(regOut(v));}}
   c.ts=ts;c.bus=bus;c.out=out;
@@ -975,13 +990,14 @@ PS.make=function(type,fault){
     switch(id){
       case 'L1':case 'SWa':return line;
       case 'SWb':case 'F1a':return swR;
-      case 'F1b':case 'P1':return fuR;
-      case 'L2':case 'P2':case 'G':case 'U1g':case 'C1m':case 'R1b':case 'CT':return z();
+      case 'F1b':case 'P2':return fuR;
+      case 'L2':case 'P1':case 'G':case 'U1g':case 'C1m':case 'R1b':case 'CT':return z();
       case 'S1':case 'D1a':case 'D3k':
+        if(type==='half')return id==='S1'?z():s1;
         if(type==='bridge')return s1.map(x=>x>0?x-0.7:-0.7*(c.vsPk>0?1:0));
         return s1;
       case 'S2':case 'D2a':case 'D4k':
-        if(type==='half')return z();
+        if(type==='half')return id==='S2'?s1:z();
         if(type==='full')return s1.map(x=>-x);
         return s1.map(x=>x<0?-x-0.7:-0.7*(c.vsPk>0?1:0));
       case 'D3a':case 'D4a':return z();
@@ -990,14 +1006,15 @@ PS.make=function(type,fault){
     }
     return z();};
   // ohmmeter readings for removed parts
+  // the original's ohmmeter prints raw readings to many decimals, and 99999.0x for open
+  const open=()=>'99999.0'+Math.floor(rnd(1,10))+' Ω';
   c.ohm=(part,rev)=>{
-    if(part==='Transformer primary')return c.ok(part)?fmt(rnd(9,14),3)+' Ω':'OL';
-    if(part==='Transformer secondary')return c.ok(part)?fmt(rnd(0.4,1.2),2)+' Ω':'OL';
-    if(part==='Resistor R1')return c.ok(part)?fmt(c.R1*rnd(0.97,1.03)/1000,3)+' kΩ':'OL';
-    const d=part.replace('Diode ','');if(!c.diodeOK(d))return 'OL';return rev?'OL':fmt(rnd(0.55,0.7),2)+' kΩ';};
-  // 24 V rms can require about 68 V PIV and 1.1 W in a 1 kΩ bleeder.
-  // Use 400 V rectifiers and 2 W resistors to cover every generated combination.
-  c.specs=()=>[`T1: 120 V primary, ${vsec} V secondary${type==='full'?' (center tapped, each half)':''}`,`${PS.TYPES[type].diodes.join(', ')}: 1N4004 silicon rectifier diode${type==='half'?'':'s'}`,`C1: ${cuF} µF, ${cV} V electrolytic filter capacitor`,`R1: ${fmt(c.R1/1000)} kΩ, 2 W bleeder resistor`,`U1: 78${String(vreg).padStart(2,'0')} +${vreg} V regulator · load ${fmt(il*1000)} mA`,'F1: 1 A slow-blow fuse · S1: SPST power switch'];
+    if(part==='Transformer primary')return c.ok(part)?rnd(3.8,3.95).toFixed(4)+' Ω':open();
+    if(part==='Transformer secondary')return c.ok(part)?rnd(0.245,0.265).toFixed(5)+' Ω':open();
+    if(part==='Resistor R1')return c.ok(part)?(c.R1*rnd(1.01,1.025)).toFixed(2)+' Ω':open();
+    const d=part.replace('Diode ','');if(!c.diodeOK(d))return open();return rev?open():rnd(312,328).toFixed(3)+' Ω';};
+  // the original's specification sheet (12 V rms peaks at 17 V: 34 V reverse on half- and full-wave diodes, 17 V on C1)
+  c.specs=()=>['Transformer primary: 120 V AC',`Transformer secondary: ${vsec} V${type==='full'?' each half (center tapped)':''}`,'Diodes: 50 V PIV @ 2 A, silicon type','Capacitor C1: 4700 µF @ 25 V DC',`Regulator U1: ${vreg} V, type LM78${String(vreg).padStart(2,'0')}`];
   return c;
 };
 const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
@@ -1009,22 +1026,22 @@ PS.explain=function(c){
   const dc=id=>mean(c.wave(id)),ac=id=>acrms(c.wave(id)),rp=id=>pp(c.wave(id));
   const vp=c.vsec*Math.SQRT2,drop=t==='bridge'?1.4:0.7,fr=t==='half'?60:120;
   const norm=`>In a working supply: secondary ${c.vsec} V rms${t==='full'?' each half':''} (${v(vp)} V peak), C1 charged to about ${v(vp-drop)} V peak with ${fr} Hz ripple, and DC OUT at +${c.vreg} V.${t==='bridge'?` Measured to ground, S1 and S2 each read only about ${v(ac('S1'))} V AC, because the bridge clamps each end of the winding near ground on alternate half cycles.`:''}`;
-  const bus=`C1 + reads ${v(dc('C1p'))} V DC with ${v(rp('C1p'))} V peak-to-peak ripple`;
+  const bus=`C1 + reads ${v(dc('C1p'))} V DC with ${v(rp('C1p'))} V peak-to-peak ripple`,hs=t==='half'?'S2':'S1';
   const L={
     'Switch':[`>The switch input (left lead) has the 120 V line voltage, but the right lead reads ${v(ac('SWb'))} V AC. The full line voltage appears across the switch, which a closed switch can't have, so S1 is open.`,'>Everything after the switch, including DC OUT, is dead.'],
     'Fuse':[`>The left end of the fuse has 120 V AC but the right end reads ${v(ac('F1b'))} V AC. A good fuse has no voltage across it, so F1 is open (blown).`],
-    'Transformer primary':[`>Line voltage reaches P1 (about 120 V AC), but the secondary (S1) reads ${v(ac('S1'))} V AC.`,'>That points to the transformer. The ohmmeter shows OL across the primary and about an ohm across the secondary: the primary winding is open.'],
-    'Transformer secondary':[`>Line voltage reaches P1 (about 120 V AC), but the secondary (S1) reads ${v(ac('S1'))} V AC.`,'>That points to the transformer. The ohmmeter shows normal resistance on the primary but OL on the secondary: the secondary winding is open.'],
+    'Transformer primary':[`>Line voltage reaches P2 (about ${Math.round(c.vac)} V AC), but the secondary (${hs}) reads ${v(ac(hs))} V AC.`,'>That points to the transformer. The ohmmeter reads 99999 Ω (open) across the primary and about a quarter of an ohm across the secondary: the primary winding is open.'],
+    'Transformer secondary':[`>Line voltage reaches P2 (about ${Math.round(c.vac)} V AC), but the secondary (${hs}) reads ${v(ac(hs))} V AC.`,'>That points to the transformer. The ohmmeter shows about 4 Ω on the primary but 99999 Ω (open) on the secondary: the secondary winding is open.'],
     'Capacitor C1':[`>${bus}. Without the filter capacitor the voltage drops to zero every half cycle (${fr} Hz pulses); the scope shows bare rectified half sines instead of a nearly flat line.`,`>The regulator drops out in the valleys, so DC OUT averages only ${v(dc('OUT'))} V instead of ${c.vreg} V. C1 is open.`],
-    'Resistor R1':['>Every voltage looks normal: the bleeder resistor carries only a few milliamps, so losing it barely changes the ripple.','>When a supply works but you still have to find a fault, check the parts voltages can’t reveal. The ohmmeter reads OL on R1: the bleeder resistor is open (C1 would then stay charged after power-off, a safety hazard).'],
-    'Regulator U1':[`>${bus}: the capacitor charges almost to the full peak because no load current is drawn.`,`>The regulator input has plenty of voltage, but U1 output and DC OUT read ${v(dc('OUT'))} V. U1 is defective.`]};
+    'Regulator U1':c.regThrough?[`>${bus}, and DC OUT reads the same: ${v(dc('OUT'))} V DC with the same ripple, instead of a steady +${c.vreg} V.`,'>The regulator is passing its input straight through to its output (a shorted pass transistor). U1 is defective.']
+      :[`>${bus}: the capacitor charges almost to the full peak because no load current is drawn.`,`>The regulator input has plenty of voltage, but U1 output and DC OUT read ${v(dc('OUT'))} V. U1 is defective.`]};
   let steps=L[f];
   if(!steps&&f&&f.startsWith('Diode')){const d=f.slice(6);
-    if(t==='half')steps=[`>The transformer secondary is good (${c.vsec} V rms at S1), but the D1 cathode, C1 + and DC OUT all read about 0 V.`,'>No current gets through the diode. The ohmmeter confirms it: OL in both directions (a good diode reads low one way and OL the other). D1 is open.'];
+    if(t==='half')steps=[`>The transformer secondary is good (${c.vsec} V rms at S2), but the D1 cathode, C1 + and DC OUT all read about 0 V.`,'>No current gets through the diode. The ohmmeter confirms it: 99999 Ω in both directions (a good diode reads about 320 Ω one way and 99999 Ω the other). D1 is open.'];
     else {const pair=t==='bridge'?(d==='D1'||d==='D4'?'D1 and D4':'D2 and D3'):d;
       steps=[`>${bus}. The ripple is now at 60 Hz instead of 120 Hz and about twice as large, because C1 is recharged only once per cycle: the supply has become a half-wave rectifier.`,
         `>${t==='bridge'?`The half cycle that ${pair} conduct together is missing, so one of those two is open.`:`One of the two diodes has stopped conducting.`} DC OUT ${dc('OUT')>c.vreg-0.05?`still reads +${c.vreg} V because the regulator has enough headroom, so check the ripple, not just the output.`:`has dropped to ${v(dc('OUT'))} V because the regulator drops out in the deeper valleys.`}`,
-        `>The ohmmeter finds it: ${d} reads OL in both directions, while each good diode reads low forward and OL reversed.`];}}
+        `>The ohmmeter finds it: ${d} reads 99999 Ω in both directions, while each good diode reads about 320 Ω forward and 99999 Ω reversed.`];}}
   if(!steps)return [];
   return [norm,...steps];
 };
@@ -1036,30 +1053,31 @@ const lbl=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.s||11}" font-wei
 const diode=(a,k,l)=>{const cx=(a[0]+k[0])/2,cy=(a[1]+k[1])/2,ang=Math.atan2(k[1]-a[1],k[0]-a[0])*180/Math.PI,L=Math.hypot(k[0]-a[0],k[1]-a[1]);
   return `<g transform="translate(${cx},${cy}) rotate(${ang})"><line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#aaa" stroke-width="2.5"/><rect x="-16" y="-7" width="32" height="14" rx="3" fill="#222"/><rect x="9" y="-7" width="4" height="14" fill="#ddd"/></g>`+lbl(cx+(Math.abs(ang)>45?16:0),cy+(Math.abs(ang)>45?4:-12),l,{a:Math.abs(ang)>45?'start':'middle'});};
 PS.board=function(type,pads){
-  const P={L1:[40,80],L2:[40,140],G:[40,262],SWa:[95,80],SWb:[155,80],F1a:[185,80],F1b:[265,80],P1:[305,95],P2:[305,205],S1:[385,95],S2:[385,205],
+  const P={L1:[40,80],L2:[40,140],G:[40,262],SWa:[95,80],SWb:[155,80],F1a:[185,80],F1b:[265,80],P2:[305,95],P1:[305,205],S1:[385,95],S2:[385,205],
     C1p:[535,70],C1m:[535,240],R1t:[585,95],R1b:[585,215],U1i:[628,110],U1g:[628,140],U1o:[628,170],OUT:[672,215]};
   if(type==='full')P.CT=[385,150];
+  if(type==='half'){P.S2=[385,95];P.S1=[385,205];}
   if(type==='half'){P.D1a=[415,95];P.D1k=[485,95];}
   if(type==='full'){P.D1a=[415,95];P.D1k=[485,95];P.D2a=[415,205];P.D2k=[485,205];}
   if(type==='bridge'){P.D1k=[430,50];P.D1a=[430,115];P.D3k=[430,170];P.D3a=[430,245];P.D2k=[480,50];P.D2a=[480,115];P.D4k=[480,170];P.D4a=[480,245];}
   let g=`<rect x="10" y="20" width="690" height="275" rx="8" fill="${BG}" stroke="#256b2b" stroke-width="3"/>`;
   // ground bus
   g+=tr([P.G,[60,262],[60,280],[660,280]],8);
-  g+=tr([P.L1,P.SWa])+tr([P.SWb,P.F1a])+tr([P.F1b,[290,80],[290,95],P.P1])+tr([P.L2,[70,140],[70,230],[290,230],[290,205],P.P2]);
+  g+=tr([P.L1,P.SWa])+tr([P.SWb,P.F1a])+tr([P.F1b,[290,80],[290,95],P.P2])+tr([P.L2,[70,140],[70,230],[290,230],[290,205],P.P1]);
   const busTo=x=>tr([[x,38],[628,38],[628,P.U1i[1]]]);
-  if(type==='half'){g+=tr([P.S1,P.D1a])+tr([P.D1k,[485,38]])+busTo(485)+tr([P.S2,[400,205],[400,280]]);}
+  if(type==='half'){g+=tr([P.S2,P.D1a])+tr([P.D1k,[485,38]])+busTo(485)+tr([P.S1,[400,205],[400,280]]);}
   if(type==='full'){g+=tr([P.S1,P.D1a])+tr([P.D2a,P.S2])+tr([P.D1k,[485,38]])+tr([P.D2k,[500,205],[500,38]])+busTo(485)+tr([P.CT,[365,150],[365,280]]);}
   if(type==='bridge'){g+=tr([P.S1,[405,95],[405,142],[430,142]])+tr([P.D1a,P.D3k])+tr([P.S2,[455,205],[455,142],[480,142]])+tr([P.D2a,P.D4k])+tr([P.D1k,[430,38]])+tr([P.D2k,[480,38]])+busTo(430)+tr([P.D3a,[430,280]])+tr([P.D4a,[480,280]]);}
   g+=tr([[535,38],P.C1p])+tr([P.C1m,[535,280]])+tr([[585,38],P.R1t])+tr([P.R1b,[585,280]])+tr([P.U1g,[605,140],[605,280]])+tr([P.U1o,[655,170],[655,215],P.OUT])+tr([[660,280],[672,280],[672,255]]);
   // parts
   g+=`<rect x="100" y="62" width="50" height="36" rx="4" fill="#ddd" stroke="#888"/><rect x="${pads.swOn?118:118}" y="68" width="14" height="24" rx="2" fill="#555"/>`+lbl(125,58,'S1');
   g+=`<rect x="195" y="72" width="60" height="16" rx="5" fill="#eef6fa" stroke="#8aa"/><rect x="195" y="72" width="10" height="16" fill="#bbb"/><rect x="245" y="72" width="10" height="16" fill="#bbb"/><line x1="205" y1="80" x2="245" y2="80" stroke="#777"/>`+lbl(225,66,'F1');
-  g+=`<rect x="318" y="70" width="54" height="160" rx="6" fill="#2a8c8c" stroke="#145"/><rect x="330" y="62" width="30" height="176" rx="3" fill="#cfd8dc" stroke="#78909c"/>`+lbl(345,154,'ACME',{s:10,f:'#455a64',r:-90})+lbl(345,252,'T1')+lbl(298,90,'P1',{a:'end',s:10})+lbl(298,220,'P2',{a:'end',s:10})+lbl(392,88,'S1',{a:'start',s:10})+lbl(392,222,'S2',{a:'start',s:10})+(type==='full'?lbl(392,165,'CT',{a:'start',s:10}):'');
+  g+=`<rect x="318" y="70" width="54" height="160" rx="6" fill="#2a8c8c" stroke="#145"/><rect x="330" y="62" width="30" height="176" rx="3" fill="#cfd8dc" stroke="#78909c"/>`+lbl(345,154,'ACME',{s:10,f:'#455a64',r:-90})+lbl(345,252,'T1')+lbl(298,90,'P2',{a:'end',s:10})+lbl(298,220,'P1',{a:'end',s:10})+lbl(392,88,type==='half'?'S2':'S1',{a:'start',s:10})+lbl(392,222,type==='half'?'S1':'S2',{a:'start',s:10})+(type==='full'?lbl(392,165,'CT',{a:'start',s:10}):'');
   if(type==='half')g+=diode(P.D1a,P.D1k,'D1');
   if(type==='full')g+=diode(P.D1a,P.D1k,'D1')+diode(P.D2a,P.D2k,'D2');
   if(type==='bridge')g+=diode(P.D1a,P.D1k,'D1')+diode(P.D3a,P.D3k,'D3')+diode(P.D2a,P.D2k,'D2')+diode(P.D4a,P.D4k,'D4');
-  g+=`<rect x="512" y="85" width="46" height="140" rx="20" fill="#1a7a8a" stroke="#0d4a55"/><rect x="512" y="85" width="12" height="140" fill="#cfe9ee" opacity=".6"/>`+lbl(540,160,(pads.cuF||4700)+'µF',{s:10,f:'#e0f7fa',r:-90})+lbl(548,105,'+',{s:14,f:'#ffeb3b'})+lbl(565,235,'C1',{a:'start'});
-  g+=`<g transform="translate(585,155)"><rect x="-8" y="-36" width="16" height="72" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/><rect x="-8" y="-22" width="16" height="5" fill="#6d4c41"/><rect x="-8" y="-10" width="16" height="5" fill="#111"/><rect x="-8" y="2" width="16" height="5" fill="#c62828"/><rect x="-8" y="20" width="16" height="5" fill="#c9a227"/></g>`+lbl(596,180,'R1',{a:'start'});
+  g+=`<rect x="512" y="85" width="46" height="140" rx="20" fill="#1a7a8a" stroke="#0d4a55"/><rect x="512" y="85" width="12" height="140" fill="#cfe9ee" opacity=".6"/>`+lbl(540,160,'4700µF',{s:10,f:'#e0f7fa',r:-90})+lbl(548,105,'+',{s:14,f:'#ffeb3b'})+lbl(565,235,'C1',{a:'start'});
+  g+=`<g transform="translate(585,155)"><rect x="-8" y="-36" width="16" height="72" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/><rect x="-8" y="-22" width="16" height="5" fill="#f4d03f"/><rect x="-8" y="-10" width="16" height="5" fill="#7b3fa0"/><rect x="-8" y="2" width="16" height="5" fill="#c62828"/><rect x="-8" y="20" width="16" height="5" fill="#c9a227"/></g>`+lbl(596,180,'R1',{a:'start'});
   g+=`<rect x="640" y="95" width="34" height="90" rx="3" fill="#333"/><rect x="664" y="95" width="16" height="90" fill="#bbb"/><circle cx="672" cy="140" r="5" fill="#888"/>`+lbl(657,90,'U1')+lbl(640,124,'IN',{s:8,f:'#ddd',a:'start'})+lbl(640,186,'OUT',{s:8,f:'#ddd',a:'start'});
   [['L1',P.L1],['L2',P.L2],['G',P.G]].forEach(([l,p])=>{g+=`<rect x="${p[0]-14}" y="${p[1]-14}" width="28" height="28" rx="4" fill="#c9c9c9" stroke="#666"/>`+lbl(p[0],p[1]-18,l);});
   g+=lbl(25,48,'AC IN',{a:'start',s:10})+`<rect x="${P.OUT[0]-14}" y="${P.OUT[1]-14}" width="28" height="28" rx="4" fill="#c9c9c9" stroke="#666"/>`+lbl(P.OUT[0],P.OUT[1]+28,'DC OUT');
@@ -1098,6 +1116,8 @@ PS.scope=function(wave,st){
   for(let i=1;i<10;i++)g+=`<line x1="${i*div}" y1="0" x2="${i*div}" y2="${Hd}" stroke="#2e5a3c" stroke-width="${i===5?1.5:0.7}"/>`;
   for(let j=1;j<8;j++)g+=`<line x1="0" y1="${j*div}" x2="${Wd}" y2="${j*div}" stroke="#2e5a3c" stroke-width="${j===4?1.5:0.7}"/>`;
   if(wave){const m=st.ac?mean(wave):0;const vd=st.gain;const N=wave.length;
+    // the record is exactly three 60 Hz cycles, so a horizontal position shift wraps around seamlessly
+    const sh=((Math.round(-st.hpos*div/Wd*(N-1))%N)+N)%N;if(sh)wave=wave.slice(sh).concat(wave.slice(0,sh));
     const pts=wave.map((v,i)=>{let y=Hd/2-((v-m)/vd+st.pos)*div;y=Math.max(-2,Math.min(Hd+2,y));return (i/(N-1)*Wd).toFixed(1)+','+y.toFixed(1);}).join(' ');
     g+=`<polyline points="${pts}" fill="none" stroke="#7CFF9B" stroke-width="2.2"/>`;}
   const gl=st.gain<1?st.gain+' V':st.gain+' V';
@@ -1110,12 +1130,12 @@ PS.scope=function(wave,st){
 PS.run=function(root,s,o){
   const practice=!!o.practice;let type=o.type,inst=o.inst;
   const N=10,PTS=13;let k=0,total=0;
+  // gain, coupling and position carry over from one supply to the next, as in the original
+  const st={gain:50,pos:0,hpos:0,ac:false,dmmAC:false,ohmRev:false};
   const w=CC.el(`<div>${practice?`<div class="card" style="margin-bottom:12px"><div class="row"><b class="small">Power supply:</b><button class="btn sm" data-ty="half">Half-wave</button><button class="btn sm" data-ty="full">Full-wave</button><button class="btn sm" data-ty="bridge">Bridge</button><span style="width:10px"></span><b class="small">Instrument:</b><button class="btn sm" data-in="dmm">Voltmeter</button><button class="btn sm" data-in="scope">Oscilloscope</button></div></div>`:''}
     <div class="statusbar"><span class="pill" id="pn"></span>${practice?'':'<span class="pill" id="pp"></span><span class="pill" id="pt">Total: 0</span>'}<span class="pill" id="ptm">0:00</span></div><div id="pbody"></div></div>`);
   root.appendChild(w);
   s.every(()=>{CC.$('#ptm',w).textContent=CC.fmtTime(s.elapsed());},1000);
-  // like a real meter, the DMM reading floats a little: redraw it every 0.7 s
-  let tick=null;s.every(()=>{if(tick)tick();},700);
   if(practice){
     CC.$$('[data-ty]',w).forEach(b=>b.onclick=()=>{type=b.dataset.ty;start();});
     CC.$$('[data-in]',w).forEach(b=>b.onclick=()=>{inst=b.dataset.in;start();});
@@ -1123,18 +1143,18 @@ PS.run=function(root,s,o){
   const start=()=>{
     if(practice){CC.$$('[data-ty]',w).forEach(b=>b.classList.toggle('blue',b.dataset.ty===type));CC.$$('[data-in]',w).forEach(b=>b.classList.toggle('blue',b.dataset.in===inst));}
     const parts=PS.parts(type);
-    const fault=practice?null:pick(parts);
+    const fault=practice?null:pick(PS.pool(type));
     const c=PS.make(type,fault);CC._last={c,parts,answer:parts.indexOf(fault)};
-    let pts=PTS,tries=0,probe=null,done=false;
-    const st={gain:5,pos:0,ac:false,dmmAC:false,ohmRev:false};
-    const brd=PS.board(type,{cuF:c.cuF});
+    // the red lead starts each supply on G, next to the black lead
+    let pts=PTS,tries=0,probe='G',done=false;
+    const brd=PS.board(type,{});
     const padIds=Object.keys(brd.P);
     CC.$('#pn',w).textContent=practice?`${PS.TYPES[type].name} power supply · practice, no faults`:`Power supply ${k+1} of ${N}`;
     const upd=()=>{if(practice)return;CC.$('#pp',w).textContent=`${pts} point${pts===1?'':'s'} available`;CC.$('#pp',w).className='pill'+(pts<6?' bad':'');};upd();
     const body=CC.$('#pbody',w);body.innerHTML='';
     const instHTML=inst==='scope'?`<div class="ps-scope"><div id="scr"></div>
         <div class="ps-ctrl"><span class="lab">Vertical gain</span>${[0.2,1,5,50].map(v=>`<button class="btn" data-g="${v}">${v} V/div</button>`).join('')}</div>
-        <div class="ps-ctrl"><span class="lab">Coupling</span><button class="btn" data-c="dc">DC</button><button class="btn" data-c="ac">AC</button><span class="lab" style="margin-left:8px">Position</span><button class="btn" data-p="1" aria-label="Move trace up">▲</button><button class="btn" data-p="-1" aria-label="Move trace down">▼</button><button class="btn" data-p="0">Center</button></div>
+        <div class="ps-ctrl"><span class="lab">Coupling</span><button class="btn" data-c="dc">DC</button><button class="btn" data-c="ac">AC</button><span class="lab" style="margin-left:8px">Position</span><button class="btn" data-p="1" aria-label="Move trace up">▲</button><button class="btn" data-p="-1" aria-label="Move trace down">▼</button><button class="btn" data-h="-1" aria-label="Move trace left">◀</button><button class="btn" data-h="1" aria-label="Move trace right">▶</button><button class="btn" data-p="0">Center</button></div>
         <div class="small" style="color:#c9d6cc" id="where">Tap a part lead to move the red test lead.</div></div>`
       :`<div class="row" style="align-items:stretch"><div class="meterbox"><span class="ml">Digital voltmeter</span><span class="lcd" id="lcd" style="min-width:9ch">----</span><span class="small" style="color:#c9cdd2" id="where">Tap a part lead to move the red test lead.</span></div>
         <div class="meterbox"><span class="ml">Function</span><div class="row" style="gap:6px"><button class="btn sm" data-m="dc">DC V</button><button class="btn sm" data-m="ac">AC V</button></div></div></div>`;
@@ -1148,14 +1168,13 @@ PS.run=function(root,s,o){
     const readInst=()=>{
       if(inst==='scope'){CC.$('#scr',card).innerHTML=PS.scope(wave(),st);
         CC.$$('[data-g]',card).forEach(b=>b.classList.toggle('blue',+b.dataset.g===st.gain));CC.$$('[data-c]',card).forEach(b=>b.classList.toggle('blue',(b.dataset.c==='ac')===st.ac));}
-      else{const wv=wave();let t='----';if(wv){const v=st.dmmAC?acrms(wv):mean(wv);const r=v*(1+st.bias+rnd(-0.001,0.001))+rnd(-0.004,0.004);t=(Math.abs(r)<0.005?0:r).toFixed(Math.abs(r)>=100?1:2)+(st.dmmAC?' VAC':' VDC');}
+      else{const wv=wave();let t='----';if(wv){const v=st.dmmAC?acrms(wv):mean(wv);const r=v*(1+st.bias)+rnd(-0.004,0.004);t=(Math.abs(r)<0.005?0:r).toFixed(Math.abs(r)>=100?1:2)+(st.dmmAC?' VAC':' VDC');}
         CC.$('#lcd',card).textContent=t;CC.$$('[data-m]',card).forEach(b=>b.classList.toggle('blue',(b.dataset.m==='ac')===st.dmmAC));}
       if(probe)CC.$('#where',card).textContent='Red lead: '+PS.padNames[probe]+' · black lead: ground';
     };
     st.bias=rnd(-0.015,0.015);
-    tick=()=>{if(inst!=='scope'&&probe)readInst();};
     const draw=()=>{
-      const pads=padIds.filter(id=>id!=='G').map(id=>{const [x,y]=brd.P[id];const on=probe===id;return `<g class="pad" data-id="${id}" tabindex="0" role="button" aria-label="${esc(PS.padNames[id])}"><circle cx="${x}" cy="${y}" r="6" fill="#e0e0e0" stroke="#555" stroke-width="2"/><circle cx="${x}" cy="${y}" r="2" fill="#555"/>${on?`<circle cx="${x}" cy="${y}" r="10" fill="none" stroke="#d32f2f" stroke-width="4"/><path d="M${x+6},${y-6} l18,-20" stroke="#d32f2f" stroke-width="5" stroke-linecap="round"/>`:''}<circle cx="${x}" cy="${y}" r="13" fill="transparent"/></g>`;}).join('');
+      const pads=padIds.map(id=>{const [x,y]=brd.P[id];const on=probe===id;return `<g class="pad" data-id="${id}" tabindex="0" role="button" aria-label="${esc(PS.padNames[id])}"><circle cx="${x}" cy="${y}" r="6" fill="#e0e0e0" stroke="#555" stroke-width="2"/><circle cx="${x}" cy="${y}" r="2" fill="#555"/>${on?`<circle cx="${x}" cy="${y}" r="10" fill="none" stroke="#d32f2f" stroke-width="4"/><path d="M${x+6},${y-6} l18,-20" stroke="#d32f2f" stroke-width="5" stroke-linecap="round"/>`:''}<circle cx="${x}" cy="${y}" r="13" fill="transparent"/></g>`;}).join('');
       const gp=brd.P.G;
       CC.$('#bw',card).innerHTML=`<svg viewBox="0 0 710 305" width="710" height="305" role="img" aria-label="power supply PC board" font-family="FN Greek,system-ui,sans-serif">${brd.svg}<path d="M${gp[0]+8},${gp[1]+6} q20,30 -30,30" stroke="#111" stroke-width="5" fill="none"/><circle cx="${gp[0]}" cy="${gp[1]}" r="7" fill="#111"/>${pads}</svg>`;
       CC.$$('.pad',card).forEach(g=>{const f=()=>{if(done&&!practice)return;const id=g.dataset.id;if(id!==probe){probe=id;if(!practice&&pts>0){pts--;upd();}}draw();readInst();};g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
@@ -1164,7 +1183,8 @@ PS.run=function(root,s,o){
     if(inst==='scope'){
       CC.$$('[data-g]',card).forEach(b=>b.onclick=()=>{st.gain=+b.dataset.g;readInst();});
       CC.$$('[data-c]',card).forEach(b=>b.onclick=()=>{st.ac=b.dataset.c==='ac';readInst();});
-      CC.$$('[data-p]',card).forEach(b=>b.onclick=()=>{const d=+b.dataset.p;st.pos=d===0?0:Math.max(-4,Math.min(4,st.pos+d*0.5));readInst();});
+      CC.$$('[data-p]',card).forEach(b=>b.onclick=()=>{const d=+b.dataset.p;if(d===0){st.pos=0;st.hpos=0;}else st.pos=Math.max(-4,Math.min(4,st.pos+d*0.5));readInst();});
+      CC.$$('[data-h]',card).forEach(b=>b.onclick=()=>{st.hpos=Math.max(-5,Math.min(5,st.hpos+ +b.dataset.h*0.5));readInst();});
     } else CC.$$('[data-m]',card).forEach(b=>b.onclick=()=>{st.dmmAC=b.dataset.m==='ac';readInst();});
     // tabs
     const ohmParts=['Transformer primary','Transformer secondary','Resistor R1',...PS.TYPES[type].diodes.map(d=>'Diode '+d)];
@@ -1173,7 +1193,7 @@ PS.run=function(root,s,o){
       Specifications:()=>`<ul class="small" style="margin:0;padding-left:1.2em">${c.specs().map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`,
       Ohmmeter:()=>`<p class="small muted" style="margin-top:0">The part is removed from the board and tested out of circuit.${practice?'':' Each ohmmeter test costs two points.'}</p><div class="field"><label for="op">Part to test</label><select id="op" style="border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:9px 10px">${ohmParts.map(p=>`<option>${esc(p)}</option>`).join('')}</select></div>
         <div class="row"><button class="btn sm" id="orev">Test leads: + / −</button><button class="btn primary sm" id="ogo">Test with ohmmeter${practice?'':' (−2)'}</button></div><div class="meterbox mt"><span class="ml">Ohmmeter</span><span class="lcd" id="olcd" style="min-width:9ch">OFF</span><span class="small" style="color:#c9cdd2" id="onote"></span></div>`,
-      Score:()=>`<p class="small" style="margin-top:0">Each supply starts with 13 points. Moving the test lead costs 1, an ohmmeter test costs 2 and a wrong answer costs 5. You keep the points left when you pick the right part.</p><table class="t"><tr><td>Points available on this supply</td><td><b>${pts}</b></td></tr><tr><td>Total points earned</td><td><b>${total}</b></td></tr><tr><td>Tries used on this supply</td><td>${tries} of 3</td></tr></table>`,
+      Score:()=>`<p class="small" style="margin-top:0">Each supply starts with 13 points. Moving the test lead costs 1, an ohmmeter test costs 2 and each wrong answer costs 5 (grading the same wrong part again counts as another try). You keep the points left when you pick the right part.</p><table class="t"><tr><td>Points available on this supply</td><td><b>${pts}</b></td></tr><tr><td>Total points earned</td><td><b>${total}</b></td></tr><tr><td>Tries used on this supply</td><td>${tries} of 3</td></tr></table>`,
       Help:()=>PS.HELP
     };
     const showTab=t=>{CC.$$('[data-tab]',card).forEach(b=>b.classList.toggle('blue',b.dataset.tab===t));CC.$('#tabc',card).innerHTML=tabs[t]();
@@ -1189,21 +1209,22 @@ PS.run=function(root,s,o){
       if(!ch){CC.modal('<p>Select one of the parts in the list, then choose Grade selection.</p>');return;}
       const i=+ch.value;const lb=CC.$$('#fl label',card)[i];
       if(i===ans){done=true;total+=pts;lb.classList.add('correct');CC.$('#pfb',card).innerHTML=`<p class="verdict ok">Correct!</p><p class="small">You earned ${pts} point${pts===1?'':'s'} on this power supply. Total score so far: ${total} of ${(k+1)*PTS} possible.</p>`;}
-      else{tries++;pts=Math.max(0,pts-5);lb.classList.add('wrong');ch.disabled=true;ch.checked=false;upd();
+      // as in the original, a wrong part stays selectable: grading it again is another try and another 5 points
+      else{tries++;pts=Math.max(0,pts-5);lb.classList.add('wrong');upd();
         if(tries>=3){done=true;CC.$$('#fl label',card)[ans].classList.add('correct');CC.$('#pfb',card).innerHTML=`<p class="verdict bad">Incorrect</p><p class="small">The arrow points to the correct part to replace: <b>➜ ${esc(fault)}</b>. No points earned on this power supply. Total score so far: ${total}.</p>`;}
-        else CC.$('#pfb',card).innerHTML=`<p class="verdict bad">Incorrect</p><p class="small">Five points deducted. You have ${3-tries} ${3-tries===1?'try':'tries'} left on this power supply.</p>`;}
+        else CC.$('#pfb',card).innerHTML=`<p class="verdict bad">Incorrect. Try again.</p><p class="small">Five points deducted. You have ${3-tries} more ${3-tries===1?'attempt':'attempts'} on this power supply.</p>`;}
       CC.$('#pt',w).textContent='Total: '+total;
       if(done){CC.$$('#fl input',card).forEach(x=>x.disabled=true);btn.textContent=k+1<N?'Next power supply':'Finish';CC.$('#pfb',card).insertAdjacentHTML('beforeend',CC.workHTML(PS.explain(c),'Show how to find this fault'));}
       if(CC.$('[data-tab=Score].blue',card))showTab('Score');
     };
   };
-  const end=()=>s.finish(total/(N*PTS)*100,`${total} of ${N*PTS} possible points.`);
+  const end=()=>s.finish(total,`${total} of ${N*PTS} possible points. Even an expert scores well below ${N*PTS}, because every supply needs some measurements.`,{max:N*PTS});
   start();
 };
-PS.HELP=`<div class="small"><p style="margin-top:0"><b>Moving the test lead.</b> Tap any part lead or terminal to move the red test lead there; the instrument updates immediately. The black lead stays on the circuit ground (the negative side of C1). Primary-side points (AC input, switch, fuse, P1, P2) are shown as measured from the neutral line, L2. On a real supply, never clip an ordinary scope ground lead to the line side.</p>
-<p><b>Using the ohmmeter.</b> The ohmmeter tests a part removed from the board: either transformer winding, any diode or the resistor. Reverse the test leads to check a diode both ways. A good diode reads low one way and OL (open) the other.</p>
-<p><b>Faults.</b> Each defective supply has one failed part. Switches, fuses, windings, diodes, the capacitor and the resistor fail open; a failed regulator gives no output.</p>
-<p><b>Choosing the part.</b> Select the part to replace and choose Grade selection. You have three tries per supply; after the third wrong try the correct part is highlighted.</p>
+PS.HELP=`<div class="small"><p style="margin-top:0"><b>Moving the test lead.</b> Each supply starts with the red test lead on G, beside the black lead. Tap any part lead or terminal to move the red test lead there; the instrument updates immediately. The black lead stays on the circuit ground (G, the negative side of C1). Primary-side points (AC input, switch, fuse, P1, P2) are shown as measured from the neutral line, L2. On a real supply, never clip an ordinary scope ground lead to the line side.</p>
+<p><b>Using the ohmmeter.</b> The ohmmeter tests a part removed from the board: either transformer winding, any diode or the resistor. Each test costs 2 points; reversing the test leads is free, so check a diode both ways. A good diode reads about 320 Ω one way and 99999 Ω (open) the other.</p>
+<p><b>Faults.</b> Each defective supply has one failed part. Switches, fuses, windings, diodes and the capacitor fail open; a failed regulator either gives no output or passes its input straight through.</p>
+<p><b>Choosing the part.</b> The list always shows all eleven parts, including diodes your supply doesn't have. Select the part to replace and choose Grade selection. You have three tries per supply, and grading the same wrong part again uses another try; after the third wrong try the correct part is highlighted.</p>
 <p><b>Scoring.</b> Each supply starts with 13 points. Moving the test lead costs 1 point, an ohmmeter test costs 2 and a wrong answer costs 5; a supply can't go below 0. The most you can score is 130, but every supply needs a few measurements, so even an expert scores well below that.</p></div>`;
 })();
 
@@ -1213,20 +1234,20 @@ PS.HELP=`<div class="small"><p style="margin-top:0"><b>Moving the test lead.</b>
 const P=PSK;const M=CC.M;
 const MAN=`<h2>About this program</h2><p>Power Supply Challenge gives you realistic practice troubleshooting linear DC power supplies. Each exercise puts ten defective supplies on a simulated PC board. You measure with a digital voltmeter or an oscilloscope, test parts with an ohmmeter, and pick the part to replace. You should already know how rectifiers, filter capacitors and regulators work; the start page of each exercise has a short refresher.</p>
 <p>The exercises cover half-wave, full-wave (center-tapped) and bridge rectifier supplies, each with a voltmeter or with an oscilloscope, plus an ungraded practice mode on working circuits. Every run picks new transformer, regulator and load values and new faults.</p>
-<h2>Scoring</h2><p>Each supply starts with 13 points. Moving the test lead costs 1 point, an ohmmeter test costs 2 points and a wrong answer costs 5 points; a supply can't go below 0. You have three tries per supply. Ten supplies give a maximum of 130 points, but every supply needs some measurements, so good scores are well below that. Your percentage is your points out of 130. The time you take is recorded too: good troubleshooters are both accurate and efficient.</p>`;
+<h2>Scoring</h2><p>Each supply starts with 13 points. Moving the test lead costs 1 point, an ohmmeter test costs 2 points and a wrong answer costs 5 points; a supply can't go below 0. You have three tries per supply. Ten supplies give a maximum of 130 points, but every supply needs some measurements, so good scores are well below that. Your score is your total points; there is no pass mark. The time you take is recorded too: good troubleshooters are both accurate and efficient.</p>`;
 const theory=type=>{
   const t={half:`<p>A half-wave rectifier uses a single diode, D1, to pass only the positive half cycles of the transformer secondary voltage. The capacitor C1 charges to nearly the peak secondary voltage and supplies the load between peaks, so the ripple frequency is 60 Hz (one recharge per cycle). Regulator U1 holds the output at its rated voltage as long as its input stays at least about 2 V above the output, even in the ripple valleys.</p>`,
     full:`<p>A full-wave rectifier uses a center-tapped transformer secondary and two diodes, D1 and D2. Each diode conducts on alternate half cycles, so the capacitor C1 is recharged twice each cycle and the ripple frequency is 120 Hz. The secondary rating is for each half, and C1 charges to the peak of one half less one diode drop.</p>`,
     bridge:`<p>A bridge rectifier uses four diodes, D1–D4, and the full transformer secondary. Two diodes conduct in series on each half cycle, so the capacitor C1 is recharged twice each cycle (120 Hz ripple) and the peak output is the peak secondary voltage less two diode drops.</p>`}[type];
   const drop=type==='bridge'?'1.4':'0.7';
-  return t+`<p>Bleeder resistor R1 discharges C1 when the power is off. It carries only a few milliamps, so it has little effect on the readings.</p><div class="formulas"><div class="formula"><span class="cap">Peak secondary voltage</span>${M('V_P=1.414\\,V_{rms}')}</div><div class="formula"><span class="cap">Filter capacitor voltage</span>${M('V_{C1}\\approx V_P-'+drop+'\\text{ V}')}</div><div class="formula"><span class="cap">Average (DC) voltage on C1</span>${M('V_{DC}\\approx V_{C1}-\\frac{V_r}{2}')}</div><div class="formula"><span class="cap">Ripple voltage (peak to peak)</span>${M('V_{r}\\approx\\frac{I_L}{f_r\\,C_1}\\qquad f_r='+(type==='half'?'60':'120')+'\\text{ Hz}')}</div></div>`;};
-const intro=(type,inst)=>CC.introPage({diagram:P.schematic(type),text:`<p>You will repair ten ${P.TYPES[type].name.toLowerCase()} power supplies, each with one failed part. Use ${inst==='scope'?'the oscilloscope':'the digital voltmeter'} and the ohmmeter to find it, then select the part to replace. Tap a part lead to move the red test lead; the black lead stays on ground.</p><p>Work from the AC input toward DC OUT, or check DC OUT and C1 first and then work back. Switches, fuses, windings, diodes, the capacitor and the resistor fail open; a failed regulator gives no output.</p>${theory(type)}`,
-  how:`<p>Each of the 10 supplies starts with <b>13 points</b>. Moving the ${inst==='scope'?'scope probe':'voltmeter lead'} to a new point costs 1 point, an ohmmeter test costs 2 points and a wrong answer costs 5 points (a supply can't go below 0). You have three tries per supply and keep the points that are left when you pick the right part. Your percentage is your total out of 130. After each supply you can open an explanation of how the fault shows up.</p>${inst==='scope'?'<p>The scope sweeps at 5 ms per division (three 60 Hz cycles across the screen). Choose the vertical gain (0.2, 1, 5 or 50 V/div) and DC or AC coupling, and use the position buttons to move the trace. AC coupling removes the DC level so you can see small ripple. Changing settings is free.</p>':'<p>The voltmeter reads DC volts (the average value) or AC volts (the rms value of the AC part only, which is how you measure ripple on a DC line). Switching functions is free.</p>'}`});
+  return t+`<p>Bleeder resistor R1 (4.7 kΩ) discharges C1 when the power is off. It carries only a few milliamps, so it has little effect on the readings.</p><div class="formulas"><div class="formula"><span class="cap">Peak secondary voltage</span>${M('V_P=1.414\\,V_{rms}')}</div><div class="formula"><span class="cap">Filter capacitor voltage</span>${M('V_{C1}\\approx V_P-'+drop+'\\text{ V}')}</div><div class="formula"><span class="cap">Average (DC) voltage on C1</span>${M('V_{DC}\\approx V_{C1}-\\frac{V_r}{2}')}</div><div class="formula"><span class="cap">Ripple voltage (peak to peak)</span>${M('V_{r}\\approx\\frac{I_L}{f_r\\,C_1}\\qquad f_r='+(type==='half'?'60':'120')+'\\text{ Hz}')}</div></div>`;};
+const intro=(type,inst)=>CC.introPage({diagram:P.schematic(type),text:`<p>You will repair ten ${P.TYPES[type].name.toLowerCase()} power supplies, each with one failed part. Use ${inst==='scope'?'the oscilloscope':'the digital voltmeter'} and the ohmmeter to find it, then select the part to replace. The red test lead starts on G; tap a part lead to move it. The black lead stays on ground.</p><p>Work from the AC input toward DC OUT, or check DC OUT and C1 first and then work back. Switches, fuses, windings, diodes and the capacitor fail open; a failed regulator either gives no output or passes its input straight through.</p>${theory(type)}`,
+  how:`<p>Each of the 10 supplies starts with <b>13 points</b>. Moving the ${inst==='scope'?'scope probe':'voltmeter lead'} to a new point costs 1 point, an ohmmeter test costs 2 points and a wrong answer costs 5 points (a supply can't go below 0). You have three tries per supply and keep the points that are left when you pick the right part. Your score is your total points out of 130; there is no pass mark. After each supply you can open an explanation of how the fault shows up.</p>${inst==='scope'?'<p>The scope sweeps at 5 ms per division (three 60 Hz cycles across the screen). Choose the vertical gain (0.2, 1, 5 or 50 V/div; it starts at 50) and DC or AC coupling, and use the position arrows to move the trace up, down, left or right. The settings carry over to the next supply. AC coupling removes the DC level so you can see small ripple. Changing settings is free.</p>':'<p>The voltmeter reads DC volts (the average value) or AC volts (the rms value of the AC part only, which is how you measure ripple on a DC line). Switching functions is free.</p>'}`});
 const mk=(id,type,inst)=>({id,title:`${P.TYPES[type].name==='Bridge'?'Bridge':P.TYPES[type].name} Troubleshooting with ${inst==='scope'?'Oscilloscope':'Voltmeter'}`,icon:inst==='scope'?'wave':'meter',sub:`10 defective ${P.TYPES[type].name.toLowerCase()} supplies`,intro:intro(type,inst),run:(el,s)=>P.run(el,s,{type,inst})});
 CC.App.init({
   id:'power',title:'Power Supply Challenge',tagline:'Linear power supply troubleshooting · offline edition',
   blurb:'Find the failed part in simulated half-wave, full-wave and bridge power supplies using a digital voltmeter, an oscilloscope and an ohmmeter. Ten supplies per exercise, with new values and faults every time.',
-  footer:'Based on Power Supply Challenge 98 © ETCAI Products. Offline HTML edition.',pass:60,manual:MAN,
+  footer:'Based on Power Supply Challenge 98 © ETCAI Products. Offline HTML edition.',pass:false,manual:MAN,
   hero:slot=>{slot.appendChild(CC.el(`<div class="card"><div class="diagram">${P.schematic('bridge')}</div><p class="small muted center" style="margin-bottom:0">Bridge power supply: AC in, switch, fuse, transformer, rectifier, filter, regulator.</p></div>`));},
   groups:[
     {title:'Troubleshooting with oscilloscope',items:[mk('hws','half','scope'),mk('fws','full','scope'),mk('brs','bridge','scope')]},

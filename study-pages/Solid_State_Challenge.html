@@ -575,7 +575,7 @@ App.route=function(){
   if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
   App.home(v);
 };
-App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;const f=x=>x.score/(x.max||100);g.forEach(x=>{if(x.mid===id&&(b===null||f(x)>f(b)))b=x;});return b;};
 App.home=function(v){
   const c=App.cfg;
   v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
@@ -586,7 +586,7 @@ App.home=function(v){
   c.groups.forEach(g=>{
     v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
     const m=el('<div class="menu"></div>');
-    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b.max?`${b.score}/${b.max}`:b.score+'%'}</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
     v.appendChild(m);
   });
   v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
@@ -616,18 +616,20 @@ class Session{
   every(fn,ms){const t=setInterval(fn,ms);this.timers.push(t);return t;}
   cleanup(){this.timers.forEach(clearInterval);}
   restart(){location.hash='#/run/'+this.m.id;App.route();}
-  finish(score,summary){
+  /* o.max: score is points out of o.max instead of a percentage (the ETCAI troubleshooting boards) */
+  finish(score,summary,o={}){
     if(this.done)return;this.done=true;this.cleanup();
-    score=Math.max(0,Math.min(100,Math.round(score)));
+    const max=o.max||100;score=Math.max(0,Math.min(max,Math.round(score)));
     const st=App.student();
     const time=CC.fmtTime(this.elapsed());
     const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const rec={mid:this.m.id,title:this.m.title,score,time,date,ts:d.getTime(),name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    const rec={mid:this.m.id,title:this.m.title,score,...(o.max?{max}:{}),time,date,ts:d.getTime(),name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
     if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
     App.last=rec;
-    const pass=App.cfg.pass||80;
+    // pass:false means the program has no pass mark: show the score without a pass/fail colour
+    const pass=App.cfg.pass,verdict=pass===false?'':score/max*100>=(pass||80)?'ok':'bad';
     const certOk=App.opts().certs&&rec.id;
-    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${score>=pass?'ok':'bad'}">Score: ${score}%</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
+    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${verdict}">Score: ${CC.scoreText(rec)}</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
       [{label:'Main menu',value:'menu'},{label:'Review',value:'review'},...(certOk?[{label:'Certificate',value:'cert'}]:[]),{label:'Try again',primary:true,value:'again'}],{noEscape:false}).then(v=>{
         if(v==='menu')location.hash='#/';
         else if(v==='cert')location.hash='#/cert';
@@ -636,6 +638,7 @@ class Session{
   }
 }
 CC.Session=Session;
+CC.scoreText=r=>r.max?`${r.score} of ${r.max} points`:`${r.score}%`;
 
 App.certificate=function(v){
   const r=App.last;
@@ -643,7 +646,7 @@ App.certificate=function(v){
   const code=CC.validity(App.cfg.id,r.name,r.id,r.title,r.score,r.time,r.date);
   v.appendChild(el(`<div><div class="cert"><div style="font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:#7a5b10">Certificate of Completion</div>
   <h2>${esc(App.cfg.title)}</h2><p>This certifies that</p><div class="big">${esc(r.name)}</div><p>has completed the exercise</p><div class="big" style="font-size:1.3rem">${esc(r.title)}</div>
-  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${r.score}%</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
+  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${CC.scoreText(r)}</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
   <div class="row end mt noprint"><a class="btn" href="#/">Main menu</a><button class="btn primary" onclick="window.print()">Print certificate</button></div></div>`));
 };
 App.validityView=function(v){
@@ -663,10 +666,10 @@ App.validityView=function(v){
 };
 App.grades=function(v){
   const g=store.get(App.key('grades'),[]);
-  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
+  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${CC.scoreText(r)}</b></td><td>${esc(r.time)}</td></tr>`).join('');
   v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored in this browser${window.Acct&&Acct.user()?' and synced to the account <b>'+esc(Acct.user())+'</b>':'. Use <b>Sync across browsers</b> on the main menu to keep them in step on other browsers and devices'}.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
   <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
-  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,CC.scoreText(r),r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
   $('#gclr',v).onclick=async()=>{if(await CC.confirm(window.Acct&&Acct.user()?'Delete every grade stored for this program, here and in the sync account?':'Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
 };
@@ -707,49 +710,60 @@ CC.workHTML=function(steps,label='Show worked solution'){
   return `<details class="work"><summary>${label}</summary>${body}</details>`;
 };
 /* ---------- Worksheet: one circuit, many answers, Check (-2) Help (-3) Grade ---------- */
+/* spec.itemScore (the ETCAI rule): each item is worth ⌊100/N⌋ points (any remainder is free). A wrong
+   check and every opening of help take points from that item only, never below 0; a right check locks
+   the item. Grade keeps what is left on right items; wrong items score 0. */
 CC.worksheet=function(root,s,spec){
   CC._last=spec;
   const checkCost=spec.checkCost??2, helpCost=spec.helpCost??3, N=spec.items.length;
+  const byItem=!!spec.itemScore, worth=Math.floor(100/N), spare=100-N*worth;
   let pen=0;const helped=new Set();
+  spec.items.forEach(it=>{it._ded=0;});
+  const left=it=>worth-it._ded;
+  const maxScore=()=>spare+spec.items.reduce((a,it)=>a+left(it),0);
   const w=el(`<div>
-    <div class="statusbar"><span class="pill" id="wpen">Deductions: 0</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
+    <div class="statusbar"><span class="pill" id="wpen">${byItem?`Maximum possible score: ${100}`:'Deductions: 0'}</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
     <div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title||'Circuit')}</h2><div class="diagram">${spec.diagram||''}</div><div class="givens">${spec.givens.map(g=>`<div class="given"><div class="k">${g.k}</div><div class="v">${g.v}</div></div>`).join('')}</div>${spec.note?`<p class="small muted">${spec.note}</p>`:''}</div><div id="wextra"></div></div>
     <div><div class="card"><h2 style="margin-top:0">Find</h2><div class="ws" id="ws"></div>
     <div class="row end mt"><button class="btn primary" id="wgrade">Grade</button></div></div></div></div></div>`);
   root.appendChild(w);
   const wsEl=$('#ws',w);
-  const upd=()=>{$('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  const upd=()=>{if(byItem){const m=maxScore();$('#wpen',w).textContent='Maximum possible score: '+m;$('#wpen',w).className='pill'+(m<100?' bad':'');return;}
+    $('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  const charge=(it,c)=>{pen+=c;it._ded=Math.min(worth,it._ded+c);upd();};
   s.every(()=>{$('#wtime',w).textContent=CC.fmtTime(s.elapsed());},1000);
   const ok=(it,val)=>{if(it.signFree)return CC.close(Math.abs(val),Math.abs(it.value),it.tol??spec.tol??0.02,it.absTol??null);return CC.close(val,it.value,it.tol??spec.tol??0.02,it.absTol??null);};
   spec.items.forEach((it,i)=>{
     const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
-      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points." aria-label="Help">?</button></div><div class="fb"></div></div>`);
-    it._row=r;const inp=$('input',r);
+      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong${byItem?', taken from this item':''}." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points${byItem?' from this item each time':''}." aria-label="Help">?</button></div><div class="fb">${byItem?`<span class="muted">${worth} points</span>`:''}</div></div>`);
+    it._row=r;const inp=$('input',r);if(byItem)r.classList.add('info');
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
     $('[data-a=c]',r).onclick=()=>{
       const val=CC.parse(inp.value,!CC.prefixed(it.unit));
       if(isNaN(val)){CC.toast('Type a number first.');return;}
-      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';}
-      else{pen+=checkCost;r.className='wrow bad';$('.fb',r).textContent=`Not right — ${checkCost} points deducted.`;upd();}
+      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';
+        if(byItem){inp.readOnly=true;$('[data-a=c]',r).style.display='none';}}
+      else{charge(it,checkCost);r.className='wrow bad';$('.fb',r).textContent=byItem?`Not right. This item is now worth ${left(it)} point${left(it)===1?'':'s'}.`:`Not right — ${checkCost} points deducted.`;}
     };
     $('[data-a=h]',r).onclick=async()=>{
       const first=!helped.has(i);
-      if(first){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. It costs ${helpCost} points, charged once per item.</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
-        if(go!==true)return;helped.add(i);pen+=helpCost;upd();}
+      if(first||byItem){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. ${byItem?`Each time you open it, ${helpCost} points come off this item (it is worth ${left(it)} now).`:`It costs ${helpCost} points, charged once per item.`}</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
+        if(go!==true)return;helped.add(i);charge(it,helpCost);
+        if(byItem&&!r.classList.contains('ok'))$('.fb',r).textContent=`This item is now worth ${left(it)} point${left(it)===1?'':'s'}.`;}
       CC.modal(`<h3>${CC.m(it.sym)}${it.name?` — ${esc(it.name)}`:''}</h3>${(it.help||[]).map(h=>typeof h==='string'&&h.startsWith('$')?CC.M(h.slice(1)):`<p>${h}</p>`).join('')}`);
     };
     wsEl.appendChild(r);
   });
   $('#wgrade',w).onclick=async()=>{
     const blanks=spec.items.filter(it=>!$('input',it._row).value.trim()).length;
-    if(blanks&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
-    let right=0;
-    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good)right++;inp.disabled=true;
+    if(blanks&&!byItem&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
+    let right=0,kept=spare;
+    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good){right++;kept+=left(it);}inp.disabled=true;
       it._row.className='wrow '+(good?'ok':'bad');$('.fb',it._row).innerHTML=(good?'Right! ':'')+`Correct answer: <b>${CC.fmt(it.value)} ${esc(it.unit||'')}</b>`+CC.workHTML(typeof it.work==='function'?it.work():it.work);$$('button',it._row).forEach(b=>b.disabled=true);});
     $('#wgrade',w).disabled=true;
-    const raw=right/N*100;const score=raw-pen;
+    const raw=right/N*100;const score=byItem?kept:raw-pen;
     if(spec.after)spec.after($('#wextra',w));
-    s.finish(score,`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
+    s.finish(score,byItem?`${right} of ${N} answers correct. Each item was worth ${worth} points${spare?` (plus ${spare} free)`:''}; checks and help took ${spec.items.reduce((a,it)=>a+it._ded,0)} points off the items they were used on.`:`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
     const again=el('<div class="row end mt noprint"><button class="btn primary">New problem</button></div>');$('button',again).onclick=()=>s.restart();$('#wgrade',w).parentNode.after(again);
   };
 };
@@ -807,7 +821,9 @@ CC.problemSet=function(root,s,spec){
 };
 
 /* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
-/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}} */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}}
+   spec.fixedBlack (or b.blackFixed for one board): the black probe stays on b.start.black and every tap moves the red one (the ETCAI boards).
+   spec.points out of count*points are reported as points, not a percentage, when spec.rawPoints is set. */
 CC.trouble=function(root,s,spec){
   const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
@@ -816,22 +832,22 @@ CC.trouble=function(root,s,spec){
   // like a real meter, the readings float a little: redraw them every 0.7 s
   let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
-    const b=spec.build(k);let pts=P;CC._last=b;
+    const b=spec.build(k);let pts=P;CC._last=b;const fixB=!!(spec.fixedBlack||b.blackFixed);
     if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
     $('#tn',w).textContent=`Problem ${k+1} of ${N}`;
     const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for this item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};
     updP();
     const body=$('#tbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
-      <div class="row mt" style="justify-content:space-between"><div class="row">${b.blackFixed?`<span class="small muted">Tap a pad to move the red probe. The black probe stays on ${esc(b.padName(b.start.black))}.</span><span class="hide"><button id="pr"></button><button id="pk"></button></span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row">${fixB?`<span class="small muted">Tap a pad to move the red (+) probe. The black (−) probe stays on ${esc(b.padName(b.start.black))}.</span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
       <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
       <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
       <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
     body.appendChild(card);
     $('#info',card).innerHTML=b.info?b.info():'';
     const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
-    const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
-    $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    const setActive=a=>{if(fixB)a='red';probe.active=a;if(fixB)return;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
+    if(!fixB){$('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');}setActive('red');
     // probes that start on the board give a free first reading
     if(b.start){probe.red=b.start.red;probe.black=b.start.black;lastKey=probe.red+'|'+probe.black;
       readings.push(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${b.measure(probe.red,probe.black).text}</b> <span class="muted">(starting position, free)</span>`);}
@@ -848,10 +864,10 @@ CC.trouble=function(root,s,spec){
       $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
       $('#mt',card).innerHTML=meterHTML();
     };
+    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     const tap=id=>{
       if(card.dataset.graded)return;
       // the selected probe stays selected; only the first placement hands over to the probe not yet placed
-      if(b.blackFixed)probe.active='red';
       const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
       probe[which]=id;
       setActive(!probe[other]?other:first?'red':which);
@@ -861,7 +877,6 @@ CC.trouble=function(root,s,spec){
       draw();
     };
     if(readings.length)$('#rlog',card).innerHTML=readings.join('<br>');
-    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     draw();
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
@@ -877,7 +892,7 @@ CC.trouble=function(root,s,spec){
       btn.textContent=k+1<N?'Continue':'Finish';
     };
   };
-  const end=()=>{const score=earned/(N*P)*100;s.finish(score,`${earned} of ${N*P} possible points.`);};
+  const end=()=>{if(spec.rawPoints)s.finish(earned,`${earned} of ${N*P} possible points.`,{max:N*P});else s.finish(earned/(N*P)*100,`${earned} of ${N*P} possible points.`);};
   next();
 };
 
@@ -964,40 +979,39 @@ SK.wrap=(w,h,inner)=>CC.svg.wrap(w,h,inner);
 /* ---------- ohmmeter test bench (diode / transistor testing) ---------- */
 /* spec: {count, build(k)->{svg():string (device, no pads), pads:[{id,x,y,label}], read(red,black)->string, options:[], answer, w,h}} */
 SK.ohmBench=function(root,s,spec){
-  const N=spec.count;let k=0,right=0;
+  const N=spec.count;let k=0,right=0,keep=null,lcd=null; // keep: diode probe positions carry over to the next diode
+  s.every(()=>{if(lcd)lcd();},1000); // the reading drifts a little while you watch, like a real meter
   const w=el(`<div><div class="statusbar"><span class="pill" id="on"></span><span class="pill" id="os">Points earned: 0</span><span class="pill" id="ot">0:00</span></div><div class="progress"><i id="ob" style="width:0"></i></div><div id="obody" class="mt"></div></div>`);
   root.appendChild(w);
   s.every(()=>{$('#ot',w).textContent=CC.fmtTime(s.elapsed());},1000);
-  // like a real meter, the reading floats a little: redraw it every 0.7 s
-  let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
-    const b=spec.build(k);CC._last=b;
-    const pr={red:b.pads[0].id,black:b.pads[1].id,active:'red'};
+    const b=spec.build(k);CC._last=b;const two=b.pads.length===2,ids=b.pads.map(p=>p.id);
+    let pr;
+    if(two)pr=keep?{...keep}:{red:ids[0],black:ids[1]};
+    else{const a=ids.splice(CC.ri(0,2),1)[0];pr={red:a,black:ids[CC.ri(0,1)]};} // each transistor starts with the probes on some pair of leads
     $('#on',w).textContent=`${spec.noun||'Item'} ${k+1} of ${N}`;$('#ob',w).style.width=(k/N*100)+'%';
     const body=$('#obody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="dv"></div>
-      <div class="row mt" style="justify-content:space-between">${b.pads.length===2?'<button class="btn sm" id="rev">⇄ Reverse the probes</button>':'<div class="row"><span class="small muted">Tap a lead to move the</span><button class="btn sm" id="pr">● Red (+) probe</button><button class="btn sm" id="pk">● Black (−) probe</button></div>'}</div>
+      <div class="row mt" style="justify-content:space-between">${two?'<button class="btn sm" id="rev">⇄ Reverse the probes</button>':'<span class="small muted">Tap a lead with a probe on it to move that probe to the free lead. Tap the free lead to reverse the probes.</span>'}</div>
       <div class="meter mt"><div class="meterbox"><span class="ml">Ohmmeter</span><span class="lcd" id="lcd"></span></div></div>
       <p class="small muted">The red probe is the positive (+) ohmmeter lead.</p></div></div>
       <div><div class="card"><h3 style="margin-top:0">Answer options</h3><div class="faults" id="opts" style="grid-template-columns:1fr"></div><div class="row end mt"><button class="btn primary" id="og">Grade selected answer</button></div><div id="ofb"></div></div></div></div>`);
     body.appendChild(card);
     b.options.forEach((o,i)=>$('#opts',card).appendChild(el(`<label><input type="radio" name="opt" value="${i}"> <span>${esc(o)}</span></label>`)));
-    const setA=a=>{pr.active=a;const x=$('#pr',card),y=$('#pk',card);if(x){x.classList.toggle('blue',a==='red');y.classList.toggle('blue',a==='black');}};
-    if($('#pr',card)){$('#pr',card).onclick=()=>setA('red');$('#pk',card).onclick=()=>setA('black');setA('red');}
     const draw=()=>{
       const pads=b.pads.map(p=>{const r=pr.red===p.id,bl=pr.black===p.id;
         return `<g class="pad" data-id="${p.id}" tabindex="0" role="button" aria-label="Lead ${esc(p.label||p.id)}"><circle class="ring" cx="${p.x}" cy="${p.y}" r="7" fill="#d8d8d8" stroke="#777" stroke-width="2"/>${r?`<circle cx="${p.x}" cy="${p.y}" r="11" fill="none" stroke="#d32f2f" stroke-width="4"/><path d="M${p.x-4},${p.y+12} L${p.x-14},${p.y+48}" stroke="#d32f2f" stroke-width="5"/>`:''}${bl?`<circle cx="${p.x}" cy="${p.y}" r="${r?15:11}" fill="none" stroke="#111" stroke-width="4"/><path d="M${p.x+4},${p.y+12} L${p.x+14},${p.y+48}" stroke="#111" stroke-width="5"/>`:''}${p.label?`<text x="${p.x}" y="${p.y-14}" text-anchor="middle" font-size="14" font-weight="800" fill="var(--ink)">${esc(p.label)}</text>`:''}<circle class="hit" cx="${p.x}" cy="${p.y}" r="18"/></g>`;}).join('');
       $('#dv',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
-      $('#lcd',card).textContent=b.read(pr.red,pr.black);
+      lcd=()=>{$('#lcd',card).textContent=b.read(pr.red,pr.black);};lcd();
       $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
     };
     const tap=id=>{
-      if(b.pads.length===2){[pr.red,pr.black]=[pr.black,pr.red];}
-      else{const which=pr.active,other=which==='red'?'black':'red',first=!pr[which];pr[which]=id;setA(!pr[other]?other:first?'red':which);}
+      if(two||(id!==pr.red&&id!==pr.black))[pr.red,pr.black]=[pr.black,pr.red];
+      else{const free=b.pads.find(p=>p.id!==pr.red&&p.id!==pr.black).id;if(id===pr.red)pr.red=free;else pr.black=free;}
+      if(two)keep={red:pr.red,black:pr.black};
       draw();
     };
-    if($('#rev',card))$('#rev',card).onclick=()=>{[pr.red,pr.black]=[pr.black,pr.red];draw();};
-    tick=()=>{$('#lcd',card).textContent=b.read(pr.red,pr.black);};
+    if($('#rev',card))$('#rev',card).onclick=()=>tap(pr.red);
     draw();
     $('#og',card).onclick=()=>{
       const btn=$('#og',card);
@@ -1007,38 +1021,38 @@ SK.ohmBench=function(root,s,spec){
       card.dataset.g='1';const good=+c.value===b.answer;if(good)right++;
       $$('#opts label',card).forEach((lb,i)=>{if(i===b.answer)lb.classList.add('correct');else if(i===+c.value)lb.classList.add('wrong');});
       $$('#opts input',card).forEach(x=>x.disabled=true);
-      $('#os',w).textContent=`Points earned: ${right} of ${k+1}`;
+      $('#os',w).textContent=`Points earned: ${CC.fmt(right*100/N,3)} · maximum possible score is now ${CC.fmt(100-(k+1-right)*100/N,3)}`;
       $('#ofb',card).innerHTML=`<p class="verdict ${good?'ok':'bad'}">${good?'Correct!':'Incorrect'}</p>${good?'':'<p class="small">The correct answer is highlighted in green. You can keep measuring to see what you missed.</p>'}${b.explain?`<p class="small">${b.explain()}</p>`:''}${CC.workHTML(typeof b.work==='function'?b.work():b.work)}`;
       btn.textContent=k+1<N?'Go to next problem':'Finish';
     };
   };
-  const end=()=>{$('#ob',w).style.width='100%';s.finish(right/N*100,`${right} of ${N} answered correctly.`);};
+  const end=()=>{lcd=null;$('#ob',w).style.width='100%';s.finish(right/N*100,`${right} of ${N} answered correctly (${CC.fmt(100/N,3)} points each).`);};
   next();
 };
 
 /* ---------- amplifier troubleshooting bench ---------- */
 /* positive probe moves between pads, negative probe stays on ground. DC / AC meter modes.
-   spec: {count, points, build(k)->{svg(), pads, faults, answer, dc(id)->volts, ac(id)->volts p-p, info(), schematic}} */
+   As in the original: the probe starts on b.start with a free reading, only moving it to a different pad costs a point
+   (tapping the same pad or switching DC/AC is free), and the meter mode carries over to the next board.
+   spec: {count, points, build(k)->{svg(), pads, start, faults, answer, dc(id)->volts, ac(id)->volts p-p, info(), schematic}} */
 SK.ampBench=function(root,s,spec){
-  const N=spec.count||10,P=spec.points||12;let k=0,earned=0;
+  const N=spec.count||10,P=spec.points||12;let k=0,earned=0,mode='DC';
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
   root.appendChild(w);
   s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
-  // like a real meter, the reading floats a little: redraw it every 0.7 s
-  let tick=null;s.every(()=>{if(tick)tick();},700);
   const fmtAC=v=>v<0.0005?'0.0 mVPP':v<1?(v*1000).toFixed(v<0.1?1:0)+' mVPP':v.toFixed(2)+' VPP';
   const next=()=>{
-    const b=spec.build(k);CC._last=b;let pts=P,probe=null,mode='DC',lastKey=null,graded=false;const log=[];
-    const vm=CC.meterErr();
+    const b=spec.build(k);CC._last=b;let pts=P,probe=b.start,graded=false;const log=[];
+    const vm=v=>v*(1+CC.rnd(-0.001,0.001)); // the reading wanders in the last digit
     $('#tn',w).textContent=`Item ${k+1} of ${N}`;
     const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};updP();
     const body=$('#tbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div style="min-width:0"><div class="card"><div class="board-wrap" style="overflow-x:auto"><div id="bw" style="min-width:520px"></div></div>
       <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Meter:</span><button class="btn sm" id="mdc">DC volts</button><button class="btn sm" id="mac">AC volts</button></div><button class="btn sm" id="sch">Schematic</button></div>
-      <div class="meter mt"><div class="meterbox"><span class="ml">Voltmeter <span id="mm"></span></span><span class="lcd" id="lcd">----</span></div><div class="meterbox"><span class="ml">Power supply</span><span class="lcd">${CC.lcd(b.vcc,1)} V</span></div><div class="meterbox"><span class="ml">Signal generator</span><span class="lcd">${(b.vin*1000).toFixed(0)} mVPP</span></div></div>
+      <div class="meter mt"><div class="meterbox"><span class="ml">Voltmeter <span id="mm"></span></span><span class="lcd" id="lcd">----</span></div><div class="meterbox"><span class="ml">Power supply</span><span class="lcd">${b.vcc.toFixed(2)} V</span></div><div class="meterbox"><span class="ml">Signal generator</span><span class="lcd">${(b.vin*1000).toFixed(0)} mVPP</span></div></div>
       <p class="small muted mt">Tap a solder pad to move the positive (red) meter probe. The negative probe stays on ground (GND).</p><div class="small" id="info"></div></div></div>
       <div><div class="card"><h3 style="margin-top:0">Select the circuit fault</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
-      <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
+      <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"></div></div></div></div>`);
     body.appendChild(card);
     $('#info',card).innerHTML=b.info();
     b.faults.forEach((f,i)=>$('#fl',card).appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
@@ -1049,18 +1063,16 @@ SK.ampBench=function(root,s,spec){
       $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
       $('#mdc',card).classList.toggle('blue',mode==='DC');$('#mac',card).classList.toggle('blue',mode==='AC');$('#mm',card).textContent=mode;
     };
-    const take=()=>{
-      if(!probe){draw();return;}
-      const key=probe+'|'+mode;const txt=read();$('#lcd',card).textContent=txt;
-      if(key!==lastKey){lastKey=key;if(!graded&&pts>0){pts--;updP();}
-        log.unshift(`${esc(b.pads.find(p=>p.id===probe).label)} (${mode}): <b>${txt}</b>`);$('#rlog',card).innerHTML=log.slice(0,14).join('<br>');}
+    const take=(cost,note='')=>{
+      const txt=read();$('#lcd',card).textContent=txt;
+      if(cost&&!graded&&pts>0){pts--;updP();}
+      log.unshift(`${esc(b.pads.find(p=>p.id===probe).label)} (${mode}): <b>${txt}</b>${note}`);$('#rlog',card).innerHTML=log.slice(0,14).join('<br>');
       draw();
     };
-    const tap=id=>{probe=id;take();};
-    $('#mdc',card).onclick=()=>{mode='DC';take();};$('#mac',card).onclick=()=>{mode='AC';take();};
+    const tap=id=>{const moved=id!==probe;probe=id;take(moved);};
+    $('#mdc',card).onclick=()=>{if(mode!=='DC'){mode='DC';take(false);}};$('#mac',card).onclick=()=>{if(mode!=='AC'){mode='AC';take(false);}};
     $('#sch',card).onclick=()=>CC.modal(`<h3>Schematic</h3><div class="diagram">${b.schematic}</div>`);
-    tick=()=>{if(probe)$('#lcd',card).textContent=read();};
-    draw();
+    take(false,' <span class="muted">(starting position, free)</span>');
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
       if(graded){k++;if(k>=N)return end();return next();}
@@ -1074,7 +1086,7 @@ SK.ampBench=function(root,s,spec){
       btn.textContent=k+1<N?'Continue':'Finish';
     };
   };
-  const end=()=>s.finish(earned/(N*P)*100,`${earned} of ${N*P} possible points.`);
+  const end=()=>s.finish(earned,`${earned} of ${N*P} possible points.`,{max:N*P});
   next();
 };
 })();
@@ -1091,16 +1103,14 @@ const fK=r=>r>=1e6?fmt(r/1e6)+'M':r>=1000?fmt(r/1000)+'K':fmt(r);
 const splitEq=t=>{if(typeof t!=='string'||t.startsWith('>'))return [t];const p=t.split('=');return p.length>=4&&t.length>50?[p.slice(0,2).join('='),'='+p.slice(2).join('=')]:[t];};
 const splitWork=w=>w&&w.flatMap(splitEq); // long chains are shown on two lines so they fit a phone screen
 const it=(sym,name,unit,value,help,extra={})=>{const o=Object.assign({sym,name,unit,value,help},extra);if(o.work)o.work=splitWork(o.work);return o;};
-const Z0={absTol:0.05};
 
 /* ---------- schematics ---------- */
 function schCE(kind,o={}){ // 'bb' base bias, 'div' divider no bypass, 'byp' bypass, 'cc', 'cb'
+  if(kind==='cb')return schCB();
   let g=SK.rail(100,169,20,'VCC');
   const q=SK.bjt(160,130,{label:'Q1'});g+=q.svg;
   g+=SK.res([100,20],[100,105],'R1',{left:true})+W([[100,105],[100,130],q.B])+D(100,130);
-  if(kind==='cb'){
-    g+=SK.res([169,20],[169,80],'RC')+W([[169,80],q.C]);
-  }else if(kind!=='cc'){g+=SK.res([169,20],[169,80],'RC')+W([[169,80],q.C]);}
+  if(kind!=='cc'){g+=SK.res([169,20],[169,80],'RC')+W([[169,80],q.C]);}
   else g+=W([q.C,[169,20]]);
   if(kind==='bb'){
     g+=SK.cap([30,130],[70,130],'C1')+W([[70,130],[100,130]])+SK.io(30,130,'IN');
@@ -1108,21 +1118,29 @@ function schCE(kind,o={}){ // 'bb' base bias, 'div' divider no bypass, 'byp' byp
     g+=W([q.E,[169,200]])+SK.gnd(169,200);
     return SK.wrap(300,225,g);
   }
-  g+=SK.res([100,150],[100,210],'R2',{left:kind!=='cb'})+W([[100,130],[100,150]]);
+  g+=SK.res([100,150],[100,210],'R2',{left:true})+W([[100,130],[100,150]]);
   g+=SK.res([169,165],[169,210],'RE',{left:kind==='byp'||kind==='cc'?false:false})+W([q.E,[169,165]]);
   const gx2=kind==='byp'?225:169;
-  if(kind==='cb'){
-    g+=W([[100,130],[55,130],[55,160]])+SK.cap([55,160],[55,210],'C2',{left:true})+SK.rail(55,169,210);
-    g+=D(169,163)+W([[169,163],[205,163]])+SK.cap([205,163],[245,163],'C1')+SK.io(245,163,'IN',true);
-    g+=D(169,90)+W([[169,90],[205,90]])+SK.cap([205,90],[245,90],'C3')+SK.io(245,90,'OUT',true);
-    g+=SK.gnd(130,210);return SK.wrap(300,240,g);
-  }
   g+=SK.cap([30,130],[70,130],'C1')+W([[70,130],[100,130]])+SK.io(30,130,'IN')+D(100,130);
   if(kind==='cc'){g+=D(169,163)+W([[169,163],[205,163]])+SK.cap([205,163],[245,163],'C2')+SK.io(245,163,'OUT',true);}
   else{g+=D(169,90)+W([[169,90],[205,90]])+SK.cap([205,90],[245,90],o.out||'C2')+SK.io(245,90,'OUT',true);}
   if(kind==='byp'){g+=D(169,163)+W([[169,163],[225,163],[225,180]])+SK.cap([225,180],[225,210],o.byp||'C3',{pol:true});}
   g+=SK.rail(100,gx2,210)+SK.gnd(140,210);
   return SK.wrap(300,240,g);
+}
+/* classic common base layout: input from the left into the emitter, output to the right from the collector, base decoupled to ground by C2 */
+function schCB(){
+  const q=SK.bjt(170,102,{flip:true}); // drawn emitter-up, then turned a quarter turn: E left (142,102), C right (198,102), B down (170,135)
+  let g=`<g transform="rotate(-90 170 102)">${q.svg}</g>`+T(186,84,'Q1',{size:11});
+  g+=SK.rail(220,260,20,'VCC')+SK.res([240,20],[240,80],'RC')+W([[240,80],[240,102]])+W([[198,102],[240,102]])+D(240,102);
+  g+=W([[240,102],[262,102]])+SK.cap([262,102],[298,102],'C3')+SK.io(298,102,'OUT',true);
+  g+=SK.cap([40,102],[76,102],'C1')+SK.io(40,102,'IN')+W([[76,102],[142,102]])+D(100,102);
+  g+=W([[100,102],[100,140]])+SK.res([100,140],[100,200],'RE',{left:true})+W([[100,200],[100,215]]);
+  g+=W([[170,135],[170,150]])+D(170,150)+SK.res([170,150],[170,205],'R2')+W([[170,205],[170,215]]);
+  g+=W([[170,150],[128,150],[128,160]])+SK.cap([128,160],[128,200],'C2')+W([[128,200],[128,215]])+D(128,215);
+  g+=W([[170,150],[200,150]])+SK.res([200,150],[255,150],'R1')+W([[255,150],[275,150],[275,135]])+SK.rail(260,290,135,'VCC');
+  g+=SK.rail(100,170,215)+SK.gnd(135,215);
+  return SK.wrap(340,245,g);
 }
 function schB(kind,o={}){ // 'one' single supply, 'two' dual, 'dar' darlington
   let g='';
@@ -1168,32 +1186,32 @@ const gv=(id,tex,v)=>({id,k:m(tex),v});
 const RE_TEX='{r\'}_e=\\frac{25\\,\\text{mV}}{I_E}';
 
 /* ---------- shared help text ---------- */
-const SCORE_WS=`<p><b>Scoring.</b> Type each answer in the units shown next to its box. An answer is graded correct when it is within <b>5%</b> of the expected value (voltages that should be 0 V accept anything within ±0.05 V). Each <b>✓ Check</b> that turns out wrong costs 2 points; a right check is free. Each <b>?</b> help costs 3 points the first time you open it for an item. <b>Grade</b> marks everything; your score is the percent correct minus those deductions. After grading, every item has a <b>worked solution</b>.</p><p>Carry at least three or four significant figures from step to step: later answers are built on earlier ones, so early rounding can push a later answer outside the 5% window. Each run uses new component values.</p>`;
-const APPROX_CE=`<p><b>Approximations used in this exercise</b> (the answer key uses exactly these):</p><ul><li>Silicon transistor: ${m('V_{BE}=0.7\\,\\text{V}')}.</li><li>The divider is <b>stiff</b>: the base current is small enough to ignore, so ${m('V_B')} is the unloaded divider voltage. The values are chosen so that a full Thevenin analysis gives answers within the 5% window too.</li><li>${m('I_C\\approx I_E')}.</li><li>AC emitter resistance ${m('{r\'}_e=\\frac{25\\,\\text{mV}}{I_E}')}.</li><li>Capacitors are short circuits for the signal; there is no load on the output and the signal source has zero resistance.</li></ul>`;
-const NOTE_DIV=`Method: stiff divider, ${m('V_{BE}=0.7\\,\\text{V}')}, ${m('I_C\\approx I_E')}, ${m('{r\'}_e=25\\,\\text{mV}/I_E')}. All voltages are measured from ground.`;
+const SCORE_WS=`<p><b>Scoring.</b> Type each answer in the units shown next to its box. An answer is graded correct when it is within <b>5%</b> of the expected value; an answer that should be 0 must be typed as exactly 0. Each item is worth 10 points (8 when there are twelve items, plus 4 free). A <b>✓ Check</b> that turns out wrong takes 2 points off that item, and every time you open <b>?</b> help it takes 3 points off that item; an item never drops below 0. A right check locks the item. <b>Grade</b> marks everything: right items keep the points they have left and wrong items score 0. The status bar shows the maximum score you can still reach. After grading, every item has a <b>worked solution</b>.</p><p>Carry at least three or four significant figures from step to step: later answers are built on earlier ones, so early rounding can push a later answer outside the 5% window. Each run uses new component values.</p>`;
+const APPROX_CE=`<p><b>Approximations used in this exercise</b> (the answer key uses exactly these):</p><ul><li>Silicon transistor: ${m('V_{BE}=0.7\\,\\text{V}')}.</li><li>The base current is ignored, so ${m('V_B')} is the unloaded divider voltage. With a stiff divider that is very close to the truth; the answer key uses it even when the divider is not stiff, so do the same.</li><li>${m('I_C\\approx I_E')}.</li><li>AC emitter resistance ${m('{r\'}_e=\\frac{25\\,\\text{mV}}{I_E}')}.</li><li>Capacitors are short circuits for the signal; there is no load on the output and the signal source has zero resistance.</li></ul>`;
+const NOTE_DIV=`Method: unloaded divider (base current ignored), ${m('V_{BE}=0.7\\,\\text{V}')}, ${m('I_C\\approx I_E')}, ${m('{r\'}_e=25\\,\\text{mV}/I_E')}. All voltages are measured from ground.`;
 
 /* ---------- CE / CC / CB worksheets ---------- */
 const BETAS=()=>pick([50,60,75,80,90,100,110,120,125,150,175,180,200,220,250]);
-function baseBias(){
+function baseBias(){ // original ranges: VCC 9 or 15 V, R1 300-390 kΩ, RC 820-1500 Ω, beta with one decimal
   let VCC,beta,RC,R1,IB,IC,VC;
-  do{VCC=pick([9,10,12,15,18,20,24]);beta=BETAS();RC=eVal(1000,10000);const ICt=VCC*rnd(0.35,0.6)/RC;R1=eNear((VCC-0.7)/(ICt/beta));
-    IB=(VCC-0.7)/R1;IC=beta*IB;VC=VCC-IC*RC;}while(VC<0.25*VCC||VC>0.75*VCC);
+  do{VCC=pick([9,15]);beta=Math.round(rnd(110,200)*10)/10;RC=pick([820,1000,1200,1500]);R1=pick([300e3,330e3,360e3,390e3]);
+    IB=(VCC-0.7)/R1;IC=beta*IB;VC=VCC-IC*RC;}while(VC<1);
   const VR1=VCC-0.7,VRC=IC*RC,IE=IB+IC,re=0.025/IE,A=RC/re,Zb=beta*re,Zin=1/(1/R1+1/Zb);
   return {title:'Base bias common emitter amplifier',diagram:schCE('bb'),
     note:`Method: ${m('V_{BE}=0.7\\,\\text{V}')}, ${m('I_C=\\beta I_B')}, ${m('{r\'}_e=25\\,\\text{mV}/I_E')}. All voltages are measured from ground.`,
     givens:[gv('VCC','V_{CC}',VCC+' V'),gv('R1','R_1',fR(R1)),gv('RC','R_C',fR(RC)),gv('beta','\\beta',beta)],tol:0.05,
-    items:[it('V_E','Emitter voltage','V',0,['The emitter is wired straight to ground, so it is the 0 V reference.'],{...Z0,work:['>The emitter is connected directly to ground.','V_E=0\\,\\text{V}']}),
+    items:[it('V_E','Emitter voltage','V',0,['The emitter is wired straight to ground, so it is the 0 V reference. Type 0.'],{work:['>The emitter is connected directly to ground.','V_E=0\\,\\text{V}']}),
       it('V_B','Base voltage','V',0.7,['A conducting silicon base-emitter junction drops about 0.7 V, and the emitter is at 0 V.','$V_B=V_E+V_{BE}'],{work:['V_B=V_E+V_{BE}=0\\,\\text{V}+0.7\\,\\text{V}=0.7\\,\\text{V}']}),
+      it('V_C','Collector voltage','V',VC,['Find the base current from Ohm\'s law on R1, multiply by beta to get the collector current, then subtract the drop across RC from VCC.','$I_B=\\frac{V_{CC}-0.7\\,\\text{V}}{R_1}','$I_C=\\beta I_B','$V_C=V_{CC}-I_C R_C'],{work:[`I_B=\\frac{V_{CC}-0.7\\,\\text{V}}{R_1}=\\frac{${tV(VR1)}}{${tR(R1)}}=${tuA(IB)}`,`I_C=\\beta I_B=(${beta})(${tuA(IB)})=${tmA(IC)}`,`V_C=V_{CC}-I_C R_C=${tV(VCC)}-(${tmA(IC)})(${tR(RC)})=${tV(VC)}`]}),
       it('V_{R1}','Voltage across R1','V',VR1,['R1 runs from VCC down to the base. Its voltage is whatever is left of VCC after the base voltage (Kirchhoff\'s voltage law).','$V_{R1}=V_{CC}-V_B'],{work:[`V_{R1}=V_{CC}-V_B=${tV(VCC)}-0.7\\,\\text{V}=${tV(VR1)}`]}),
-      it('I_B','Base current','µA',IB*1e6,['All of the R1 current flows into the base, so find it with Ohm\'s law on R1.','$I_B=\\frac{V_{R1}}{R_1}','Answer in microamperes: multiply amperes by 1,000,000. Common mistake: forgetting that R1 is in kilohms or megohms.'],{work:[`I_B=\\frac{V_{R1}}{R_1}=\\frac{${tV(VR1)}}{${tR(R1)}}=${tuA(IB)}`]}),
+      it('V_{RC}','Voltage across RC','V',VRC,['The collector current flows through RC. Use Ohm\'s law, or subtract the collector voltage from VCC.','$V_{RC}=I_C R_C=V_{CC}-V_C','Common mistake: mixing mA and kΩ with A and Ω. mA × kΩ gives volts directly.'],{work:[`V_{RC}=I_C R_C=(${tmA(IC)})(${tR(RC)})=${tV(VRC)}`]}),
+      it('I_E','Emitter current','mA',IE*1e3,['Both the base current and the collector current leave through the emitter (Kirchhoff\'s current law).','$I_E=I_B+I_C','Answer in milliamperes. Convert I<sub>B</sub> to mA before adding.'],{work:[`I_E=I_B+I_C=${tn(IB*1e3)}\\,\\text{mA}+${tmA(IC)}=${tmA(IE)}`]}),
+      it('I_B','Base current','µA',IB*1e6,['All of the R1 current flows into the base, so find it with Ohm\'s law on R1.','$I_B=\\frac{V_{R1}}{R_1}','Answer in microamperes: multiply amperes by 1,000,000. Common mistake: forgetting that R1 is in kilohms.'],{work:[`I_B=\\frac{V_{R1}}{R_1}=\\frac{${tV(VR1)}}{${tR(R1)}}=${tuA(IB)}`]}),
       it('I_C','Collector current','mA',IC*1e3,['Collector current is beta times base current (the definition of beta).','$I_C=\\beta I_B','Answer in milliamperes.'],{work:[`I_C=\\beta I_B=(${beta})(${tuA(IB)})=${tmA(IC)}`]}),
-      it('V_{RC}','Voltage across RC','V',VRC,['The collector current flows through RC. Use Ohm\'s law.','$V_{RC}=I_C R_C','Common mistake: mixing mA and kΩ with A and Ω. mA × kΩ gives volts directly.'],{work:[`V_{RC}=I_C R_C=(${tmA(IC)})(${tR(RC)})=${tV(VRC)}`]}),
-      it('V_C','Collector voltage','V',VC,['Start at VCC and subtract the drop across RC.','$V_C=V_{CC}-V_{RC}'],{work:[`V_C=V_{CC}-V_{RC}=${tV(VCC)}-${tV(VRC)}=${tV(VC)}`]}),
-      it('I_E','Emitter current','mA',IE*1e3,['Both the base current and the collector current leave through the emitter (Kirchhoff\'s current law).','$I_E=I_B+I_C','Convert I<sub>B</sub> to mA before adding.'],{work:[`I_E=I_B+I_C=${tn(IB*1e3)}\\,\\text{mA}+${tmA(IC)}=${tmA(IE)}`]}),
       it('A','Voltage gain','',A,['First find the AC emitter resistance from the emitter current, then divide RC by it. The emitter is grounded, so r\'<sub>e</sub> is the only emitter resistance.','$'+RE_TEX,'$A=\\frac{R_C}{{r\'}_e}','Tip: 25 divided by I<sub>E</sub> in mA gives r\'<sub>e</sub> in ohms.'],{work:[`{r'}_e=\\frac{25\\,\\text{mV}}{${tmA(IE)}}=${tO(re)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{${tR(RC)}}{${tO(re)}}=${tn(A)}`]}),
       it('Z_{in}','Input impedance','Ω',Zin,['The signal sees R1 (to VCC, which is AC ground) in parallel with the resistance looking into the base, which is beta times r\'<sub>e</sub>.','$Z_{in}=R_1\\parallel\\beta {r\'}_e=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{\\beta {r\'}_e}}','Answer in ohms (not kilohms).'],{work:[`\\beta {r'}_e=(${beta})(${tO(re)})=${tO(Zb)}`,`Z_{in}=\\frac{1}{\\frac{1}{${tR(R1)}}+\\frac{1}{${tO(Zb)}}}=${tO(Zin)}`,'>R1 is so large that Z<sub>in</sub> is set almost entirely by the base.'] })]};
 }
-/* voltage divider bias: stiff divider (unloaded VB). Generated values keep the full Thevenin answers within 4% of the stiff answers. */
+/* voltage divider bias: the answer key uses the unloaded divider voltage for VB (base current ignored), as the original does even when the divider is not stiff */
 function divCalc(kind,VCC,R1,R2,RC,RE,beta,thev){
   let VB=VCC*R2/(R1+R2);let IE;
   if(thev){const RTH=R1*R2/(R1+R2);IE=(VB-0.7)/(RE+RTH/(beta+1));VB=IE*RE+0.7;} // loaded divider (Thevenin)
@@ -1206,32 +1224,28 @@ function divCalc(kind,VCC,R1,R2,RC,RE,beta,thev){
 function divider(kind){ // 'div','byp','cc','cb'
   let VCC,beta,RC=0,RE,R1,R2,S,ok=false;
   for(let n=0;n<4000&&!ok;n++){
-    VCC=pick([10,12,15,18,20,24]);beta=BETAS();
-    let VEt;
-    if(kind==='cc'){RE=eVal(1000,10000);VEt=VCC*rnd(0.35,0.6);RC=0;}
-    else{RC=eVal(2200,15000);const IEt=VCC*rnd(0.3,0.45)/RC;VEt=rnd(1,Math.max(1.2,VCC*0.18));RE=eNear(VEt/IEt);}
-    const r2max=Math.min(kind==='cc'?100e3:47e3,beta*RE/25);if(r2max<1000)continue;
-    R2=eVal(Math.min(r2max,kind==='cc'?2200:1500),r2max);const VBt=VEt+0.7;R1=eNear(R2*(VCC-VBt)/VBt);
-    S=divCalc(kind,VCC,R1,R2,RC,RE,beta,false);const T=divCalc(kind,VCC,R1,R2,RC,RE,beta,true);
-    const dev=Math.max(...['VE','IE','VC','VCE','A','Zin'].map(k=>Math.abs(T[k]/S[k]-1)));
-    ok=S.VE>0.5&&S.VCE>1.5&&(kind==='cc'||S.VC<VCC-0.8)&&beta*RE>=10*R2&&dev<=0.04&&S.IE<0.03;
+    VCC=ri(10,20);beta=pick([100,120,125,150,175,180,200,220,250]);
+    RE=eVal(470,2700);R2=eVal(4700,47000);R1=eVal(33e3,220e3);RC=kind==='cc'?0:eVal(1000,10000);
+    S=divCalc(kind,VCC,R1,R2,RC,RE,beta,false);
+    ok=S.VE>0.5&&S.VCE>1.5&&(kind==='cc'||S.VC<VCC-0.8&&RC>=1.5*RE)&&S.IE<0.02;
   }
-  const {VB,VE,IE,VR1,VRC,VC,VCE,re,A,Zin,Zout}=S;
-  const cc=kind==='cc',cb=kind==='cb';
+  const {VB,VE,IE,VR1,VRC,VC,VCE,re,A,Zin}=S;
+  const cc=kind==='cc',cb=kind==='cb',kOhm=!cb; // the original asks Zin in kΩ here, in Ω for common base
   const title={div:'Voltage divider biased amplifier without bypass',byp:'Voltage divider biased amplifier with bypass',cc:'Voltage divider biased common collector amplifier',cb:'Voltage divider biased common base amplifier'}[kind];
   const givens=[gv('VCC','V_{CC}',VCC+' V'),gv('R1','R_1',fR(R1)),gv('R2','R_2',fR(R2)),...(RC?[gv('RC','R_C',fR(RC))]:[]),gv('RE','R_E',fR(RE)),gv('beta','\\beta',beta)];
   const wre=`{r'}_e=\\frac{25\\,\\text{mV}}{I_E}=\\frac{25\\,\\text{mV}}{${tmA(IE)}}=${tO(re)}`;
+  const tZ=z=>kOhm?tn(z/1000)+'\\,\\text{k}\\Omega':tO(z);
   const items=[
-    it('V_{R1}','Voltage across R1','V',VR1,['R1 and R2 form a voltage divider across VCC. With a stiff divider the base current is too small to matter, so use the divider rule with R1 on top.','$V_{R1}=V_{CC}\\frac{R_1}{R_1+R_2}','Common mistake: putting R2 on top gives V<sub>R2</sub>, not V<sub>R1</sub>.'],{work:[`V_{R1}=V_{CC}\\frac{R_1}{R_1+R_2}=${tV(VCC)}\\left(\\frac{${tR(R1)}}{${tR(R1)}+${tR(R2)}}\\right)=${tV(VR1)}`]}),
+    it('V_{R1}','Voltage across R1','V',VR1,['R1 and R2 form a voltage divider across VCC. Ignore the base current (the answer key always does) and use the divider rule with R1 on top.','$V_{R1}=V_{CC}\\frac{R_1}{R_1+R_2}','Common mistake: putting R2 on top gives V<sub>R2</sub>, not V<sub>R1</sub>.'],{work:[`V_{R1}=V_{CC}\\frac{R_1}{R_1+R_2}=${tV(VCC)}\\left(\\frac{${tR(R1)}}{${tR(R1)}+${tR(R2)}}\\right)=${tV(VR1)}`]}),
     it('V_{R2}','Voltage across R2','V',VB,['The two divider voltages add up to VCC (Kirchhoff\'s voltage law).','$V_{R2}=V_{CC}-V_{R1}','You can also use the divider rule with R2 on top.'],{work:[`V_{R2}=V_{CC}-V_{R1}=${tV(VCC)}-${tV(VR1)}=${tV(VB)}`]}),
     it('V_B','Base voltage','V',VB,['R2 runs from the base to ground, so the base voltage equals the R2 voltage.','$V_B=V_{R2}'],{work:[`V_B=V_{R2}=${tV(VB)}`]}),
     it('V_E','Emitter voltage','V',VE,['The emitter sits one base-emitter drop below the base.','$V_E=V_B-0.7\\,\\text{V}'],{work:[`V_E=V_B-V_{BE}=${tV(VB)}-0.7\\,\\text{V}=${tV(VE)}`]}),
-    ...(cc?[it('V_{RE}','Voltage across RE','V',VE,['RE runs from the emitter to ground.','$V_{RE}=V_E'],{work:[`V_{RE}=V_E=${tV(VE)}`]})]:[]),
-    it('I_E','Emitter current','mA',IE*1e3,['Ohm\'s law on RE: the voltage across RE is the emitter voltage.','$I_E=\\frac{V_E}{R_E}','Answer in milliamperes. Find I<sub>E</sub> before the collector values: everything on the collector side depends on it.'],{work:[`I_E=\\frac{V_E}{R_E}=\\frac{${tV(VE)}}{${tR(RE)}}=${tmA(IE)}`]}),
-    ...(cc?[it('V_C','Collector voltage','V',VCC,['The collector is wired straight to VCC.','$V_C=V_{CC}'],{work:[`V_C=V_{CC}=${tV(VCC)}`]})]
-      :[it('V_{RC}','Voltage across RC','V',VRC,['The collector current is almost exactly the emitter current. Use Ohm\'s law on RC.','$I_C\\approx I_E','$V_{RC}=I_C R_C'],{work:[`I_C\\approx I_E=${tmA(IE)}`,`V_{RC}=I_C R_C=(${tmA(IE)})(${tR(RC)})=${tV(VRC)}`]}),
+    ...(cc?[it('V_{RE}','Voltage across RE','V',VE,['RE runs from the emitter to ground.','$V_{RE}=V_E'],{work:[`V_{RE}=V_E=${tV(VE)}`]}),
+        it('V_C','Collector voltage','V',VCC,['The collector is wired straight to VCC.','$V_C=V_{CC}'],{work:[`V_C=V_{CC}=${tV(VCC)}`]})]
+      :[it('V_{RC}','Voltage across RC','V',VRC,['Find the emitter current from Ohm\'s law on RE. The collector current is almost exactly the same, so use Ohm\'s law on RC.','$I_C\\approx I_E=\\frac{V_E}{R_E}','$V_{RC}=I_C R_C'],{work:[`I_C\\approx I_E=\\frac{V_E}{R_E}=\\frac{${tV(VE)}}{${tR(RE)}}=${tmA(IE)}`,`V_{RC}=I_C R_C=(${tmA(IE)})(${tR(RC)})=${tV(VRC)}`]}),
         it('V_C','Collector voltage','V',VC,['Start at VCC and subtract the drop across RC.','$V_C=V_{CC}-V_{RC}'],{work:[`V_C=V_{CC}-V_{RC}=${tV(VCC)}-${tV(VRC)}=${tV(VC)}`]})]),
     it('V_{CE}','Collector to emitter voltage','V',VCE,['The voltage between collector and emitter is the difference of the two node voltages.','$V_{CE}=V_C-V_E'],{work:[`V_{CE}=V_C-V_E=${tV(VC)}-${tV(VE)}=${tV(VCE)}`]}),
+    it('I_E','Emitter current','mA',IE*1e3,['Ohm\'s law on RE: the voltage across RE is the emitter voltage.','$I_E=\\frac{V_E}{R_E}','Answer in milliamperes.'],{work:[`I_E=\\frac{V_E}{R_E}=\\frac{${tV(VE)}}{${tR(RE)}}=${tmA(IE)}`]}),
   ];
   const Ait={
     div:it('A','Voltage gain','',A,['First find r\'<sub>e</sub>. With no bypass capacitor the signal current flows through RE as well, so RE is added to r\'<sub>e</sub>.','$'+RE_TEX,'$A=\\frac{R_C}{{r\'}_e+R_E}','Expect a small gain (often under 10) for this circuit.'],{work:[wre,`A=\\frac{R_C}{{r'}_e+R_E}=\\frac{${tR(RC)}}{${tO(re)}+${tR(RE)}}=${tn(A)}`]}),
@@ -1239,76 +1253,62 @@ function divider(kind){ // 'div','byp','cc','cb'
     cc:it('A','Voltage gain','',A,['The output is taken across RE. The signal divides between r\'<sub>e</sub> and RE, so the gain is just under 1.','$'+RE_TEX,'$A=\\frac{R_E}{{r\'}_e+R_E}'],{work:[wre,`A=\\frac{R_E}{{r'}_e+R_E}=\\frac{${tR(RE)}}{${tO(re)}+${tR(RE)}}=${tn(A)}`]}),
     cb:it('A','Voltage gain','',A,['The base is at AC ground and the signal drives the emitter, so the gain is RC divided by r\'<sub>e</sub> (the same size as a bypassed common emitter stage, but with no phase inversion).','$'+RE_TEX,'$A=\\frac{R_C}{{r\'}_e}'],{work:[wre,`A=\\frac{R_C}{{r'}_e}=\\frac{${tR(RC)}}{${tO(re)}}=${tn(A)}`]}),
   }[kind];
-  const zb=kind==='byp'?beta*re:beta*(re+RE);
+  const zb=kind==='byp'?beta*re:beta*(re+RE),zu=kOhm?'kΩ':'Ω',zv=kOhm?Zin/1000:Zin,zn=kOhm?'Answer in kilohms.':'Answer in ohms.';
   const Zit={
-    div:it('Z_{in}','Input impedance','Ω',Zin,['The signal sees R1, R2 and the base in parallel (VCC is AC ground). Looking into the base you see beta times the total emitter resistance.','$Z_{in}=R_1\\parallel R_2\\parallel\\beta({r\'}_e+R_E)','$Z_{in}=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{\\beta({r\'}_e+R_E)}}','Answer in ohms.'],{work:[`\\beta({r'}_e+R_E)=(${beta})(${tO(re)}+${tR(RE)})=${tR(zb)}`,`Z_{in}=\\frac{1}{\\frac{1}{${tR(R1)}}+\\frac{1}{${tR(R2)}}+\\frac{1}{${tR(zb)}}}=${tO(Zin)}`]}),
-    byp:it('Z_{in}','Input impedance','Ω',Zin,['The signal sees R1, R2 and the base in parallel. With RE bypassed, the base looks like beta times r\'<sub>e</sub> only, so Z<sub>in</sub> is much lower than without the bypass capacitor.','$Z_{in}=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{\\beta {r\'}_e}}','Answer in ohms.'],{work:[`\\beta {r'}_e=(${beta})(${tO(re)})=${tR(zb)}`,`Z_{in}=\\frac{1}{\\frac{1}{${tR(R1)}}+\\frac{1}{${tR(R2)}}+\\frac{1}{${tR(zb)}}}=${tO(Zin)}`]}),
-    cc:it('Z_{in}','Input impedance','Ω',Zin,['The signal sees R1, R2 and the base in parallel. Looking into the base you see beta times (r\'<sub>e</sub> + RE), which is large, so the bias resistors usually set Z<sub>in</sub>.','$Z_{in}=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{\\beta({r\'}_e+R_E)}}','Answer in ohms.'],{work:[`\\beta({r'}_e+R_E)=(${beta})(${tO(re)}+${tR(RE)})=${tR(zb)}`,`Z_{in}=\\frac{1}{\\frac{1}{${tR(R1)}}+\\frac{1}{${tR(R2)}}+\\frac{1}{${tR(zb)}}}=${tO(Zin)}`]}),
-    cb:it('Z_{in}','Input impedance','Ω',Zin,['The signal enters at the emitter. It sees r\'<sub>e</sub> (into the emitter) in parallel with RE, so the input impedance is very low.','$Z_{in}={r\'}_e\\parallel R_E=\\frac{1}{\\frac{1}{{r\'}_e}+\\frac{1}{R_E}}','Answer in ohms.'],{work:[`Z_{in}=\\frac{1}{\\frac{1}{${tO(re)}}+\\frac{1}{${tR(RE)}}}=${tO(Zin)}`,'>RE is so much larger than r\'<sub>e</sub> that Z<sub>in</sub> is practically equal to r\'<sub>e</sub>.']}),
+    div:it('Z_{in}','Input impedance',zu,zv,['The signal sees R1, R2 and the base in parallel (VCC is AC ground). Looking into the base you see beta times the total emitter resistance.','$Z_{in}=R_1\\parallel R_2\\parallel\\beta({r\'}_e+R_E)','$Z_{in}=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{\\beta({r\'}_e+R_E)}}',zn],{work:[`\\beta({r'}_e+R_E)=(${beta})(${tO(re)}+${tR(RE)})=${tR(zb)}`,`Z_{in}=\\frac{1}{\\frac{1}{${tR(R1)}}+\\frac{1}{${tR(R2)}}+\\frac{1}{${tR(zb)}}}=${tZ(Zin)}`]}),
+    byp:it('Z_{in}','Input impedance',zu,zv,['The signal sees R1, R2 and the base in parallel. With RE bypassed, the base looks like beta times r\'<sub>e</sub> only, so Z<sub>in</sub> is much lower than without the bypass capacitor.','$Z_{in}=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{\\beta {r\'}_e}}',zn],{work:[`\\beta {r'}_e=(${beta})(${tO(re)})=${tR(zb)}`,`Z_{in}=\\frac{1}{\\frac{1}{${tR(R1)}}+\\frac{1}{${tR(R2)}}+\\frac{1}{${tR(zb)}}}=${tZ(Zin)}`]}),
+    cc:it('Z_{in}','Input impedance',zu,zv,['The signal sees R1, R2 and the base in parallel. Looking into the base you see beta times (r\'<sub>e</sub> + RE), which is large, so the bias resistors usually set Z<sub>in</sub>.','$Z_{in}=\\frac{1}{\\frac{1}{R_1}+\\frac{1}{R_2}+\\frac{1}{\\beta({r\'}_e+R_E)}}',zn],{work:[`\\beta({r'}_e+R_E)=(${beta})(${tO(re)}+${tR(RE)})=${tR(zb)}`,`Z_{in}=\\frac{1}{\\frac{1}{${tR(R1)}}+\\frac{1}{${tR(R2)}}+\\frac{1}{${tR(zb)}}}=${tZ(Zin)}`]}),
+    cb:it('Z_{in}','Input impedance',zu,zv,['The signal enters at the emitter. It sees r\'<sub>e</sub> (into the emitter) in parallel with RE, so the input impedance is very low.','$Z_{in}={r\'}_e\\parallel R_E=\\frac{1}{\\frac{1}{{r\'}_e}+\\frac{1}{R_E}}',zn],{work:[`Z_{in}=\\frac{1}{\\frac{1}{${tO(re)}}+\\frac{1}{${tR(RE)}}}=${tO(Zin)}`,'>RE is so much larger than r\'<sub>e</sub> that Z<sub>in</sub> is practically equal to r\'<sub>e</sub>.']}),
   }[kind];
   items.push(Ait,Zit);
-  if(cc)items.push(it('Z_{out}','Output impedance','Ω',Zout,['Looking back into the emitter from the output you see r\'<sub>e</sub> in parallel with RE. This exercise assumes an ideal signal source (0 Ω), so the source adds nothing.','$Z_{out}={r\'}_e\\parallel R_E=\\frac{1}{\\frac{1}{{r\'}_e}+\\frac{1}{R_E}}','With a real source of resistance R<sub>s</sub>, add (R<sub>s</sub> ∥ R1 ∥ R2) ÷ beta to r\'<sub>e</sub>.'],{work:[`Z_{out}=\\frac{1}{\\frac{1}{${tO(re)}}+\\frac{1}{${tR(RE)}}}=${tO(Zout)}`,'>The output impedance is only a few tens of ohms: this is why an emitter follower is used to drive low-impedance loads.']}));
   return {title,diagram:schCE(kind),givens,tol:0.05,note:NOTE_DIV,items};
 }
 
 /* ---------- class B push-pull power amplifiers ---------- */
-const NOTE_B=`Method: ${m('V_{BE}=0.7\\,\\text{V}')} for every junction and for each diode; maximum-output values are ideal (the transistors swing all the way to the supply rails; saturation voltages ignored). All voltages are measured from ground; type a minus sign for negative voltages.`;
-function bOut(VCC,RL,dual){ // ideal maximum-signal values
-  const Vp=dual?VCC:VCC/2,Ip=Vp/RL,PL=Vp*Vp/(2*RL),PDC=(dual?2:1)*VCC*Ip/Math.PI,eta=PL/PDC*100;
-  const S=dual?'V_{CC}':'\\frac{V_{CC}}{2}';
-  return [
-    it('V_{out(pk)}','Maximum peak output voltage','V',Vp,[dual?'The output can swing from 0 V up to nearly +VCC and down to nearly −VCC, so the ideal peak is VCC.':'The output rests at VCC/2 and can swing up to nearly VCC and down to nearly 0 V, so the ideal peak is half of VCC.','$V_{out(pk)}\\approx '+S],{work:[`V_{out(pk)}\\approx ${S}=${tV(Vp)}`,'>This is the peak (not peak-to-peak) value; the ideal peak-to-peak swing is twice this.']}),
-    it('I_{out(pk)}','Maximum peak load current','A',Ip,['Ohm\'s law on the speaker at the signal peak.','$I_{out(pk)}=\\frac{V_{out(pk)}}{R_L}','Answer in amperes.'],{work:[`I_{out(pk)}=\\frac{V_{out(pk)}}{R_L}=\\frac{${tV(Vp)}}{${tO(RL)}}=${tA(Ip)}`]}),
-    it('P_{out(max)}','Maximum AC output power','W',PL,['For a sine wave, average power uses the RMS voltage. Using the peak voltage, divide by 2R<sub>L</sub>.','$P_{out(max)}=\\frac{V_{out(pk)}^2}{2R_L}','Common mistake: using the peak voltage without the 2 (that gives twice the real power).'],{work:[`P_{out(max)}=\\frac{V_{out(pk)}^2}{2R_L}=\\frac{(${tV(Vp)})^2}{2(${tO(RL)})}=${tW(PL)}`]}),
-    it('P_{DC}','DC input power at maximum output','W',PDC,[dual?'Each supply delivers half-wave pulses of current. The average of each is I<sub>pk</sub>/π, and there are two supplies of VCC each.':'The supply delivers a half-wave pulse of current each cycle. Its average value is I<sub>pk</sub>/π.',dual?'$P_{DC}=2V_{CC}\\frac{I_{out(pk)}}{\\pi}':'$P_{DC}=V_{CC}\\frac{I_{out(pk)}}{\\pi}'],{work:[dual?`P_{DC}=2V_{CC}\\frac{I_{out(pk)}}{\\pi}=2(${tV(VCC)})\\frac{${tA(Ip)}}{\\pi}=${tW(PDC)}`:`P_{DC}=V_{CC}\\frac{I_{out(pk)}}{\\pi}=(${tV(VCC)})\\frac{${tA(Ip)}}{\\pi}=${tW(PDC)}`]}),
-    it('\\eta_{max}','Maximum efficiency','%',eta,['Efficiency is AC output power divided by DC input power, as a percent. For an ideal class B amplifier it is always π/4.','$\\eta_{max}=\\frac{P_{out(max)}}{P_{DC}}\\times100\\%'],{work:[`\\eta_{max}=\\frac{${tW(PL)}}{${tW(PDC)}}\\times100\\%=${tn(eta,3)}\\%`,'>This is the ideal class B limit, π/4 = 78.5%. Real amplifiers reach less because the transistors cannot swing all the way to the rails.']}),
-  ];
-}
-function classB(kind){
-  const RL=pick([4,8,16]),beta=pick([30,40,50,60,75,80,100]),beta2=pick([20,25,30,40,50]);
-  const Aitem=pg=>it('A','Voltage gain','',1,['Each transistor is an emitter follower: the output follows the input with a voltage gain of about 1. Type 1.','$A\\approx1',`The power gain is roughly equal to ${pg}.`],{tol:0.1,work:['A\\approx1',`>The output is taken from the emitters, so the voltage gain is just under 1. The amplifier gives power gain through current gain: roughly ${pg}.`]});
-  if(kind==='one'){const VCC=pick([12,15,18,20,24,28,30,36,40]),V2=VCC/2,C2=pick([1000,2200,470]),fc=1/(2*Math.PI*RL*C2*1e-6);
+const NOTE_B=`Method: ${m('V_{BE}=0.7\\,\\text{V}')} for every junction and for each diode, and the no-signal output sits midway between the supply rails. All voltages are measured from ground; type a minus sign for negative voltages.`;
+const zOut=RL=>it('Z_{out}','Output impedance','Ω',RL,['This exercise takes Z<sub>out</sub> as the impedance the output stage drives: the speaker, R<sub>L</sub>.','$Z_{out}=R_L'],{work:[`Z_{out}=R_L=${tO(RL)}`,'>The emitter followers themselves have a very low output impedance; the value asked for here is the load they work into.']});
+function classB(kind){ // as in the original: the DC voltages, the gain and Zout (= the speaker); no power or efficiency items
+  const RL=pick([8,16]),beta=pick([40,50,60,75,80,100]),beta2=pick([10,15,20,25]),R=pick([680,820,1000,1200]);
+  const Aitem=pg=>it('A','Voltage gain','',1,['Each transistor is an emitter follower: the output follows the input with a voltage gain of about 1. Type 1.','$A\\approx1',`The power gain is roughly equal to ${pg}.`],{work:['A\\approx1',`>The output is taken from the emitters, so the voltage gain is just under 1. The amplifier gives power gain through current gain: roughly ${pg}.`]});
+  const gR=gv('R','R_1=R_2',fR(R)),gRL=gv('RL','R_L\;(\\text{speaker})',RL+' Ω');
+  if(kind==='one'){const VCC=pick([12,15,18,20,24]),V2=VCC/2;
     return {title:'Single source push-pull power amplifier',diagram:schB('one',{cap:'C2'}),tol:0.05,note:NOTE_B,
-      givens:[gv('VCC','V_{CC}',VCC+' V'),gv('beta','\\beta_{Q1},\\;\\beta_{Q2}',beta),gv('RL','R_L\\;(\\text{speaker})',RL+' Ω'),gv('C2','C_2',C2+' µF')],
+      givens:[gv('VCC','V_{CC}',VCC+' V'),gR,gv('beta','\\beta_{Q1},\;\\beta_{Q2}',beta),gRL,gv('C','C_1,\;C_2','220 µF, 1000 µF')],
       items:[it('V_{EQ1}','Voltage, emitter Q1','V',V2,['With equal transistors and equal resistors R1 and R2, the circuit is symmetrical. With no signal the output (the two emitters) rests at half of VCC, and C2 charges to that voltage.','$V_{EQ1}=\\frac{V_{CC}}{2}'],{work:[`V_{EQ1}=\\frac{V_{CC}}{2}=\\frac{${tV(VCC)}}{2}=${tV(V2)}`]}),
         it('V_{BQ1}','Voltage, base Q1','V',V2+0.7,['Q1 is an NPN transistor, so its base is one junction drop above its emitter. D1 sets this bias.','$V_{BQ1}=V_{EQ1}+0.7\\,\\text{V}'],{work:[`V_{BQ1}=${tV(V2)}+0.7\\,\\text{V}=${tV(V2+0.7)}`]}),
         it('V_{CQ1}','Voltage, collector Q1','V',VCC,['The collector of Q1 is wired straight to VCC.','$V_{CQ1}=V_{CC}'],{work:[`V_{CQ1}=V_{CC}=${tV(VCC)}`]}),
         it('V_{EQ2}','Voltage, emitter Q2','V',V2,['The two emitters are tied together at the output.','$V_{EQ2}=V_{EQ1}'],{work:[`V_{EQ2}=V_{EQ1}=${tV(V2)}`]}),
         it('V_{BQ2}','Voltage, base Q2','V',V2-0.7,['Q2 is a PNP transistor, so its base is one junction drop below its emitter. D2 sets this bias.','$V_{BQ2}=V_{EQ2}-0.7\\,\\text{V}'],{work:[`V_{BQ2}=${tV(V2)}-0.7\\,\\text{V}=${tV(V2-0.7)}`]}),
-        it('V_{CQ2}','Voltage, collector Q2','V',0,['The collector of Q2 is wired to ground.','$V_{CQ2}=0\\,\\text{V}'],{...Z0,work:['V_{CQ2}=0\\,\\text{V}']}),
+        it('V_{CQ2}','Voltage, collector Q2','V',0,['The collector of Q2 is wired to ground. Type 0.','$V_{CQ2}=0\\,\\text{V}'],{work:['V_{CQ2}=0\\,\\text{V}']}),
         it('V_{R1}','Voltage across R1','V',V2-0.7,['R1 runs from VCC down to the base of Q1.','$V_{R1}=V_{CC}-V_{BQ1}'],{work:[`V_{R1}=V_{CC}-V_{BQ1}=${tV(VCC)}-${tV(V2+0.7)}=${tV(V2-0.7)}`]}),
         it('V_{R2}','Voltage across R2','V',V2-0.7,['R2 runs from the base of Q2 down to ground.','$V_{R2}=V_{BQ2}-0\\,\\text{V}'],{work:[`V_{R2}=V_{BQ2}=${tV(V2-0.7)}`,'>V<sub>R1</sub> and V<sub>R2</sub> are equal because the circuit is symmetrical.']}),
-        Aitem('beta'),
-        ...bOut(VCC,RL,false),
-        it('f_c','Low-frequency cutoff set by C2','Hz',fc,['C2 and the speaker form a high-pass filter. Below this frequency the bass response falls off.','$f_c=\\frac{1}{2\\pi R_L C_2}','Common mistakes: forgetting 2π, or using microfarads without converting to farads.'],{work:[`f_c=\\frac{1}{2\\pi R_L C_2}=\\frac{1}{2\\pi(${tO(RL)})(${C2}\\times10^{-6}\\,\\text{F})}=${tn(fc)}\\,\\text{Hz}`]})]};}
-  const VCC=pick([9,10,12,15,18,20,24]);
+        Aitem('beta'),zOut(RL)]};}
+  const VCC=pick([12,15,17,18,20]);
+  const gS=[gv('VCCp','+V_{CC}',VCC+' V'),gv('VCCn','-V_{CC}','−'+VCC+' V')];
   if(kind==='two')return {title:'Dual source push-pull power amplifier',diagram:schB('two'),tol:0.05,note:NOTE_B,
-      givens:[gv('VCCp','+V_{CC}',VCC+' V'),gv('VCCn','-V_{CC}','−'+VCC+' V'),gv('beta','\\beta_{Q1},\\;\\beta_{Q2}',beta),gv('RL','R_L\\;(\\text{speaker})',RL+' Ω')],
-      items:[it('V_{EQ1}','Voltage, emitter Q1','V',0,['The circuit is symmetrical between +VCC and −VCC, so with no signal the output rests at 0 V. That is why no output capacitor is needed.','$V_{EQ1}=0\\,\\text{V}'],{...Z0,work:['V_{EQ1}=0\\,\\text{V}']}),
+      givens:[...gS,gR,gv('beta','\\beta_{Q1},\;\\beta_{Q2}',beta),gRL],
+      items:[it('V_{EQ1}','Voltage, emitter Q1','V',0,['The circuit is symmetrical between +VCC and −VCC, so with no signal the output rests at 0 V. That is why no output capacitor is needed. Type 0.','$V_{EQ1}=0\\,\\text{V}'],{work:['V_{EQ1}=0\\,\\text{V}']}),
         it('V_{BQ1}','Voltage, base Q1','V',0.7,['NPN: base one junction drop above the emitter.','$V_{BQ1}=V_{EQ1}+0.7\\,\\text{V}'],{work:['V_{BQ1}=0\\,\\text{V}+0.7\\,\\text{V}=0.7\\,\\text{V}']}),
         it('V_{CQ1}','Voltage, collector Q1','V',VCC,['The collector of Q1 is wired to +VCC.','$V_{CQ1}=+V_{CC}'],{work:[`V_{CQ1}=+V_{CC}=${tV(VCC)}`]}),
-        it('V_{EQ2}','Voltage, emitter Q2','V',0,['The emitters are tied together at the output.','$V_{EQ2}=V_{EQ1}'],{...Z0,work:['V_{EQ2}=V_{EQ1}=0\\,\\text{V}']}),
+        it('V_{EQ2}','Voltage, emitter Q2','V',0,['The emitters are tied together at the output. Type 0.','$V_{EQ2}=V_{EQ1}'],{work:['V_{EQ2}=V_{EQ1}=0\\,\\text{V}']}),
         it('V_{BQ2}','Voltage, base Q2','V',-0.7,['PNP: base one junction drop below the emitter. The answer is negative.','$V_{BQ2}=V_{EQ2}-0.7\\,\\text{V}'],{work:['V_{BQ2}=0\\,\\text{V}-0.7\\,\\text{V}=-0.7\\,\\text{V}']}),
         it('V_{CQ2}','Voltage, collector Q2','V',-VCC,['The collector of Q2 is wired to −VCC. The answer is negative.','$V_{CQ2}=-V_{CC}'],{work:[`V_{CQ2}=-V_{CC}=-${tV(VCC)}`]}),
         it('V_{R1}','Voltage across R1','V',VCC-0.7,['R1 runs from +VCC down to the base of Q1. Give the size of the voltage (a positive number).','$V_{R1}=V_{CC}-V_{BQ1}'],{work:[`V_{R1}=${tV(VCC)}-0.7\\,\\text{V}=${tV(VCC-0.7)}`]}),
         it('V_{R2}','Voltage across R2','V',VCC-0.7,['R2 runs from the base of Q2 (−0.7 V) to −VCC. Give the size of the voltage (a positive number).','$V_{R2}=V_{BQ2}-(-V_{CC})'],{work:[`V_{R2}=-0.7\\,\\text{V}-(-${tV(VCC)})=${tV(VCC-0.7)}`]}),
-        Aitem('beta'),
-        ...bOut(VCC,RL,true)]};
+        Aitem('beta'),zOut(RL)]};
   return {title:'Push-pull power amplifier with darlington connections',diagram:schB('dar'),tol:0.05,note:NOTE_B,
-    givens:[gv('VCCp','+V_{CC}',VCC+' V'),gv('VCCn','-V_{CC}','−'+VCC+' V'),gv('beta1','\\beta_{Q1},\\;\\beta_{Q3}',beta),gv('beta2','\\beta_{Q2},\\;\\beta_{Q4}',beta2),gv('RL','R_L\\;(\\text{speaker})',RL+' Ω')],
-    items:[it('V_{EQ2}','Voltage, emitter Q2','V',0,['With matched halves and two supplies, the output (the emitters of Q2 and Q4) rests at 0 V. Start at the output and work back toward the inputs.','$V_{EQ2}=0\\,\\text{V}'],{...Z0,work:['V_{EQ2}=0\\,\\text{V}']}),
-      it('V_{BQ2}','Voltage, base Q2','V',0.7,['Q2 is NPN: its base is one junction drop above its emitter.','$V_{BQ2}=V_{EQ2}+0.7\\,\\text{V}'],{work:['V_{BQ2}=0\\,\\text{V}+0.7\\,\\text{V}=0.7\\,\\text{V}']}),
-      it('V_{EQ1}','Voltage, emitter Q1','V',0.7,['The emitter of Q1 drives the base of Q2 directly.','$V_{EQ1}=V_{BQ2}'],{work:['V_{EQ1}=V_{BQ2}=0.7\\,\\text{V}']}),
+    givens:[...gS,gR,gv('beta1','\\beta_{Q1},\;\\beta_{Q3}',beta),gv('beta2','\\beta_{Q2},\;\\beta_{Q4}',beta2),gRL],
+    items:[it('V_{EQ1}','Voltage, emitter Q1','V',0.7,['With matched halves and two supplies, the output (the emitters of Q2 and Q4) rests at 0 V. The emitter of Q1 drives the base of Q2, one junction drop above the output.','$V_{EQ1}=V_{BQ2}=0\\,\\text{V}+0.7\\,\\text{V}'],{work:['V_{EQ1}=V_{BQ2}=0\\,\\text{V}+0.7\\,\\text{V}=0.7\\,\\text{V}']}),
       it('V_{BQ1}','Voltage, base Q1','V',1.4,['One more junction drop above the emitter of Q1: two drops above the output in all. That is why two diodes (D1, D2) are needed on each side.','$V_{BQ1}=V_{EQ1}+0.7\\,\\text{V}'],{work:['V_{BQ1}=0.7\\,\\text{V}+0.7\\,\\text{V}=1.4\\,\\text{V}']}),
       it('V_{CQ1}','Voltage, collector Q1','V',VCC,['The collectors of Q1 and Q2 are wired to +VCC.','$V_{CQ1}=+V_{CC}'],{work:[`V_{CQ1}=${tV(VCC)}`]}),
-      it('V_{EQ4}','Voltage, emitter Q4','V',0,['The emitters of Q2 and Q4 are tied together at the output.','$V_{EQ4}=V_{EQ2}'],{...Z0,work:['V_{EQ4}=0\\,\\text{V}']}),
-      it('V_{BQ4}','Voltage, base Q4','V',-0.7,['Q4 is PNP: its base is one junction drop below its emitter. The answer is negative.','$V_{BQ4}=V_{EQ4}-0.7\\,\\text{V}'],{work:['V_{BQ4}=0\\,\\text{V}-0.7\\,\\text{V}=-0.7\\,\\text{V}']}),
-      it('V_{EQ3}','Voltage, emitter Q3','V',-0.7,['The emitter of Q3 drives the base of Q4 directly.','$V_{EQ3}=V_{BQ4}'],{work:['V_{EQ3}=V_{BQ4}=-0.7\\,\\text{V}']}),
+      it('V_{BQ2}','Voltage, base Q2','V',0.7,['Q2 is NPN: its base is one junction drop above its emitter, which is the 0 V output.','$V_{BQ2}=V_{EQ2}+0.7\\,\\text{V}'],{work:['V_{BQ2}=0\\,\\text{V}+0.7\\,\\text{V}=0.7\\,\\text{V}']}),
+      it('V_{EQ2}','Voltage, emitter Q2','V',0,['The emitter of Q2 is the output, which rests at 0 V. Type 0.','$V_{EQ2}=0\\,\\text{V}'],{work:['V_{EQ2}=0\\,\\text{V}']}),
+      it('V_{EQ3}','Voltage, emitter Q3','V',-0.7,['The emitter of Q3 drives the base of Q4 directly, one junction drop below the output. The answer is negative.','$V_{EQ3}=V_{BQ4}=0\\,\\text{V}-0.7\\,\\text{V}'],{work:['V_{EQ3}=V_{BQ4}=-0.7\\,\\text{V}']}),
       it('V_{BQ3}','Voltage, base Q3','V',-1.4,['One more junction drop below the emitter of Q3.','$V_{BQ3}=V_{EQ3}-0.7\\,\\text{V}'],{work:['V_{BQ3}=-0.7\\,\\text{V}-0.7\\,\\text{V}=-1.4\\,\\text{V}']}),
       it('V_{CQ3}','Voltage, collector Q3','V',-VCC,['The collectors of Q3 and Q4 are wired to −VCC. The answer is negative.','$V_{CQ3}=-V_{CC}'],{work:[`V_{CQ3}=-V_{CC}=-${tV(VCC)}`]}),
-      it('\\beta_D','Beta of each darlington pair','',beta*beta2,['A darlington pair acts like one transistor whose beta is the product of the two betas.','$\\beta_D=\\beta_{Q1}\\beta_{Q2}'],{work:[`\\beta_D=\\beta_{Q1}\\beta_{Q2}=(${beta})(${beta2})=${beta*beta2}`]}),
-      Aitem('the darlington beta'),
-      ...bOut(VCC,RL,true)]};
+      it('V_{BQ4}','Voltage, base Q4','V',-0.7,['Q4 is PNP: its base is one junction drop below its emitter. The answer is negative.','$V_{BQ4}=V_{EQ4}-0.7\\,\\text{V}'],{work:['V_{BQ4}=0\\,\\text{V}-0.7\\,\\text{V}=-0.7\\,\\text{V}']}),
+      it('V_{EQ4}','Voltage, emitter Q4','V',0,['The emitters of Q2 and Q4 are tied together at the output. Type 0.','$V_{EQ4}=V_{EQ2}'],{work:['V_{EQ4}=0\\,\\text{V}']}),
+      Aitem('the product of the two betas'),zOut(RL)]};
 }
 
 /* ---------- intro texts ---------- */
@@ -1320,9 +1320,9 @@ const TXT={
   byp:`<p>This amplifier is the same as the last one, plus an <b>emitter bypass capacitor</b> (C3) across RE. The DC analysis is unchanged, because a capacitor carries no DC current. For the signal, though, C3 shorts RE to ground, which changes the AC behavior a lot:</p><ul><li>The voltage gain rises to ${m('A=R_C/{r\'}_e')}, often a few hundred.</li><li>The input impedance drops, because the base now looks like only ${m('\\beta {r\'}_e')}.</li></ul><p>This is useful in troubleshooting: if a bypassed amplifier suddenly has a very low gain, suspect an open bypass capacitor.</p>`,
   cc:`<p>In a common collector amplifier (also called an <b>emitter follower</b>) the collector goes straight to ${m('V_{CC}')}. A DC supply has almost no AC voltage on it, so for the signal the collector is at ground. The input drives the base and the output is taken from the emitter.</p><ul><li>The voltage gain is slightly less than 1: the emitter simply follows the base.</li><li>The current gain, and therefore the power gain, can be large.</li><li>The input impedance is high and the output impedance is low (about ${m('{r\'}_e')} with a low-resistance source).</li></ul><p>Because of this, the circuit is used as a buffer: it lets a high-impedance source drive a low-impedance load.</p>`,
   cb:`<p>In a common base amplifier the base is held at AC ground (here by capacitor C2) and the signal drives the emitter. The circuit uses the same voltage divider bias as the common emitter amplifiers, so all the DC values are found the same way; only the signal connections differ. Many other common base designs need two supplies.</p><ul><li>The voltage gain is high: ${m('A=R_C/{r\'}_e')}, with no phase inversion.</li><li>The input impedance is extremely low, about ${m('{r\'}_e')}, because the signal goes straight into the emitter.</li><li>The base shields the output from the input, so common base stages are used at high frequencies.</li></ul>`,
-  one:`<p>This is a class B <b>push-pull</b> power amplifier built from a complementary pair: NPN Q1 handles the positive half of the signal and PNP Q2 handles the negative half. Each transistor is an emitter follower, so the voltage gain is about 1 and the power gain is about beta.</p><p>Diodes D1 and D2 hold each base one junction drop away from the output. Without them, the signal would have to rise 0.7 V before either transistor turned on, causing <b>crossover distortion</b>. (A circuit biased just into conduction like this is often called class AB.)</p><p>With one supply, the output rests at half of ${m('V_{CC}')}, so it needs a large coupling capacitor, C2, to block that DC from the speaker. C2 and the speaker form a high-pass filter, which is why C2 is often thousands of microfarads.</p><p>Maximum power and efficiency are calculated for the ideal case, where the output swings all the way to the rails. An ideal class B stage converts at most ${m('\\pi/4\\approx78.5\\%')} of the DC input power into signal power.</p>`,
+  one:`<p>This is a class B <b>push-pull</b> power amplifier built from a complementary pair: NPN Q1 handles the positive half of the signal and PNP Q2 handles the negative half. Each transistor is an emitter follower, so the voltage gain is about 1 and the power gain is about beta.</p><p>Diodes D1 and D2 hold each base one junction drop away from the output. Without them, the signal would have to rise 0.7 V before either transistor turned on, causing <b>crossover distortion</b>. (A circuit biased just into conduction like this is often called class AB.)</p><p>With one supply, the output rests at half of ${m('V_{CC}')}, so it needs a large coupling capacitor, C2, to block that DC from the speaker. C2 and the speaker form a high-pass filter, which is why C2 is often thousands of microfarads.</p><p>An ideal class B stage converts at most ${m('\\pi/4\\approx78.5\\%')} of the DC input power into signal power.</p>`,
   two:`<p>This push-pull amplifier uses two supplies, ${m('+V_{CC}')} and ${m('-V_{CC}')}. Because the circuit is symmetrical, the output rests at 0 V and the speaker can be connected directly, with no output capacitor. That gives full bass response down to DC, at the cost of a second power supply.</p><p>As before, D1 and D2 bias the transistors just into conduction to prevent crossover distortion, the voltage gain is about 1, and the power gain is about beta. With two supplies the output can swing almost from ${m('-V_{CC}')} to ${m('+V_{CC}')}, so the same load gets four times the power that a single supply of the same voltage could give.</p>`,
-  dar:`<p>This version uses <b>darlington pairs</b> for more power gain. Q1 and Q2 act as one high-beta NPN transistor, and Q3 and Q4 act as one high-beta PNP transistor. The beta of a darlington pair is the product of the two betas. Usually Q1 and Q3 are small drivers and Q2 and Q4 are power transistors.</p><p>Each darlington has two base-emitter junctions in series, so its input sits 1.4 V from the output. That is why there are four bias diodes instead of two. Work out the DC voltages by starting at the 0 V output and adding (NPN side) or subtracting (PNP side) 0.7 V per junction.</p><p>The voltage gain is still about 1. In a real circuit a darlington cannot saturate as fully as a single transistor (its saturation voltage is at least one junction drop), so the real maximum output is a little lower than the ideal values calculated here.</p>`,
+  dar:`<p>This version uses <b>darlington pairs</b> for more power gain. Q1 and Q2 act as one high-beta NPN transistor, and Q3 and Q4 act as one high-beta PNP transistor. The beta of a darlington pair is the product of the two betas. Usually Q1 and Q3 are small drivers and Q2 and Q4 are power transistors.</p><p>Each darlington has two base-emitter junctions in series, so its input sits 1.4 V from the output. That is why there are four bias diodes instead of two. Work out the DC voltages by starting at the 0 V output and adding (NPN side) or subtracting (PNP side) 0.7 V per junction.</p><p>The voltage gain is still about 1. In a real circuit a darlington cannot saturate as fully as a single transistor (its saturation voltage is at least one junction drop), so its maximum output swing is a little smaller than a single transistor's.</p>`,
 };
 const two=(a,b)=>`<div class="cols2" style="align-items:center"><div>${a}</div><div class="diagram">${b}</div></div>`;
 const FD=['V_{R1}=V_{CC}\\frac{R_1}{R_1+R_2}','V_B=V_{R2}=V_{CC}-V_{R1}','V_E=V_B-0.7\\,\\text{V}','I_E=\\frac{V_E}{R_E}','I_C\\approx I_E',RE_TEX];
@@ -1330,18 +1330,18 @@ const FORM={
   bb:['V_B=0.7\\,\\text{V}','I_B=\\frac{V_{CC}-0.7\\,\\text{V}}{R_1}','I_C=\\beta I_B','V_C=V_{CC}-I_C R_C','I_E=I_B+I_C',RE_TEX,'A=\\frac{R_C}{{r\'}_e}','Z_{in}=R_1\\parallel\\beta {r\'}_e'],
   div:[...FD,'V_C=V_{CC}-I_C R_C','V_{CE}=V_C-V_E','A=\\frac{R_C}{{r\'}_e+R_E}','Z_{in}=R_1\\parallel R_2\\parallel\\beta({r\'}_e+R_E)'],
   byp:[...FD,'V_C=V_{CC}-I_C R_C','V_{CE}=V_C-V_E','A=\\frac{R_C}{{r\'}_e}','Z_{in}=R_1\\parallel R_2\\parallel\\beta {r\'}_e'],
-  cc:[...FD,'V_C=V_{CC}','A=\\frac{R_E}{{r\'}_e+R_E}','Z_{in}=R_1\\parallel R_2\\parallel\\beta({r\'}_e+R_E)','Z_{out}={r\'}_e\\parallel R_E'],
+  cc:[...FD,'V_C=V_{CC}','A=\\frac{R_E}{{r\'}_e+R_E}','Z_{in}=R_1\\parallel R_2\\parallel\\beta({r\'}_e+R_E)'],
   cb:[...FD,'V_C=V_{CC}-I_C R_C','A=\\frac{R_C}{{r\'}_e}','Z_{in}={r\'}_e\\parallel R_E'],
-  one:['V_{EQ1}=V_{EQ2}=\\frac{V_{CC}}{2}','V_{BQ1}=\\frac{V_{CC}}{2}+0.7\\,\\text{V}','V_{BQ2}=\\frac{V_{CC}}{2}-0.7\\,\\text{V}','A\\approx1','V_{out(pk)}\\approx\\frac{V_{CC}}{2}','P_{out(max)}=\\frac{V_{out(pk)}^2}{2R_L}','P_{DC}=V_{CC}\\frac{I_{out(pk)}}{\\pi}','\\eta_{max}=\\frac{\\pi}{4}\\approx78.5\\%','f_c=\\frac{1}{2\\pi R_L C_2}'],
-  two:['V_{EQ1}=V_{EQ2}=0\\,\\text{V}','V_{BQ1}=+0.7\\,\\text{V}','V_{BQ2}=-0.7\\,\\text{V}','V_{R1}=V_{R2}=V_{CC}-0.7\\,\\text{V}','A\\approx1','V_{out(pk)}\\approx V_{CC}','P_{out(max)}=\\frac{V_{out(pk)}^2}{2R_L}','P_{DC}=2V_{CC}\\frac{I_{out(pk)}}{\\pi}','\\eta_{max}=\\frac{\\pi}{4}\\approx78.5\\%'],
-  dar:['V_{BQ2}=V_{EQ1}=+0.7\\,\\text{V}','V_{BQ1}=+1.4\\,\\text{V}','V_{BQ4}=V_{EQ3}=-0.7\\,\\text{V}','V_{BQ3}=-1.4\\,\\text{V}','\\beta_D=\\beta_{Q1}\\beta_{Q2}','A\\approx1','V_{out(pk)}\\approx V_{CC}','P_{out(max)}=\\frac{V_{out(pk)}^2}{2R_L}','P_{DC}=2V_{CC}\\frac{I_{out(pk)}}{\\pi}'],
+  one:['V_{EQ1}=V_{EQ2}=\\frac{V_{CC}}{2}','V_{BQ1}=\\frac{V_{CC}}{2}+0.7\\,\\text{V}','V_{BQ2}=\\frac{V_{CC}}{2}-0.7\\,\\text{V}','V_{R1}=V_{R2}=\\frac{V_{CC}}{2}-0.7\\,\\text{V}','A\\approx1','Z_{out}=R_L'],
+  two:['V_{EQ1}=V_{EQ2}=0\\,\\text{V}','V_{BQ1}=+0.7\\,\\text{V}','V_{BQ2}=-0.7\\,\\text{V}','V_{R1}=V_{R2}=V_{CC}-0.7\\,\\text{V}','A\\approx1','Z_{out}=R_L'],
+  dar:['V_{EQ1}=V_{BQ2}=+0.7\\,\\text{V}','V_{BQ1}=+1.4\\,\\text{V}','V_{EQ3}=V_{BQ4}=-0.7\\,\\text{V}','V_{BQ3}=-1.4\\,\\text{V}','A\\approx1','Z_{out}=R_L'],
 };
 function ampIntro(key,diag){
   const approx=key==='bb'?`<p><b>Approximations used</b> (the answer key uses exactly these): ${m('V_{BE}=0.7\\,\\text{V}')}, ${m('I_C=\\beta I_B')}, ${m('{r\'}_e=25\\,\\text{mV}/I_E')}, capacitors are short circuits for the signal, and there is no load on the output.</p>`
-    :['one','two','dar'].includes(key)?`<p><b>Approximations used</b> (the answer key uses exactly these): every base-emitter junction and every bias diode drops 0.7 V; the no-signal output sits exactly midway between the supply rails; maximum-output values are ideal (the output swings all the way to the rails, sine-wave signal).</p>`:APPROX_CE;
+    :['one','two','dar'].includes(key)?`<p><b>Approximations used</b> (the answer key uses exactly these): every base-emitter junction and every bias diode drops 0.7 V, and the no-signal output sits exactly midway between the supply rails.</p>`:APPROX_CE;
   return CC.introPage({text:two(TXT[key],diag),extra:`<h3>Key relationships</h3><div class="formulas">${FORM[key].map(t=>`<div class="formula">${M(t)}</div>`).join('')}</div>${approx}`,how:SCORE_WS});
 }
-function wsMod(id,title,icon,sub,key,gen,diag){return {id,title,icon,sub,intro:ampIntro(key,diag),run:(el,s)=>CC.worksheet(el,s,gen())};}
+function wsMod(id,title,icon,sub,key,gen,diag){return {id,title,icon,sub,intro:ampIntro(key,diag),run:(el,s)=>CC.worksheet(el,s,{...gen(),itemScore:true})};}
 
 /* ---------- diode testing ---------- */
 const DIODE_OPTS=['Defective diode, Low resistance in both directions','Defective diode, Open circuit','Good diode, The right lead is the cathode.','Good diode, The left lead is the cathode.'];
@@ -1349,22 +1349,24 @@ function diodeBuild(){
   const r=Math.random();const ans=r<0.15?0:r<0.3?1:r<0.65?2:3;
   const styles=[['#e88b2a','#c06010','glass'],['#222','#111','rect'],['#4a7fb5','#2b5a8a','rect'],['#3c8f5a','#286a40','rect'],['#7a4a9a','#55306d','rect'],['#b9b9b9','#888','glass'],['led','#d33','led'],['led','#2a2','led'],['led','#eb2','led']];
   const st=pick(styles);const led=st[2]==='led';
-  const fwd=led?rnd(1400,2600):rnd(470,940),sh=rnd(0.6,14);
-  const read=(red,black)=>{ // L / R pads
-    if(ans===0)return fmt(sh*(1+rnd(-0.002,0.002)),3)+' Ω';
-    if(ans===1)return 'OL';
+  // as in the original meter: every good junction (LEDs too) reads 343-436 Ω forward, over range shows 99999,
+  // and a shorted diode reads about 0 Ω, or (some of them) a forward-like 350-370 Ω in both directions
+  const fwd=rnd(343,436),both=Math.random()<0.3?rnd(350,370):null;
+  const read=(red,black)=>{ // L / R pads; each call drifts a little in the last digit
+    if(ans===0)return both?(both+rnd(-0.1,0.1)).toFixed(1)+' Ω':rnd(-0.004,0.06).toFixed(3)+' Ω';
+    if(ans===1)return '99999';
     const cathode=ans===2?'R':'L';const anode=cathode==='R'?'L':'R';
-    return red===anode&&black===cathode?Math.round(fwd*(1+rnd(-0.004,0.004)))+' Ω':'OL';};
+    return red===anode&&black===cathode?(fwd+rnd(-0.1,0.1)).toFixed(1)+' Ω':'99999';};
   const svg=()=>{let body;
     if(led)body=`<path d="M150,30 a20,20 0 0 1 40,0 v34 h-40 z" fill="${st[1]}" opacity=".85" stroke="#333"/><rect x="146" y="62" width="48" height="6" fill="${st[1]}" stroke="#333"/><path d="M160,68 L160,95 Q160,110 90,140 L90,150" fill="none" stroke="#999" stroke-width="3"/><path d="M180,68 L180,95 Q180,110 250,140 L250,150" fill="none" stroke="#999" stroke-width="3"/>`;
     else body=`<path d="M128,60 Q90,62 90,150" fill="none" stroke="#999" stroke-width="3"/><path d="M212,60 Q250,62 250,150" fill="none" stroke="#999" stroke-width="3"/><rect x="128" y="${st[2]==='glass'?51:48}" width="84" height="${st[2]==='glass'?18:24}" rx="${st[2]==='glass'?9:5}" fill="${st[0]}" stroke="${st[1]}" stroke-width="2"/>${st[2]==='glass'?'<rect x="150" y="56" width="40" height="8" fill="#5b3a1a" opacity=".5"/>':''}`;
     return `<svg viewBox="0 0 340 210" width="340" height="210" role="img" aria-label="${led?'LED':'diode'} under test">${body}</svg>`;};
   const what=led?'This LED':'This diode';
   const explain=()=>[
-    `${what} read a few ohms with the probes either way round. A junction that conducts in both directions is <b>shorted</b>.`,
-    `${what} read OL (over range) with the probes either way round. A junction that conducts in neither direction is <b>open</b>.`,
-    `${what} read low only with the red (+) probe on the <b>left</b> lead. In the low-resistance direction the positive probe is on the anode, so the left lead is the anode and the <b>right lead is the cathode</b>. The reverse reading was OL, so the diode is good.${led?' LEDs need about 1.6 V to 3 V to conduct, so their forward reading is higher than a silicon diode\'s.':''}`,
-    `${what} read low only with the red (+) probe on the <b>right</b> lead. In the low-resistance direction the positive probe is on the anode, so the right lead is the anode and the <b>left lead is the cathode</b>. The reverse reading was OL, so the diode is good.${led?' LEDs need about 1.6 V to 3 V to conduct, so their forward reading is higher than a silicon diode\'s.':''}`][ans];
+    `${what} read low with the probes either way round${both?' (a few hundred ohms each way, like a forward junction)':' (about 0 Ω)'}. A junction that conducts in both directions is <b>shorted</b>.`,
+    `${what} read 99999 (over range) with the probes either way round. A junction that conducts in neither direction is <b>open</b>.`,
+    `${what} read low only with the red (+) probe on the <b>left</b> lead. In the low-resistance direction the positive probe is on the anode, so the left lead is the anode and the <b>right lead is the cathode</b>. The reverse reading was over range (99999), so the diode is good.`,
+    `${what} read low only with the red (+) probe on the <b>right</b> lead. In the low-resistance direction the positive probe is on the anode, so the right lead is the anode and the <b>left lead is the cathode</b>. The reverse reading was over range (99999), so the diode is good.`][ans];
   return {svg,pads:[{id:'L',x:90,y:150,label:'Left'},{id:'R',x:250,y:150,label:'Right'}],read,options:DIODE_OPTS,answer:ans,explain};
 }
 /* ---------- transistor testing ---------- */
@@ -1374,14 +1376,14 @@ function transistorBuild(){
   const leads=['A','B','C'];const others=leads.filter((_,i)=>i!==base);if(Math.random()<0.5)others.reverse();
   const role={[leads[base]]:'B',[others[0]]:'E',[others[1]]:'C'};
   const fj=pick(['E','C']);
-  const vbe=rnd(620,760),vbc=rnd(570,700),vs=rnd(1,15);
+  const vbe=rnd(380,441),vbc=rnd(337,400),vs=rnd(-0.08,0.08); // forward 337-441 Ω; a shorted junction reads about 0 Ω
   const jr=(x,dirFromBase)=>{ // junction base<->x; dirFromBase: conventional current from base to x
     if(fault&&fj===x){if(fault==='open')return Infinity;return vs;}
     const fwd=pnp?!dirFromBase:dirFromBase;return fwd?(x==='E'?vbe:vbc):Infinity;};
-  const R=(a,b)=>{const ra=role[a],rb=role[b];if(a===b)return 0.1;
+  const R=(a,b)=>{const ra=role[a],rb=role[b];
     if(ra==='B')return jr(rb,true);if(rb==='B')return jr(ra,false);
     return jr(ra,false)+jr(rb,true);};
-  const read=(red,black)=>{const v=R(red,black);if(!isFinite(v)||v>5e6)return 'OL';return (v<20?fmt(v*(1+rnd(-0.002,0.002)),3):Math.round(v*(1+rnd(-0.004,0.004))))+' Ω';};
+  const read=(red,black)=>{const v=R(red,black);if(!isFinite(v))return '999999';return (Math.abs(v)<1?(v+rnd(-0.004,0.004)).toFixed(3):(v+rnd(-0.1,0.1)).toFixed(1))+' Ω';};
   const ans=fault==='open'?6:fault==='short'?7:(pnp?3:0)+base;
   const pk=ri(0,2);
   const svg=()=>{let body;
@@ -1393,134 +1395,123 @@ function transistorBuild(){
     return `<svg viewBox="0 0 340 230" width="340" height="230" role="img" aria-label="transistor under test">${body}</svg>`;};
   const bl=leads[base],ol=leads.filter(x=>x!==bl);const lead=r=>Object.keys(role).find(k=>role[k]===r);
   const explain=()=>{
-    if(fault==='open')return `The junction between leads ${lead('B')} and ${lead(fj)} read OL in both directions, so that junction is <b>open</b>. (Only one pair of leads gave a low reading in one direction.)`;
-    if(fault==='short')return `Leads ${lead('B')} and ${lead(fj)} read only a few ohms with the probes either way round, so that junction is <b>shorted</b>.`;
-    return `Lead <b>${bl}</b> is the only lead that reads low to <i>both</i> other leads with the same probe on it: the ${pnp?'black (−)':'red (+)'} probe. ${pnp?'With the negative probe on it, current flows out of the base, so the base is N-type: a <b>PNP</b> transistor.':'With the positive probe on it, current flows into the base, so the base is P-type: an <b>NPN</b> transistor.'} With the probes reversed both junctions read OL, and leads ${ol[0]} and ${ol[1]} read OL both ways, so the transistor is good. The slightly higher of the two low readings is usually the base-emitter junction.`;};
+    if(fault==='open')return `The junction between leads ${lead('B')} and ${lead(fj)} read 999999 (over range) in both directions, so that junction is <b>open</b>. (Only one pair of leads gave a low reading in one direction.)`;
+    if(fault==='short')return `Leads ${lead('B')} and ${lead(fj)} read about 0 Ω with the probes either way round, so that junction is <b>shorted</b>.`;
+    return `Lead <b>${bl}</b> is the only lead that reads low to <i>both</i> other leads with the same probe on it: the ${pnp?'black (−)':'red (+)'} probe. ${pnp?'With the negative probe on it, current flows out of the base, so the base is N-type: a <b>PNP</b> transistor.':'With the positive probe on it, current flows into the base, so the base is P-type: an <b>NPN</b> transistor.'} With the probes reversed both junctions read 999999 (over range), and leads ${ol[0]} and ${ol[1]} read over range both ways, so the transistor is good. The slightly higher of the two low readings is usually the base-emitter junction.`;};
   return {svg,pads:[{id:'A',x:110,y:170,label:'A'},{id:'B',x:170,y:170,label:'B'},{id:'C',x:230,y:170,label:'C'}],read,options:TR_OPTS,answer:ans,explain,_role:role,_pnp:pnp,_fault:fault};
 }
 
 /* ---------- troubleshooting amplifiers ---------- */
-function ampBoard(type,forceFault){ // 'bb' or 'div'
+function ampBoard(type,forceFault){ // 'bb' (base bias) or 'div' (voltage divider, bypassed). Parts, traces and faults follow the original boards.
   const div=type==='div';
-  const tol=()=>1+rnd(-0.1,0.1);
-  const vin=div?pick([0.01,0.015,0.02]):pick([0.005,0.008,0.01]);
-  const beta=div?pick([80,100,120,150,180]):pick([80,90,100,110,120,130,150]);
-  // marked (nominal) values, E12, chosen so a working board sits well inside the active region
-  let VCC,R1n,R2n=0,REn=0,RCn;
-  if(div){let ok;do{
-      VCC=pick([12,15,18,20]);RCn=eVal(2200,15000);const IEt=VCC*rnd(0.3,0.45)/RCn,VEt=rnd(1.5,VCC*0.25);REn=eNear(VEt/IEt);
-      R2n=eVal(4700,47000);const VBt=VEt+0.7;R1n=eNear(R2n*(VCC-VBt)/VBt);
-      const vb=VCC*R2n/(R1n+R2n),ie=(vb-0.7)/REn,vc=VCC-ie*RCn,rt=R1n*R2n/(R1n+R2n);
-      ok=vb>=2&&R1n>=10e3&&R1n<=220e3&&(vc-(vb-0.7))/VCC>=0.3&&(vc-(vb-0.7))/VCC<=0.6&&RCn/REn>=1.5&&RCn/REn<=6&&rt<=0.04*81*REn&&RCn*ie/0.025>=60;
-    }while(!ok);}
-  else{let ok;do{
-      VCC=pick([9,12,15,18]);RCn=eVal(1000,10000);const ICt=VCC*rnd(0.4,0.65)/RCn;R1n=eNear((VCC-0.7)/(ICt/beta));
-      const vc=VCC-beta*(VCC-0.7)/R1n*RCn;
-      ok=R1n>=100e3&&R1n<=3.3e6&&vc/VCC>=0.35&&vc/VCC<=0.6;
-    }while(!ok);}
-  const R1=R1n*tol(),R2=R2n*tol(),RE=REn*tol(),RC=RCn*tol();const VBE=rnd(0.62,0.7);
-  const faults=div?['C1 Open','C2 Open','C3 Open','R1 Open','RC Open','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Open B-E Junction in Q1','Shorted B-E Junction in Q1','No Faults']
-                  :['C1 Open','C2 Open','RC Open','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 4 Open','Open Junctions in Q1','Shorted Junctions in Q1','No Faults'];
+  const VCC=Math.round(rnd(div?12.1:10.7,div?21.6:24.2)*100)/100,vin=ri(6,12)/1000; // the supply changes on every board
+  const beta=div?ri(150,280):ri(93,111);
+  const R1=div?68e3:1.2e6,R2=27e3,RE=5.6e3,RC=div?12e3:5.6e3;
+  const faults=div?['R1 Open','C1 Open','C2 Open','C3 Open','Trace 2 Open','Trace 4 Open','Trace 5 Open','Open Junction in Q1','Shorted Junction in Q1','No Faults']
+                  :['C1 Open','C2 Open','RC Open','Trace 1 Open','Trace 2 Open','Trace 3 Open','Trace 6 Open','Open Junctions in Q1','Shorted Junctions in Q1','No Faults'];
   const ans=forceFault!=null?forceFault:ri(0,faults.length-1);const f=faults[ans];
-  // node voltages: VCC, D (bias side of R1 / divider), B (base), Cin (C1 right), C (collector), K (RC bottom / output cap), E (emitter), F (RE top, div only), OUT, IN, GND
-  const n={VCC,D:0,B:0,Cin:0,C:VCC,K:VCC,E:0,F:0,OUT:0,IN:0,GND:0};
-  const ac={VCC:0,D:0,B:0,Cin:0,C:0,K:0,E:0,F:0,OUT:0,IN:vin,GND:0};
-  let on=true,gain=0;
-  const vth=div?VCC*R2/(R1+R2):VCC,rth=div?R1*R2/(R1+R2):R1;
-  if(div){const IE=(vth-VBE)/(RE+rth/(beta+1));n.E=n.F=IE*RE;n.B=n.D=n.Cin=n.E+VBE;const IC=IE*beta/(beta+1);n.C=n.K=Math.max(n.E+0.15,VCC-IC*RC);
-    const re=0.025/IE;gain=f==='C2 Open'?RC/(re+RE):RC/re;}
-  else{const IB=(VCC-VBE)/R1;const IC=beta*IB;n.B=n.D=n.Cin=VBE;n.C=n.K=Math.max(0.15,VCC-IC*RC);const re=0.025/(IB+IC);gain=RC/re;}
-  const off=()=>{on=false;n.C=n.K=VCC;n.E=n.F=0;};
-  // collector disconnected (RC or trace 3 open): all emitter current is base current; the B-C junction is forward biased through the meter, so the collector reads about 0.5 V below the base
-  const noCollector=()=>{if(div){const IE=(vth-VBE)/(RE+rth);n.E=n.F=IE*RE;n.B=n.D=n.Cin=n.E+VBE;n.C=n.B-0.5;}else{n.C=VBE-0.5;}on=false;};
+  // nodes: R1T R1 top, D R1 bottom (and R2 top on the divider board), Cin C1 right, B base, E emitter pad, F RE top / C2 top (divider),
+  // C collector, K RC bottom, K2 output capacitor (collector side), OUT output, IN input
+  const n={VCC,R1T:VCC,D:0,Cin:0,B:0,E:0,F:0,C:VCC,K:VCC,K2:VCC,OUT:0,IN:0,GND:0};
+  const ac={VCC:0,R1T:0,D:0,Cin:0,B:0,E:0,F:0,C:0,K:0,K2:0,OUT:0,IN:vin,GND:0};
+  const vth=div?VCC*R2/(R1+R2):VCC; // unloaded divider voltage
+  let IE,IC,on=true;
+  if(div){IE=(vth-0.7)/RE;IC=IE;n.D=n.B=n.Cin=vth;n.E=n.F=vth-0.7;}
+  else{const IB=(VCC-0.7)/R1;IC=beta*IB;IE=IB+IC;n.D=n.B=n.Cin=0.7;}
+  n.C=n.K=n.K2=Math.max(n.E+0.1,VCC-IC*RC);
+  const gain=div&&f==='C2 Open'?RC/RE:RC/(0.025/IE);
+  const off=()=>{on=false;n.E=n.F=0;n.C=n.K=n.K2=VCC;};
   switch(f){
     case 'R1 Open':n.D=n.B=n.Cin=0;off();break;
-    case 'RC Open':noCollector();n.K=n.C;break;
-    case 'Trace 1 Open':n.Cin=0;ac._t1=true;break;
-    case 'Trace 2 Open':n.D=div?vth:VCC;n.B=n.Cin=0;off();ac._t2=true;break;
-    case 'Trace 3 Open':noCollector();n.K=VCC;break;
-    case 'Trace 4 Open':{const vb=div?vth:VCC-0.1;n.D=n.B=n.Cin=vb;off();n.E=vb-0.6;n.F=0;break;}
-    case 'Open B-E Junction in Q1':case 'Open Junctions in Q1':{const vb=div?vth:VCC;n.D=n.B=n.Cin=vb;off();break;}
-    case 'Shorted B-E Junction in Q1':{const rp=R2*RE/(R2+RE);const vb=VCC*rp/(R1+rp);n.D=n.B=n.Cin=n.E=n.F=vb;n.C=n.K=VCC;on=false;break;}
-    case 'Shorted Junctions in Q1':n.D=n.B=n.Cin=0;n.C=n.K=0;n.E=0;on=false;break;
+    case 'RC Open':n.C=n.K=n.K2=0;on=false;break;
+    case 'Trace 1 Open':n.Cin=0;break;
+    case 'Trace 2 Open':n.R1T=0;n.D=n.B=n.Cin=0;off();break;
+    case 'Trace 3 Open':n.D=n.Cin=VCC;n.B=0;off();break;
+    case 'Trace 4 Open':n.B=0;off();break;
+    case 'Trace 5 Open':off();n.E=vth-0.6;break;
+    case 'Trace 6 Open':n.K2=0;break;
+    case 'Open Junction in Q1':off();break;
+    case 'Open Junctions in Q1':n.D=n.B=n.Cin=VCC;off();break;
+    case 'Shorted Junction in Q1':{const up=1/(1/R1+1/RC),dn=1/(1/R2+1/RE),v=VCC*dn/(up+dn);n.D=n.B=n.Cin=n.E=n.F=n.C=n.K=n.K2=v;on=false;break;} // base, emitter and collector all shorted together
+    case 'Shorted Junctions in Q1':n.D=n.B=n.Cin=n.C=n.K=n.K2=0;on=false;break;
   }
-  // AC propagation
-  const c1ok=f!=='C1 Open';
-  ac.Cin=c1ok?vin:0;
-  ac.B=c1ok&&!ac._t1?vin:0;
-  ac.D=(ac._t2)?0:ac.B;
-  const vce=n.C-n.E;
-  let vout=on?Math.min(ac.B*gain,Math.max(0.05,2*Math.min(vce-0.2,VCC-n.C))):0;
-  ac.C=vout;ac.K=f==='Trace 3 Open'?0:vout;ac.OUT=(f==='C2 Open'&&!div)||f==='C3 Open'?0:ac.K;
-  if(div){ac.E=on?(f==='C2 Open'?ac.B*RE/(RE+0.025/((n.E)/RE)):ac.B*0.004):0;ac.F=f==='Trace 4 Open'?0:ac.E;}
-  else ac.E=0;
+  // signal path: C1 -> Cin -> (trace 1 on the simple board) -> D -> (trace 3 simple / trace 4 divider) -> base
+  const short=/^Shorted/.test(f);
+  ac.Cin=f==='C1 Open'||short?0:vin;
+  ac.D=f==='Trace 1 Open'?0:ac.Cin;
+  ac.B=f==='Trace 3 Open'||f==='Trace 4 Open'?0:ac.D;
+  const vout=on?Math.min(ac.B*gain,Math.max(0.05,2*Math.min(n.C-n.E-0.2,VCC-n.C))):0;
+  ac.C=ac.K=vout;ac.K2=f==='Trace 6 Open'?0:vout;ac.OUT=f===(div?'C3 Open':'C2 Open')?0:ac.K2;
+  if(div){ac.E=on?(f==='C2 Open'?ac.B:ac.B*0.004):f==='Trace 5 Open'?ac.B:0;ac.F=f==='Trace 5 Open'?0:ac.E;}
   // pads
   const P=div?{
-    VCC:[80,125,'VCC'],R1t:[110,140,'R1 top'],R1b:[110,200,'R1 bottom'],R2t:[110,230,'R2 top'],R2b:[110,295,'R2 bottom'],IN:[225,305,'Input (C1 left)'],C1b:[225,250,'C1 right'],
-    QB:[265,250,'Q1 base'],QC:[322,226,'Q1 collector'],QE:[322,274,'Q1 emitter'],RCt:[390,140,'RC top'],RCb:[390,200,'RC bottom'],C3a:[430,200,'C3 left'],OUT:[505,200,'Output'],
+    VCC:[80,112,'VCC'],R1t:[110,140,'R1 top'],R1b:[110,200,'R1 bottom'],R2t:[110,230,'R2 top'],R2b:[110,295,'R2 bottom'],C1b:[175,200,'C1 right'],IN:[245,200,'Input (C1 left)'],
+    QB:[265,250,'Q1 base'],QC:[322,226,'Q1 collector'],QE:[322,274,'Q1 emitter'],RCt:[390,140,'RC top'],RCb:[390,200,'RC bottom'],C3a:[440,200,'C3 left'],OUT:[510,200,'Output'],
     REt:[390,262,'RE top'],REb:[390,305,'RE bottom'],C2t:[460,262,'C2 top'],C2b:[460,305,'C2 bottom'],GND:[80,320,'GND']}
-   :{VCC:[80,125,'VCC'],R1t:[110,140,'R1 top'],R1b:[110,215,'R1 bottom'],IN:[225,305,'Input (C1 left)'],C1b:[225,250,'C1 right'],QB:[265,250,'Q1 base'],QC:[322,226,'Q1 collector'],QE:[322,274,'Q1 emitter'],
-    RCt:[390,140,'RC top'],RCb:[390,200,'RC bottom'],C2a:[430,200,'C2 left'],OUT:[505,200,'Output'],GND:[80,320,'GND']};
-  const node={VCC:'VCC',R1t:'VCC',RCt:'VCC',R1b:'D',R2t:'D',R2b:'GND',IN:'IN',C1b:'Cin',QB:'B',QC:'C',QE:'E',RCb:'K',C3a:'K',C2a:'K',OUT:'OUT',REt:'F',REb:'GND',C2t:'F',C2b:'GND',GND:'GND'};
+   :{VCC:[80,112,'VCC'],R1t:[110,140,'R1 top'],R1b:[110,200,'R1 bottom'],C1b:[175,200,'C1 right'],IN:[245,200,'Input (C1 left)'],QB:[265,250,'Q1 base'],QC:[322,226,'Q1 collector'],QE:[322,274,'Q1 emitter'],
+    RCt:[390,140,'RC top'],RCb:[390,200,'RC bottom'],C2a:[440,200,'C2 left'],OUT:[510,200,'Output'],GND:[80,320,'GND']};
+  const node={VCC:'VCC',R1t:'R1T',RCt:'VCC',R1b:'D',R2t:'D',R2b:'GND',IN:'IN',C1b:'Cin',QB:'B',QC:'C',QE:'E',RCb:'K',C3a:'K2',C2a:'K2',OUT:'OUT',REt:'F',REb:'GND',C2t:'F',C2b:'GND',GND:'GND'};
   const dc=id=>n[node[id]],acv=id=>ac[node[id]];
   const svg=()=>{
-    let g=B.supply(20,8,160,64,'POWER SUPPLY',VCC+' V DC')+`<rect x="200" y="8" width="150" height="64" rx="8" fill="#4a3b33"/><rect x="208" y="16" width="134" height="48" rx="5" fill="#e9e4dc"/><text x="275" y="34" font-size="11" font-weight="800" text-anchor="middle" fill="#b3261e">SIGNAL GENERATOR</text><text x="275" y="54" font-size="12" font-weight="700" text-anchor="middle" fill="#333">${Math.round(vin*1000)} mVPP · 1 kHz</text>`;
+    let g=B.supply(20,8,160,64,'POWER SUPPLY',VCC.toFixed(2)+' V DC')+`<rect x="200" y="8" width="150" height="64" rx="8" fill="#4a3b33"/><rect x="208" y="16" width="134" height="48" rx="5" fill="#e9e4dc"/><text x="275" y="34" font-size="11" font-weight="800" text-anchor="middle" fill="#b3261e">SIGNAL GENERATOR</text><text x="275" y="54" font-size="12" font-weight="700" text-anchor="middle" fill="#333">${Math.round(vin*1000)} mVPP · 1 kHz</text>`;
     g+=B.pcb(20,100,520,235);
-    g+=B.trace([[80,125],[390,125]])+B.trace([[110,125],[110,140]])+B.trace([[390,125],[390,140]])+B.trace([[80,320],[480,320]]);
-    g+=B.trace([[110,div?215:215],[265,215],[265,250]],'TRACE 2',[190,208]);
-    g+=B.trace([[225,250],[265,250]],'TRACE 1',[228,240]);
-    g+=B.trace([[390,200],[390,226],[322,226]],'TRACE 3',[357,220]);
-    g+=B.trace([[390,200],[430,200]]);
-    if(div){g+=B.trace([[110,200],[110,230]])+B.trace([[110,295],[110,320]])+B.trace([[322,274],[350,274],[350,262],[390,262]],'TRACE 4',[352,292])+B.trace([[390,262],[460,262]])+B.trace([[390,305],[390,320]])+B.trace([[460,305],[460,320]]);
-      g+=B.part('R',[110,140],[110,200],'R1',{ohms:R1n,tol:10})+B.part('R',[110,230],[110,295],'R2',{ohms:R2n,tol:10})+B.part('R',[390,262],[390,305],'RE',{ohms:REn,tol:10})+B.part('C',[460,262],[460,305],'C2')+B.part('C',[430,200],[505,200],'C3');}
-    else{g+=B.trace([[322,274],[322,320]],'TRACE 4',[350,300])+B.part('R',[110,140],[110,215],'R1',{ohms:R1n,tol:10})+B.part('C',[430,200],[505,200],'C2');}
-    g+=B.part('R',[390,140],[390,200],'RC',{ohms:RCn,tol:10})+B.part('C',[225,305],[225,250],'C1');
+    g+=B.trace([[80,112],[390,112]])+B.trace([[390,112],[390,140]])+B.trace([[80,320],[480,320]]);
+    g+=B.trace([[110,112],[110,140]],'TRACE 2',[143,130])+B.trace([[110,200],[175,200]],'TRACE 1',[142,193]);
+    g+=B.part('R',[110,140],[110,200],'')+B.label(96,174,'R1',{size:12,anchor:'end'})+B.part('C',[175,200],[245,200],'C1')+B.part('R',[390,140],[390,200],'RC');
+    if(div){
+      g+=B.trace([[110,200],[110,230]],'TRACE 3',[78,219])+B.trace([[110,230],[265,230],[265,250]],'TRACE 4',[190,246]);
+      g+=B.trace([[322,274],[350,274],[350,262],[390,262]],'TRACE 5',[350,292])+B.trace([[390,262],[460,262]]);
+      g+=B.trace([[322,226],[390,226],[390,200]],'TRACE 6',[357,219])+B.trace([[390,200],[440,200]],'TRACE 7',[415,192]);
+      g+=B.trace([[110,295],[110,320]])+B.trace([[390,305],[390,320]])+B.trace([[460,305],[460,320]]);
+      g+=B.part('R',[110,230],[110,295],'')+B.label(96,266,'R2',{size:12,anchor:'end'})+B.part('R',[390,262],[390,305],'RE')+B.part('C',[460,262],[460,305],'C2')+B.part('C',[440,200],[510,200],'C3');}
+    else{
+      g+=B.trace([[110,200],[110,240],[265,240],[265,250]],'TRACE 3',[190,233]);
+      g+=B.trace([[322,274],[322,320]],'TRACE 4',[350,300])+B.trace([[322,226],[390,226],[390,200]],'TRACE 5',[357,219])+B.trace([[390,200],[440,200]],'TRACE 6',[415,192]);
+      g+=B.part('C',[440,200],[510,200],'C2');}
     g+=`<path d="M280,232 h26 a4,4 0 0 1 4,4 v28 a4,4 0 0 1-4,4 h-26 a14,18 0 0 1 0,-36z" fill="#1b1b1b"/><text x="292" y="254" font-size="9" fill="#bbb" text-anchor="middle">Q1</text>`+B.trace([[265,250],[280,250]])+B.trace([[310,240],[322,226]])+B.trace([[310,262],[322,274]]);
-    g+=B.label(80,115,'VCC',{size:10})+B.label(80,338,'GND',{size:10})+B.label(505,190,'OUT',{size:10})+B.label(238,298,'IN',{size:10,anchor:'start'});
-    g+=B.wire([[100,72],[100,90],[66,90],[66,125],[80,125]],'#c62828')+B.wire([[150,72],[150,94],[32,94],[32,320],[80,320]],'#222')+B.wire([[250,72],[250,85],[528,85],[528,330],[240,330],[240,305],[225,305]],'#1f5fa8');
+    g+=B.label(58,116,'VCC',{size:10,anchor:'end'})+B.label(80,338,'GND',{size:10})+B.label(510,190,'OUT',{size:10})+B.label(256,188,'IN',{size:10,anchor:'start'});
+    g+=B.wire([[100,72],[100,90],[66,90],[66,112],[80,112]],'#c62828')+B.wire([[150,72],[150,94],[32,94],[32,320],[80,320]],'#222')+B.wire([[250,72],[250,100],[245,100],[245,200]],'#1f5fa8');
     return B.svg(560,345,g);
   };
   const pads=Object.keys(P).map(id=>({id,x:P[id][0],y:P[id][1],label:P[id][2]}));
   const EXPL=div?{
+    'R1 Open':'R1 top reads VCC, but with no current from R1, R2 pulls the divider point and the base to 0 V. The transistor is cut off: emitter at 0 V, collector at VCC.',
     'C1 Open':'DC voltages are all normal, but there is signal on the input side of C1 and none on its right side or at the base. An open coupling capacitor blocks the signal.',
-    'C2 Open':'DC voltages are normal, but the output is only a few times larger than the input and the full input signal appears at the emitter. With the bypass capacitor open, RE is back in the gain formula.',
+    'C2 Open':'DC voltages are normal, but the full input signal appears at the emitter and the output is only about RC/RE times the input. With the bypass capacitor open, RE is back in the gain formula.',
     'C3 Open':'Everything is normal up to the collector, which has a large signal, but there is no signal at the output side of C3.',
-    'R1 Open':'With no current from R1, R2 pulls the base and the divider point to 0 V. The transistor is cut off: emitter at 0 V, collector at VCC.',
-    'RC Open':'The collector and RC bottom read far below normal (about 0.5 V under the base) and the emitter and base voltages drop. With no collector current, all the emitter current has to come through the base, which loads the divider.',
-    'Trace 1 Open':'The right side of C1 has the signal but reads 0 V DC, while the base has normal DC and no signal. The break is between C1 and the base.',
-    'Trace 2 Open':'The divider point (R1 bottom / R2 top) reads its unloaded divider voltage, but the base reads 0 V. The break is between the divider and the base, so the transistor is cut off.',
-    'Trace 3 Open':'RC bottom reads the full VCC (no current through RC), but the collector reads low, about 0.5 V below the base. The break is between RC and the collector.',
-    'Trace 4 Open':'The emitter pad reads a high voltage (one junction drop below the base) but RE top reads 0 V. The break is between the emitter and RE, so no current flows and the collector rises to VCC.',
-    'Open B-E Junction in Q1':'The base reads the unloaded divider voltage, the emitter (and RE top) read 0 V and the collector reads VCC. The base draws no current and no emitter current flows, yet the emitter circuit is intact: the base-emitter junction is open.',
-    'Shorted B-E Junction in Q1':'The base and emitter read the same low voltage (RE is now in parallel with R2) and the collector is at VCC. A base-emitter short.',
+    'Trace 2 Open':'R1 top reads 0 V: the break is between the VCC rail and R1. With no divider current every bias voltage is 0, and the collector sits at VCC.',
+    'Trace 4 Open':'The divider point (R1 bottom / R2 top) reads its unloaded divider voltage, but the base reads 0 V. The break is between the divider and the base, so the transistor is cut off.',
+    'Trace 5 Open':'The emitter pad reads high (about one junction drop below the base) but RE top reads 0 V. The break is between the emitter and RE, so no current flows and the collector rises to VCC.',
+    'Open Junction in Q1':'The base reads the unloaded divider voltage, the emitter (and RE top) read 0 V and the collector reads VCC. No transistor current flows although the emitter circuit is intact: an open junction.',
+    'Shorted Junction in Q1':'Base, emitter and collector all read the same voltage. The shorted transistor ties all three together: R1 and RC pull the node up and R2 and RE pull it down.',
     'No Faults':'All DC voltages are close to the calculated values and the amplifier has a large output signal.'}
    :{
     'C1 Open':'DC voltages are all normal, but there is signal on the input side of C1 and none on its right side or at the base.',
     'C2 Open':'DC voltages are normal and the collector has a large signal, but there is no signal at the output side of C2.',
-    'RC Open':'The collector and RC bottom read only about 0.2 V. With RC open the transistor has base current but no collector current; the base-collector junction is forward biased through the meter.',
-    'Trace 1 Open':'The right side of C1 has the signal but reads 0 V DC, while the base has normal DC (about 0.7 V) and no signal.',
-    'Trace 2 Open':'R1 bottom reads the full VCC (no current through R1) but the base reads 0 V. The break is between R1 and the base, so the transistor is cut off.',
-    'Trace 3 Open':'RC bottom reads the full VCC (no current through RC), but the collector reads about 0.2 V. The break is between RC and the collector.',
-    'Trace 4 Open':'The base reads almost VCC and the emitter pad reads a high voltage: with the emitter disconnected from ground, no current can flow. The collector sits at VCC.',
+    'RC Open':'RC top reads VCC, but RC bottom and the collector read about 0 V while the base still reads 0.7 V. With RC open no collector current can flow.',
+    'Trace 1 Open':'The right side of C1 has the signal but reads 0 V DC, while R1 bottom and the base have normal DC (about 0.7 V) and no signal. The break is between C1 and R1.',
+    'Trace 2 Open':'R1 top reads 0 V: the break is between the VCC rail and R1. With no base current the base reads 0 V, the transistor is cut off and the collector sits at VCC.',
+    'Trace 3 Open':'R1 bottom (and the right side of C1) read the full VCC, because R1 carries no current, but the base reads 0 V. The break is between R1 and the base.',
+    'Trace 6 Open':'The collector and RC bottom are normal and have a large signal, but the collector side of C2 reads 0 V with no signal. The break is between RC and C2.',
     'Open Junctions in Q1':'The base reads the full VCC (R1 carries no current, so it drops no voltage) and the collector reads VCC. The transistor conducts nowhere: open junctions.',
     'Shorted Junctions in Q1':'Base, collector and emitter all read 0 V: the shorted transistor ties the collector and base to the grounded emitter.',
     'No Faults':'All DC voltages are close to the calculated values and the amplifier has a large output signal.'};
-  const work=div?(()=>{const vb=VCC*R2n/(R1n+R2n),ie=(vb-0.7)/REn;return ['>Normal values from the marked parts (stiff-divider estimate):',`V_B=V_{CC}\\frac{R_2}{R_1+R_2}=${tV(VCC)}\\frac{${tR(R2n)}}{${tR(R1n)}+${tR(R2n)}}=${tV(vb)}`,`V_E=V_B-0.7\\,\\text{V}=${tV(vb-0.7)}`,`I_E=\\frac{V_E}{R_E}=\\frac{${tV(vb-0.7)}}{${tR(REn)}}=${tmA(ie)}`,`V_C=V_{CC}-I_E R_C=${tV(VCC)}-(${tmA(ie)})(${tR(RCn)})=${tV(VCC-ie*RCn)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{${tR(RCn)}}{${tO(0.025/ie)}}=${tn(RCn*ie/0.025,3)}`,'>Real readings differ from these by up to about 10% because of part tolerance and meter error.'].flatMap(splitEq);})
-    :(()=>{const ib=(VCC-0.7)/R1n,ic=beta*ib;return ['>Normal values from the marked parts:',`I_B=\\frac{V_{CC}-0.7\\,\\text{V}}{R_1}=\\frac{${tV(VCC)}-0.7\\,\\text{V}}{${tR(R1n)}}=${tuA(ib)}`,`I_C=\\beta I_B=(${beta})(${tuA(ib)})=${tmA(ic)}`,`V_C=V_{CC}-I_C R_C=${tV(VCC)}-(${tmA(ic)})(${tR(RCn)})=${tV(VCC-ic*RCn)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{${tR(RCn)}}{${tO(0.025/(ib+ic))}}=${tn(RCn*(ib+ic)/0.025,3)}`,'>Real readings differ from these by up to about 10% because of part tolerance and meter error.'].flatMap(splitEq);});
-  return {svg,pads,faults,answer:ans,dc,ac:acv,vcc:VCC,vin,explain:()=>EXPL[f],work,
+  const work=(div?(()=>{const vb=vth,ie=IE;return ['>Normal values for this board:',`V_B=V_{CC}\\frac{R_2}{R_1+R_2}=${tV(VCC)}\\frac{27\\,\\text{k}\\Omega}{68\\,\\text{k}\\Omega+27\\,\\text{k}\\Omega}=${tV(vb)}`,`V_E=V_B-0.7\\,\\text{V}=${tV(vb-0.7)}`,`I_E=\\frac{V_E}{R_E}=\\frac{${tV(vb-0.7)}}{5.6\\,\\text{k}\\Omega}=${tmA(ie)}`,`V_C=V_{CC}-I_E R_C=${tV(VCC)}-(${tmA(ie)})(12\\,\\text{k}\\Omega)=${tV(VCC-ie*12e3)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{12\\,\\text{k}\\Omega}{${tO(0.025/ie)}}=${tn(12e3*ie/0.025,3)}`];})
+    :(()=>{const ib=(VCC-0.7)/1.2e6,ic=beta*ib;return ['>Normal values for this board:',`I_B=\\frac{V_{CC}-0.7\\,\\text{V}}{R_1}=\\frac{${tV(VCC)}-0.7\\,\\text{V}}{1.2\\,\\text{M}\\Omega}=${tuA(ib)}`,`I_C=\\beta I_B=(${beta})(${tuA(ib)})=${tmA(ic)}`,`V_C=V_{CC}-I_C R_C=${tV(VCC)}-(${tmA(ic)})(5.6\\,\\text{k}\\Omega)=${tV(VCC-ic*5600)}`,`A=\\frac{R_C}{{r'}_e}=\\frac{5.6\\,\\text{k}\\Omega}{${tO(0.025/(ib+ic))}}=${tn(5600*(ib+ic)/0.025,3)}`];}));
+  return {svg,pads,start:div?'R2b':'QE',faults,answer:ans,dc,ac:acv,vcc:VCC,vin,explain:()=>EXPL[f],work:()=>work().flatMap(splitEq),
     schematic:div?schCE('byp',{out:'C3',byp:'C2'}):schCE('bb'),
-    info:()=>div?`Marked values: R1 = ${fR(R1n)}, R2 = ${fR(R2n)}, RE = ${fR(REn)}, RC = ${fR(RCn)}. C1 is the input capacitor, C2 the emitter bypass capacitor and C3 the output capacitor. Beta = ${beta}. Parts are within 10% of their marked values, and the meter can be off by up to 5%.`
-                :`Marked values: R1 = ${fR(R1n)}, RC = ${fR(RCn)}. C1 is the input capacitor and C2 the output capacitor. Beta = ${beta}. Parts are within 10% of their marked values, and the meter can be off by up to 5%.`};
+    info:()=>div?`Beta = ${beta}, R1 = 68 kΩ, R2 = 27 kΩ, RE = 5.6 kΩ, RC = 12 kΩ. C1 is the input capacitor, C2 the emitter bypass capacitor and C3 the output capacitor.`
+                :`Beta = ${beta}, R1 = 1.2 MΩ, RC = 5.6 kΩ. C1 is the input capacitor and C2 the output capacitor.`};
 }
 SK._ampBoard=ampBoard; // exposed for automated fault sweeps
-const TS_TEXT=(what,nf)=>`<p>Find the fault in a ${what} amplifier built on a PC board. The fault can be a failed part or a broken circuit trace, or the board may have no fault at all. There are ${nf} possible answers, and each run gives you ten boards.</p><p>Like real equipment, the parts are only within 10% of their marked values, and the meter can be off by up to 5% and drifts a little. You will not get the calculated values exactly, but you will always get enough information to decide. Before you start, work out roughly what the normal base, emitter and collector voltages should be (the worked solution after each item shows how).</p><p>A good strategy: check the DC voltages at the transistor first (they tell you whether it is cut off, saturated or normal), then follow the signal with the AC meter from the input toward the output. To find the voltage across a part, measure both ends and subtract.</p>`;
-const TS_HOW='<p>Tap a solder pad to move the red (+) meter probe there; the black (−) probe stays on ground. Switch between <b>DC volts</b> and <b>AC volts</b> with the meter buttons. The signal generator feeds a small 1 kHz signal into the input. Open <b>Schematic</b> to see the circuit diagram.</p><p><b>Scoring.</b> Each board is worth up to 12 points. Every new reading (a new pad, or a new meter mode on the same pad) costs 1 point, so plan your measurements. A wrong answer scores 0 for that board. After grading you can keep measuring to see what you missed; that does not change the score. Your final score is your points as a percentage of the 120 possible.</p>';
+const TS_TEXT=(what,nf)=>`<p>Find the fault in a ${what} amplifier built on a PC board. The fault can be a failed part or a broken circuit trace, or the board may have no fault at all. There are ${nf} possible answers, and each run gives you ten boards.</p><p>The supply voltage, the signal level and the transistor's beta change from board to board, so read them before you start. The parts are at their marked values and the meter is accurate (its last digit wanders a little), so the normal readings match the calculated values closely. Before you start, work out roughly what the normal base, emitter and collector voltages should be (the worked solution after each item shows how).</p><p>A good strategy: check the DC voltages at the transistor first (they tell you whether it is cut off, saturated or normal), then follow the signal with the AC meter from the input toward the output. To find the voltage across a part, measure both ends and subtract.</p>`;
+const TS_HOW='<p>The red (+) meter probe starts on a solder pad, and that first reading is free. Tap a pad to move the red probe there; the black (−) probe stays on ground. Switch between <b>DC volts</b> and <b>AC volts</b> with the meter buttons; the meter stays in the mode you leave it in for the next board. The signal generator feeds a small 1 kHz signal into the input. Open <b>Schematic</b> to see the circuit diagram.</p><p><b>Scoring.</b> Each board is worth up to 12 points. Moving the probe to a different pad costs 1 point; tapping the same pad again or switching between DC and AC is free, so plan your measurements. A wrong answer scores 0 for that board. After grading you can keep measuring to see what you missed; that does not change the score. Your score is your points out of the 120 possible.</p>';
 
 /* ---------- home hero: live CE amplifier calculator ---------- */
-function hero(slot){
-  const vals={R1:68,R2:27,RE:5.6,RC:12,VCC:20,beta:100};
-  const card=CC.el(`<div class="card"><b>Voltage divider amplifier calculator</b><p class="small muted" style="margin:.2em 0 .6em">Change any value and the results update immediately. You will see a warning if the design has a serious problem. Uses the stiff-divider method, ${m('V_{BE}=0.7\\,\\text{V}')}, ${m('{r\'}_e=25\\,\\text{mV}/I_E')}, no bypass capacitor and no load.</p>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px"><div class="diagram" style="padding:4px">${schCE('div')}</div>
+function hero(slot){ // the original's Amp Calc: a voltage divider amplifier with RE bypassed
+  const vals={R1:82,R2:33,RC:6.8,RE:2.7,VCC:12,beta:200};
+  const card=CC.el(`<div class="card"><b>Amp Calc: voltage divider amplifier</b><p class="small muted" style="margin:.2em 0 .6em">Change any value and the results update immediately. You will see a warning if the design has a serious problem. Uses the unloaded divider, ${m('V_{BE}=0.7\\,\\text{V}')}, ${m('{r\'}_e=25\\,\\text{mV}/I_E')}, RE bypassed and no load.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px"><div class="diagram" style="padding:4px">${schCE('byp')}</div>
     <div class="fields" style="grid-template-columns:1fr 1fr;gap:0 8px">${[['R1','R1 (kΩ)'],['R2','R2 (kΩ)'],['RC','RC (kΩ)'],['RE','RE (kΩ)'],['VCC','VCC (V)'],['beta','Beta Q1']].map(([k,l])=>`<div class="field" style="margin:3px 0"><label for="h${k}">${l}</label><input id="h${k}" inputmode="decimal" value="${vals[k]}" style="padding:6px 8px"></div>`).join('')}</div></div>
     <div class="givens" id="hout"></div><div class="small mt" id="hcom" style="color:var(--bad)"></div></div>`);
   slot.appendChild(card);
@@ -1529,17 +1520,16 @@ function hero(slot){
     const R1=g('R1')*1e3,R2=g('R2')*1e3,RC=g('RC')*1e3,RE=g('RE')*1e3,VCC=g('VCC'),beta=g('beta');
     const out=CC.$('#hout',card),com=CC.$('#hcom',card);
     if([R1,R2,RC,RE,VCC,beta].some(x=>!(x>0&&isFinite(x)))){out.innerHTML='';com.textContent='Enter a positive number in every box.';return;}
-    const VR1=VCC*R1/(R1+R2),VR2=VCC-VR1,VB=VR2;const c=[];let state='ok';
+    const VR1=VCC*R1/(R1+R2),VR2=VCC-VR1,VB=VR2;const c=[];let ok=true;
     let VE=VB-0.7,IE=VE/RE,VRC=IE*RC,VC=VCC-VRC;
-    if(VB<0.7){state='cut';c.push('The base voltage is too low to forward bias the base-emitter junction, so the transistor is cut off. Decrease R1 or increase R2 or VCC.');VE=0;IE=0;VRC=0;VC=VCC;}
-    else if(VC<=VE+0.2){state='sat';c.push('The transistor is saturated, so it cannot amplify. Increase R1, decrease R2, or decrease RC.');IE=(VCC-0.2)/(RC+RE);VE=IE*RE;VRC=IE*RC;VC=VE+0.2;}
-    else if(VC-VE>0.9*VCC)c.push('The transistor is barely conducting (close to cutoff), so the gain is very low and the collector, already almost at VCC, has no room to swing upward. Decrease R1 or increase R2.');
-    else if(VC-VE<1)c.push('The transistor is very close to saturation; the output can hardly swing. Increase R1, decrease R2, or decrease RC.');
-    if(state==='ok'&&IE>0){const RTH=R1*R2/(R1+R2),IEt=VE/(RE+RTH/(beta+1));
-      if(VCC/(R1+R2)<10*IE/beta||beta*RE<10*R2)c.push(`The divider is not stiff: the base current loads it, so the real emitter current is about ${Math.round((1-IEt/IE)*100)}% lower than shown. Decrease both R1 and R2 (keeping their ratio).`);}
-    const re=state==='ok'?0.025/IE:Infinity,A=state==='ok'?RC/(re+RE):0,Zin=1/(1/R1+1/R2+(state==='ok'?1/(beta*(re+RE)):0));
-    const show=[['V_{R1}',VR1,'V'],['V_{R2}',VR2,'V'],['V_{RC}',VRC,'V'],['V_{RE}',VE,'V'],['V_C',VC,'V'],['V_{CE}',VC-VE,'V'],['I_E',IE*1e3,'mA'],['A',A,''],['Z_{in}',Zin/1e3,'kΩ']];
-    out.innerHTML=show.map(([s,v,u])=>`<div class="given"><div class="k">${m(s)}</div><div class="v">${fmt(v,3)} ${u}</div></div>`).join('');
+    if(VB<0.7){ok=false;c.push('VB is too small to forward bias the B-E junction. Decrease R1 or increase R2 and/or VCC.');VE=0;IE=0;VRC=0;VC=VCC;}
+    else if(VC<=VE){ok=false;c.push('The transistor is saturated. Increase R1 or decrease RC and/or decrease R2.');IE=VCC/(RC+RE);VE=IE*RE;VRC=IE*RC;VC=VE;}
+    if(ok&&VCC/(R1+R2)<10*IE/beta)c.push('The voltage divider current is too small. Decrease both R1 and R2.');
+    const VCE=VC-VE,re=ok?0.025/IE:Infinity,A=ok?RC/re:0,Zin=1/(1/R1+1/R2+(ok?1/(beta*re):0));
+    const mW=x=>[x*1e3,'mW'];
+    const show=[['V_{R1}',VR1,'V'],['V_{R2}',VR2,'V'],['V_{RE}',VE,'V'],['V_{RC}',VRC,'V'],['V_B',VB,'V'],['V_E',VE,'V'],['V_C',VC,'V'],['I_E',IE*1e3,'mA'],['A',A,''],['Z_{in}',Zin/1e3,'kΩ'],
+      ['P_{R1}',...mW(VR1*VR1/R1)],['P_{R2}',...mW(VR2*VR2/R2)],['P_{RE}',...mW(VE*IE)],['P_{RC}',...mW(VRC*VRC/RC)],['P_{Q1}',...mW(VCE*IE)],['\\text{Max output}',ok?2*VCE:0,'VPP']];
+    out.innerHTML=show.map(([s,v,u])=>`<div class="given"><div class="k">${m(s)}</div><div class="v">${fmt(v,4)} ${u}</div></div>`).join('');
     com.innerHTML=c.length?'<b>Warning:</b> '+c.join(' '):'';
   };
   CC.$$('input',card).forEach(i=>i.addEventListener('input',calc));calc();
@@ -1549,19 +1539,19 @@ function hero(slot){
 CC.App.init({
   id:'solid',title:'Solid-State Challenge',tagline:'Diodes, transistors and amplifiers · offline edition',
   blurb:'Twelve hands-on exercises: test diodes and transistors with an ohmmeter, analyze base biased, voltage divider biased, common collector and common base amplifiers, work out three class B push-pull power amplifiers, and troubleshoot two virtual amplifier boards. Every run uses new values.',
-  footer:'Based on Solid-State Challenge © ETCAI Products. Offline HTML edition.',pass:80,hero,
+  footer:'Based on Solid-State Challenge © ETCAI Products. Offline HTML edition.',pass:false,hero,
   manual:`<h2>About this program</h2><p>Solid-State Challenge is a set of practice exercises to use alongside your textbook and lab work. Each exercise gives you immediate feedback, has hints and formulas when you need them, and is graded automatically, so you and your instructor can see how you are doing.</p><p>There are twelve exercises: diode testing, transistor testing, base biased amplifiers, voltage divider biased common emitter amplifiers without and with an emitter bypass capacitor, common collector amplifiers, common base amplifiers, single-supply and dual-supply push-pull power amplifiers, a push-pull amplifier with darlington transistors, and two troubleshooting boards (a base biased amplifier and a voltage divider biased amplifier).</p><p>Every exercise starts with a short introduction to the topic and its key formulas; press <b>Begin</b> when you are ready. New values are chosen each time, so you can practice an exercise as often as you like. The program records the time you take, and you can print a certificate with your name, ID, date, score, time and a validity code.</p>
-  <h2>Grading</h2><p>Calculated answers are correct when they are within 5% of the expected value. Work to at least three or four significant figures, because later answers are built from earlier ones and early rounding can push a later answer outside the window. Each exercise's introduction states the approximations the answer key uses (for example ${m('V_{BE}=0.7\\,\\text{V}')} and ${m('{r\'}_e=25\\,\\text{mV}/I_E')}), and every graded item has a worked solution.</p>
-  <h2>Troubleshooting scores</h2><p>Each troubleshooting run has ten boards worth up to 12 points each (120 points in all). Every meter reading you take costs 1 point, and a wrong answer scores 0 for that board. Because you always need at least a few readings, a perfect 120 is only possible by guessing. Your instructor sets the score and time that count as acceptable.</p>`,
+  <h2>Grading</h2><p>Calculated answers are correct when they are within 5% of the expected value; an answer that should be 0 must be exactly 0. On the amplifier worksheets each item is worth 10 points (8 on the twelve-item darlington sheet). A wrong check takes 2 points and each look at help takes 3 points off that item only, and a right check locks the item. Work to at least three or four significant figures, because later answers are built from earlier ones and early rounding can push a later answer outside the window. Each exercise's introduction states the approximations the answer key uses (for example ${m('V_{BE}=0.7\\,\\text{V}')} and ${m('{r\'}_e=25\\,\\text{mV}/I_E')}), and every graded item has a worked solution.</p>
+  <h2>Troubleshooting scores</h2><p>Each troubleshooting run has ten boards worth up to 12 points each (120 points in all). Moving the meter probe to a new pad costs 1 point (switching between DC and AC is free), and a wrong answer scores 0 for that board. Because you always need at least a few readings, a perfect 120 is only possible by guessing. Your instructor sets the score and time that count as acceptable.</p>`,
   groups:[
     {title:'Component testing',items:[
       {id:'diode',title:'Basic Diode Testing',icon:'diode',sub:'ohmmeter tests on eleven diodes',
-        intro:CC.introPage({text:two(`<p>A good diode conducts in one direction only, so an ohmmeter shows a <b>low</b> reading with the probes one way and a <b>high</b> reading (OL, over range) with them reversed. In a good diode the high reading is at least ten times the low one.</p><p>Most failed diodes are either <b>shorted</b> (low resistance both ways) or <b>open</b> (high resistance both ways).</p><p>For a good diode you can also find the leads: in the low-resistance direction, the <b>positive (red) probe is on the anode</b>. The other lead is the cathode, usually marked with a band.</p><p>The exact number of ohms does not matter. It depends on the voltage your meter applies, so different meters give very different readings for the same diode. Some meters apply too little voltage to turn a diode on at all, which can make a good diode look open; that is why most digital meters have a separate diode-test mode. The meter in this exercise applies enough voltage to forward bias silicon diodes and LEDs. LEDs need more voltage to conduct (about 1.6 V to 3 V), so their forward readings are higher.</p>`,SK.wrap(200,120,SK.diode([20,60],[180,60],'')+SK.t(30,95,'Anode',{a:'middle',w:600})+SK.t(170,95,'Cathode',{a:'middle',w:600}))),
-          how:'<p>Test eleven diodes. The red (+) probe starts on one lead and the black (−) probe on the other; tap a lead or press <b>Reverse the probes</b> to swap them. Pick one of the four answers and press <b>Grade selected answer</b>.</p><p><b>Scoring.</b> Each diode is either right or wrong, and readings are free. Your score is the percent of diodes you identify correctly. If you are wrong, the right answer is highlighted with an explanation, and you can keep measuring before you press <b>Go to next problem</b>.</p>'}),
+        intro:CC.introPage({text:two(`<p>A good diode conducts in one direction only, so an ohmmeter shows a <b>low</b> reading with the probes one way and a <b>high</b> reading (over range: this meter shows 99999) with them reversed. In a good diode the high reading is at least ten times the low one.</p><p>Most failed diodes are either <b>shorted</b> (low resistance both ways) or <b>open</b> (high resistance both ways).</p><p>For a good diode you can also find the leads: in the low-resistance direction, the <b>positive (red) probe is on the anode</b>. The other lead is the cathode, usually marked with a band.</p><p>The exact number of ohms does not matter. It depends on the voltage your meter applies, so different meters give very different readings for the same diode. Some meters apply too little voltage to turn a diode on at all, which can make a good diode look open; that is why most digital meters have a separate diode-test mode. The meter in this exercise applies enough voltage to forward bias silicon diodes and LEDs, and it reads every good junction at roughly 340 to 440 Ω in the forward direction, LEDs included. A shorted diode usually reads close to 0 Ω, but some shorted diodes read a few hundred ohms in <i>both</i> directions; what marks them as shorted is that the reading is low both ways.</p>`,SK.wrap(200,120,SK.diode([20,60],[180,60],'')+SK.t(30,95,'Anode',{a:'middle',w:600})+SK.t(170,95,'Cathode',{a:'middle',w:600}))),
+          how:'<p>Test eleven diodes. The red (+) probe is on one lead and the black (−) probe on the other; tap a lead or press <b>Reverse the probes</b> to swap them. The probes stay the way you left them when the next diode comes up. Pick one of the four answers and press <b>Grade selected answer</b>.</p><p><b>Scoring.</b> Each diode is worth 100/11 = 9.09 points, and readings are free. Your score is the points for the diodes you identify correctly. If you are wrong, the right answer is highlighted with an explanation, and you can keep measuring before you press <b>Go to next problem</b>.</p>'}),
         run:(el,s)=>SK.ohmBench(el,s,{count:11,noun:'Diode',build:diodeBuild})},
       {id:'trans',title:'Basic Transistor Testing',icon:'trans',sub:'identify NPN/PNP, base lead, faults',
-        intro:CC.introPage({text:two(`<p>You can find most failed bipolar transistors with an ohmmeter, because a transistor behaves like two diodes that share the base. In an NPN transistor the base is P-type and the emitter and collector are N-type; in a PNP transistor it is the other way round. A transistor is good when:</p><ol><li>The base-emitter junction tests like a good diode.</li><li>The base-collector junction tests like a good diode.</li><li>Emitter to collector reads high (OL) with the probes either way round.</li></ol><p>Most failed transistors have a <b>shorted</b> junction (low both ways) or an <b>open</b> junction (high both ways).</p><p>To find the base, look for the one lead that reads low to <i>both</i> other leads with the same probe on it. If that probe is the <b>red (+)</b> one, current flows into a P-type base: the transistor is <b>NPN</b>. If it is the <b>black (−)</b> one, the base is N-type: the transistor is <b>PNP</b>. For example, with the black probe on lead A, touching the red probe to either other lead reads low. Then A is the base of a PNP transistor. It is good if both readings go to OL when the probes are reversed and the other two leads read OL to each other.</p><p>A systematic order of measurements gets you there fastest.</p>`,SK.wrap(250,110,SK.bjt(60,55,{label:'NPN'}).svg+SK.bjt(180,55,{pnp:true,label:'PNP'}).svg)),
-          how:'<p>Analyze twelve transistors. Tap a lead to move the highlighted probe there. It stays selected until you pick the other probe with the probe buttons. Pick one of the eight answers and press <b>Grade selected answer</b>.</p><p><b>Scoring.</b> Each transistor is either right or wrong, and readings are free. Your score is the percent you identify correctly. If you are wrong, the right answer is highlighted with an explanation, and you can keep measuring before moving on.</p>'}),
+        intro:CC.introPage({text:two(`<p>You can find most failed bipolar transistors with an ohmmeter, because a transistor behaves like two diodes that share the base. In an NPN transistor the base is P-type and the emitter and collector are N-type; in a PNP transistor it is the other way round. A transistor is good when:</p><ol><li>The base-emitter junction tests like a good diode.</li><li>The base-collector junction tests like a good diode.</li><li>Emitter to collector reads high (over range: this meter shows 999999) with the probes either way round.</li></ol><p>Most failed transistors have a <b>shorted</b> junction (low both ways) or an <b>open</b> junction (high both ways).</p><p>To find the base, look for the one lead that reads low to <i>both</i> other leads with the same probe on it. If that probe is the <b>red (+)</b> one, current flows into a P-type base: the transistor is <b>NPN</b>. If it is the <b>black (−)</b> one, the base is N-type: the transistor is <b>PNP</b>. For example, with the black probe on lead A, touching the red probe to either other lead reads low. Then A is the base of a PNP transistor. It is good if both readings go over range when the probes are reversed and the other two leads read OL to each other.</p><p>A systematic order of measurements gets you there fastest.</p>`,SK.wrap(250,110,SK.bjt(60,55,{label:'NPN'}).svg+SK.bjt(180,55,{pnp:true,label:'PNP'}).svg)),
+          how:'<p>Analyze twelve transistors. The two probes are always on two of the three leads. Tap a lead with a probe on it to move that probe to the free lead; tap the free lead to reverse the probes. Pick one of the eight answers and press <b>Grade selected answer</b>.</p><p><b>Scoring.</b> Each transistor is worth 100/12 = 8.33 points, and readings are free. Your score is the points for the transistors you identify correctly. If you are wrong, the right answer is highlighted with an explanation, and you can keep measuring before moving on.</p>'}),
         run:(el,s)=>SK.ohmBench(el,s,{count:12,noun:'Transistor',build:transistorBuild})},
     ]},
     {title:'Small-signal amplifiers',items:[
@@ -1578,7 +1568,7 @@ CC.App.init({
     ]},
     {title:'Troubleshooting',items:[
       {id:'ts1',title:'Troubleshooting Simple Amplifiers',icon:'wrench',sub:'base biased CE amplifier',intro:CC.introPage({text:two(TS_TEXT('base biased common emitter',10),schCE('bb')),how:TS_HOW}),run:(el,s)=>SK.ampBench(el,s,{count:10,points:12,build:()=>ampBoard('bb')})},
-      {id:'ts2',title:'Troubleshooting CE Amplifiers',icon:'wrench',sub:'voltage divider CE amplifier',intro:CC.introPage({text:two(TS_TEXT('voltage divider biased common emitter',12),schCE('byp',{out:'C3',byp:'C2'})),how:TS_HOW}),run:(el,s)=>SK.ampBench(el,s,{count:10,points:12,build:()=>ampBoard('div')})},
+      {id:'ts2',title:'Troubleshooting CE Amplifiers',icon:'wrench',sub:'voltage divider CE amplifier',intro:CC.introPage({text:two(TS_TEXT('voltage divider biased common emitter',10),schCE('byp',{out:'C3',byp:'C2'})),how:TS_HOW}),run:(el,s)=>SK.ampBench(el,s,{count:10,points:12,build:()=>ampBoard('div')})},
     ]}
   ]
 });

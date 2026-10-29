@@ -43,7 +43,7 @@ test('all topic calculator defaults still yield finite numeric outputs', () => {
   }
 });
 
-test('power-supply component ratings cover every generated voltage/resistor combination', () => {
+test('power-supply component ratings cover every generated voltage/regulator combination', () => {
   const source = read('Power_Supply_Challenge.html');
   const context = contextWithUtilities(source);
   const start = source.indexOf('PS.make=function');
@@ -54,25 +54,25 @@ test('power-supply component ratings cover every generated voltage/resistor comb
     globalThis.makeSupply=PS.make;`, context);
   const seen = new Set();
   for (const type of ['half', 'full', 'bridge']) {
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 200; i++) {
       const c = context.makeSupply(type, null);
-      seen.add(`${type}/${c.vsec}/${c.R1}`);
+      seen.add(`${type}/${c.vsec}/${c.vreg}`);
       const specs = c.specs();
-      const resistorWatts = Number(specs.find(s => s.startsWith('R1:')).match(/, ([\d.]+) W/)[1]);
-      const diode = specs.find(s => s.includes('silicon rectifier'));
-      const reverseRatings = { '1N4001': 50, '1N4002': 100, '1N4003': 200, '1N4004': 400,
-        '1N4005': 600, '1N4006': 800, '1N4007': 1000 };
-      const reverseVolts = reverseRatings[diode.match(/1N400[1-7]/)[0]];
+      // The original's sheet: 50 V PIV diodes, a 4700 µF 25 V capacitor and a 4.7 kΩ bleeder.
+      const reverseVolts = Number(specs.find(s => s.startsWith('Diodes:')).match(/(\d+) V PIV/)[1]);
+      const capVolts = Number(specs.find(s => s.startsWith('Capacitor C1:')).match(/@ (\d+) V/)[1]);
       // Bound the stress independently of the simulator's waveform calculation.
       const peak = c.vsec * Math.SQRT2;
       const requiredReverseVolts = type === 'bridge' ? peak : 2 * peak;
-      assert.ok(reverseVolts >= 1.5 * requiredReverseVolts, `${type}: reverse-voltage margin`);
-      assert.ok(resistorWatts >= 1.5 * peak ** 2 / c.R1, `${type}: continuous resistor margin`);
-      const simulatedWatts = c.bus.reduce((sum, v) => sum + v ** 2 / c.R1, 0) / c.bus.length;
-      assert.ok(simulatedWatts < resistorWatts, `${type}: simulated dissipation`);
+      assert.ok(reverseVolts >= 1.25 * requiredReverseVolts, `${type}: reverse-voltage margin`);
+      assert.ok(capVolts >= 1.25 * peak, `${type}: capacitor voltage margin`);
+      assert.equal(c.R1, 4700);
+      assert.ok(peak ** 2 / c.R1 < 0.125, `${type}: bleeder within half a 1/4 W rating`);
+      const out = c.out.reduce((a, v) => a + v, 0) / c.out.length;
+      assert.ok(Math.abs(out - c.vreg) < 0.05, `${type}: a working supply regulates`);
     }
   }
-  assert.equal(seen.size, 27, 'covered all three topologies, secondary voltages and bleeder resistances');
+  assert.equal(seen.size, 48, 'covered all three topologies, secondary voltages and regulators');
 });
 
 test('generated inverting-amplifier bandwidth answers use noise gain and reject low-gain approximations', () => {

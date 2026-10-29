@@ -575,7 +575,7 @@ App.route=function(){
   if(r==='x'&&App.cfg.extra&&App.cfg.extra[a])return App.cfg.extra[a](v);
   App.home(v);
 };
-App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;g.forEach(x=>{if(x.mid===id&&(b===null||x.score>b))b=x.score;});return b;};
+App.best=function(id){const g=store.get(App.key('grades'),[]);let b=null;const f=x=>x.score/(x.max||100);g.forEach(x=>{if(x.mid===id&&(b===null||f(x)>f(b)))b=x;});return b;};
 App.home=function(v){
   const c=App.cfg;
   v.appendChild(el(`<section class="hero"><div><h1>${esc(c.title)}</h1><p class="muted">${c.blurb||''}</p>
@@ -586,7 +586,7 @@ App.home=function(v){
   c.groups.forEach(g=>{
     v.appendChild(el(`<div class="group-title">${esc(g.title)}</div>`));
     const m=el('<div class="menu"></div>');
-    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b}%</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
+    g.items.forEach(it=>{const b=App.best(it.id);const btn=el(`<button class="menu-item"><span class="ic">${IC[it.icon]||IC.wave}</span><span><b>${esc(it.title)}</b><span>${esc(it.sub||'')}</span></span>${b!==null?`<span class="best" title="Best score">${b.max?`${b.score}/${b.max}`:b.score+'%'}</span>`:''}</button>`);btn.onclick=()=>{location.hash='#/m/'+it.id;};m.appendChild(btn);});
     v.appendChild(m);
   });
   v.appendChild(el(`<p class="small muted mt center">${esc(c.footer||'')}</p>`));
@@ -616,18 +616,20 @@ class Session{
   every(fn,ms){const t=setInterval(fn,ms);this.timers.push(t);return t;}
   cleanup(){this.timers.forEach(clearInterval);}
   restart(){location.hash='#/run/'+this.m.id;App.route();}
-  finish(score,summary){
+  /* o.max: score is points out of o.max instead of a percentage (the ETCAI troubleshooting boards) */
+  finish(score,summary,o={}){
     if(this.done)return;this.done=true;this.cleanup();
-    score=Math.max(0,Math.min(100,Math.round(score)));
+    const max=o.max||100;score=Math.max(0,Math.min(max,Math.round(score)));
     const st=App.student();
     const time=CC.fmtTime(this.elapsed());
     const d=new Date();const date=d.toLocaleString(undefined,{year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const rec={mid:this.m.id,title:this.m.title,score,time,date,ts:d.getTime(),name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
+    const rec={mid:this.m.id,title:this.m.title,score,...(o.max?{max}:{}),time,date,ts:d.getTime(),name:st&&!App.guest?st.name:'(practice)',id:st&&!App.guest?st.id:''};
     if(this.m.graded!==false){const g=store.get(App.key('grades'),[]);g.push(rec);store.set(App.key('grades'),g.slice(-500));}
     App.last=rec;
-    const pass=App.cfg.pass||80;
+    // pass:false means the program has no pass mark: show the score without a pass/fail colour
+    const pass=App.cfg.pass,verdict=pass===false?'':score/max*100>=(pass||80)?'ok':'bad';
     const certOk=App.opts().certs&&rec.id;
-    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${score>=pass?'ok':'bad'}">Score: ${score}%</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
+    return CC.modal(`<h3>Exercise completed</h3><p class="verdict ${verdict}">Score: ${CC.scoreText(rec)}</p><p class="muted">Time on task: ${time}</p>${summary?`<div class="small">${summary}</div>`:''}${!rec.id?'<p class="small muted">Sign in with a name and ID to print a certificate.</p>':''}`,
       [{label:'Main menu',value:'menu'},{label:'Review',value:'review'},...(certOk?[{label:'Certificate',value:'cert'}]:[]),{label:'Try again',primary:true,value:'again'}],{noEscape:false}).then(v=>{
         if(v==='menu')location.hash='#/';
         else if(v==='cert')location.hash='#/cert';
@@ -636,6 +638,7 @@ class Session{
   }
 }
 CC.Session=Session;
+CC.scoreText=r=>r.max?`${r.score} of ${r.max} points`:`${r.score}%`;
 
 App.certificate=function(v){
   const r=App.last;
@@ -643,7 +646,7 @@ App.certificate=function(v){
   const code=CC.validity(App.cfg.id,r.name,r.id,r.title,r.score,r.time,r.date);
   v.appendChild(el(`<div><div class="cert"><div style="font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:#7a5b10">Certificate of Completion</div>
   <h2>${esc(App.cfg.title)}</h2><p>This certifies that</p><div class="big">${esc(r.name)}</div><p>has completed the exercise</p><div class="big" style="font-size:1.3rem">${esc(r.title)}</div>
-  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${r.score}%</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
+  <dl><dt>Student ID</dt><dd>${esc(r.id)}</dd><dt>Exercise score</dt><dd>${CC.scoreText(r)}</dd><dt>Time on task</dt><dd>${esc(r.time)}</dd><dt>Date / time</dt><dd>${esc(r.date)}</dd><dt>Validity code</dt><dd style="font-family:var(--mono)">${code}</dd></dl></div>
   <div class="row end mt noprint"><a class="btn" href="#/">Main menu</a><button class="btn primary" onclick="window.print()">Print certificate</button></div></div>`));
 };
 App.validityView=function(v){
@@ -663,10 +666,10 @@ App.validityView=function(v){
 };
 App.grades=function(v){
   const g=store.get(App.key('grades'),[]);
-  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${r.score}%</b></td><td>${esc(r.time)}</td></tr>`).join('');
+  const rows=g.slice().reverse().map(r=>`<tr><td>${esc(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.id)}</td><td>${esc(r.title)}</td><td><b>${CC.scoreText(r)}</b></td><td>${esc(r.time)}</td></tr>`).join('');
   v.appendChild(el(`<div><h1>Grade file</h1><p class="muted small">Scores are stored in this browser${window.Acct&&Acct.user()?' and synced to the account <b>'+esc(Acct.user())+'</b>':'. Use <b>Sync across browsers</b> on the main menu to keep them in step on other browsers and devices'}.</p><div class="card"><div class="tablewrap"><table class="t"><thead><tr><th>Date</th><th>Name</th><th>ID</th><th>Exercise</th><th>Score</th><th>Time</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="muted">No grades recorded yet.</td></tr>'}</tbody></table></div></div>
   <div class="row end mt noprint"><button class="btn" id="gclr">Clear grade file</button><button class="btn" id="gcsv">Download CSV</button><button class="btn primary" onclick="window.print()">Print</button></div></div>`));
-  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,r.score,r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
+  $('#gcsv',v).onclick=()=>{const csv='Date,Name,ID,Exercise,Score,Time\n'+g.map(r=>[r.date,r.name,r.id,r.title,CC.scoreText(r),r.time].map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',')).join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=App.cfg.id+'-grades.csv';document.body.appendChild(a);a.click();a.remove();};
   $('#gclr',v).onclick=async()=>{if(await CC.confirm(window.Acct&&Acct.user()?'Delete every grade stored for this program, here and in the sync account?':'Delete every grade stored for this program on this device?','Delete')){store.del(App.key('grades'));App.route();}};
 };
@@ -707,49 +710,60 @@ CC.workHTML=function(steps,label='Show worked solution'){
   return `<details class="work"><summary>${label}</summary>${body}</details>`;
 };
 /* ---------- Worksheet: one circuit, many answers, Check (-2) Help (-3) Grade ---------- */
+/* spec.itemScore (the ETCAI rule): each item is worth ⌊100/N⌋ points (any remainder is free). A wrong
+   check and every opening of help take points from that item only, never below 0; a right check locks
+   the item. Grade keeps what is left on right items; wrong items score 0. */
 CC.worksheet=function(root,s,spec){
   CC._last=spec;
   const checkCost=spec.checkCost??2, helpCost=spec.helpCost??3, N=spec.items.length;
+  const byItem=!!spec.itemScore, worth=Math.floor(100/N), spare=100-N*worth;
   let pen=0;const helped=new Set();
+  spec.items.forEach(it=>{it._ded=0;});
+  const left=it=>worth-it._ded;
+  const maxScore=()=>spare+spec.items.reduce((a,it)=>a+left(it),0);
   const w=el(`<div>
-    <div class="statusbar"><span class="pill" id="wpen">Deductions: 0</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
+    <div class="statusbar"><span class="pill" id="wpen">${byItem?`Maximum possible score: ${100}`:'Deductions: 0'}</span><span class="pill" id="wtime">0:00</span><span class="pill small">Check: −${checkCost} if wrong${helpCost?` · Help: −${helpCost}`:''}</span></div>
     <div class="cols2"><div><div class="card"><h2 style="margin-top:0">${esc(spec.title||'Circuit')}</h2><div class="diagram">${spec.diagram||''}</div><div class="givens">${spec.givens.map(g=>`<div class="given"><div class="k">${g.k}</div><div class="v">${g.v}</div></div>`).join('')}</div>${spec.note?`<p class="small muted">${spec.note}</p>`:''}</div><div id="wextra"></div></div>
     <div><div class="card"><h2 style="margin-top:0">Find</h2><div class="ws" id="ws"></div>
     <div class="row end mt"><button class="btn primary" id="wgrade">Grade</button></div></div></div></div></div>`);
   root.appendChild(w);
   const wsEl=$('#ws',w);
-  const upd=()=>{$('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  const upd=()=>{if(byItem){const m=maxScore();$('#wpen',w).textContent='Maximum possible score: '+m;$('#wpen',w).className='pill'+(m<100?' bad':'');return;}
+    $('#wpen',w).textContent='Deductions: '+pen;$('#wpen',w).className='pill'+(pen?' bad':'');};
+  const charge=(it,c)=>{pen+=c;it._ded=Math.min(worth,it._ded+c);upd();};
   s.every(()=>{$('#wtime',w).textContent=CC.fmtTime(s.elapsed());},1000);
   const ok=(it,val)=>{if(it.signFree)return CC.close(Math.abs(val),Math.abs(it.value),it.tol??spec.tol??0.02,it.absTol??null);return CC.close(val,it.value,it.tol??spec.tol??0.02,it.absTol??null);};
   spec.items.forEach((it,i)=>{
     const r=el(`<div class="wrow"><div class="lab">${CC.m(it.sym)}</div><div class="inp"><input type="text" inputmode="decimal" autocomplete="off" aria-label="${esc(it.name||it.sym)}"><span class="unit">${esc(it.unit||'')}</span></div>
-      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points." aria-label="Help">?</button></div><div class="fb"></div></div>`);
-    it._row=r;const inp=$('input',r);
+      <div class="acts"><button class="btn sm" data-a="c" title="Check your answer. Cost: ${checkCost} points if wrong${byItem?', taken from this item':''}." aria-label="Check">${IC.check.replace('<svg','<svg width="18" height="18"')}</button><button class="btn sm" data-a="h" title="Formulas and hints. Cost: ${helpCost} points${byItem?' from this item each time':''}." aria-label="Help">?</button></div><div class="fb">${byItem?`<span class="muted">${worth} points</span>`:''}</div></div>`);
+    it._row=r;const inp=$('input',r);if(byItem)r.classList.add('info');
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=spec.items[i+1];if(nx)$('input',nx._row).focus();else $('#wgrade',w).focus();}});
     $('[data-a=c]',r).onclick=()=>{
       const val=CC.parse(inp.value,!CC.prefixed(it.unit));
       if(isNaN(val)){CC.toast('Type a number first.');return;}
-      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';}
-      else{pen+=checkCost;r.className='wrow bad';$('.fb',r).textContent=`Not right — ${checkCost} points deducted.`;upd();}
+      if(ok(it,val)){r.className='wrow ok';$('.fb',r).textContent='Right!';
+        if(byItem){inp.readOnly=true;$('[data-a=c]',r).style.display='none';}}
+      else{charge(it,checkCost);r.className='wrow bad';$('.fb',r).textContent=byItem?`Not right. This item is now worth ${left(it)} point${left(it)===1?'':'s'}.`:`Not right — ${checkCost} points deducted.`;}
     };
     $('[data-a=h]',r).onclick=async()=>{
       const first=!helped.has(i);
-      if(first){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. It costs ${helpCost} points, charged once per item.</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
-        if(go!==true)return;helped.add(i);pen+=helpCost;upd();}
+      if(first||byItem){const go=await CC.modal(`<h3>Help for ${CC.m(it.sym)}</h3><p>Help shows the formula and method for this item. ${byItem?`Each time you open it, ${helpCost} points come off this item (it is worth ${left(it)} now).`:`It costs ${helpCost} points, charged once per item.`}</p><p class="small muted">Choose Exit help to go back with no penalty.</p>`,[{label:'Exit help',value:false},{label:`Show help (−${helpCost})`,primary:true,value:true}]);
+        if(go!==true)return;helped.add(i);charge(it,helpCost);
+        if(byItem&&!r.classList.contains('ok'))$('.fb',r).textContent=`This item is now worth ${left(it)} point${left(it)===1?'':'s'}.`;}
       CC.modal(`<h3>${CC.m(it.sym)}${it.name?` — ${esc(it.name)}`:''}</h3>${(it.help||[]).map(h=>typeof h==='string'&&h.startsWith('$')?CC.M(h.slice(1)):`<p>${h}</p>`).join('')}`);
     };
     wsEl.appendChild(r);
   });
   $('#wgrade',w).onclick=async()=>{
     const blanks=spec.items.filter(it=>!$('input',it._row).value.trim()).length;
-    if(blanks&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
-    let right=0;
-    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good)right++;inp.disabled=true;
+    if(blanks&&!byItem&&!(await CC.confirm(`${blanks} answer${blanks>1?'s are':' is'} blank and will be graded as wrong. Grade now?`,'Grade')))return;
+    let right=0,kept=spare;
+    spec.items.forEach(it=>{const inp=$('input',it._row);const val=CC.parse(inp.value,!CC.prefixed(it.unit));const good=!isNaN(val)&&ok(it,val);if(good){right++;kept+=left(it);}inp.disabled=true;
       it._row.className='wrow '+(good?'ok':'bad');$('.fb',it._row).innerHTML=(good?'Right! ':'')+`Correct answer: <b>${CC.fmt(it.value)} ${esc(it.unit||'')}</b>`+CC.workHTML(typeof it.work==='function'?it.work():it.work);$$('button',it._row).forEach(b=>b.disabled=true);});
     $('#wgrade',w).disabled=true;
-    const raw=right/N*100;const score=raw-pen;
+    const raw=right/N*100;const score=byItem?kept:raw-pen;
     if(spec.after)spec.after($('#wextra',w));
-    s.finish(score,`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
+    s.finish(score,byItem?`${right} of ${N} answers correct. Each item was worth ${worth} points${spare?` (plus ${spare} free)`:''}; checks and help took ${spec.items.reduce((a,it)=>a+it._ded,0)} points off the items they were used on.`:`${right} of ${N} answers correct (${Math.round(raw)}%), minus ${pen} points for checks and help.`);
     const again=el('<div class="row end mt noprint"><button class="btn primary">New problem</button></div>');$('button',again).onclick=()=>s.restart();$('#wgrade',w).parentNode.after(again);
   };
 };
@@ -807,7 +821,9 @@ CC.problemSet=function(root,s,spec){
 };
 
 /* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
-/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}} */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}}
+   spec.fixedBlack (or b.blackFixed for one board): the black probe stays on b.start.black and every tap moves the red one (the ETCAI boards).
+   spec.points out of count*points are reported as points, not a percentage, when spec.rawPoints is set. */
 CC.trouble=function(root,s,spec){
   const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
@@ -816,22 +832,22 @@ CC.trouble=function(root,s,spec){
   // like a real meter, the readings float a little: redraw them every 0.7 s
   let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
-    const b=spec.build(k);let pts=P;CC._last=b;
+    const b=spec.build(k);let pts=P;CC._last=b;const fixB=!!(spec.fixedBlack||b.blackFixed);
     if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
     $('#tn',w).textContent=`Problem ${k+1} of ${N}`;
     const updP=()=>{$('#tp',w).textContent=`${pts} point${pts===1?'':'s'} remain for this item`;$('#tp',w).className='pill'+(pts<P/2?' bad':'');};
     updP();
     const body=$('#tbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
-      <div class="row mt" style="justify-content:space-between"><div class="row">${b.blackFixed?`<span class="small muted">Tap a pad to move the red probe. The black probe stays on ${esc(b.padName(b.start.black))}.</span><span class="hide"><button id="pr"></button><button id="pk"></button></span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row">${fixB?`<span class="small muted">Tap a pad to move the red (+) probe. The black (−) probe stays on ${esc(b.padName(b.start.black))}.</span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
       <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
       <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
       <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
     body.appendChild(card);
     $('#info',card).innerHTML=b.info?b.info():'';
     const fl=$('#fl',card);b.faults.forEach((f,i)=>fl.appendChild(el(`<label><input type="radio" name="flt" value="${i}"> <span>${esc(f)}</span></label>`)));
-    const setActive=a=>{probe.active=a;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
-    $('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');setActive('red');
+    const setActive=a=>{if(fixB)a='red';probe.active=a;if(fixB)return;$('#pr',card).classList.toggle('blue',a==='red');$('#pk',card).classList.toggle('blue',a==='black');};
+    if(!fixB){$('#pr',card).onclick=()=>setActive('red');$('#pk',card).onclick=()=>setActive('black');}setActive('red');
     // probes that start on the board give a free first reading
     if(b.start){probe.red=b.start.red;probe.black=b.start.black;lastKey=probe.red+'|'+probe.black;
       readings.push(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${b.measure(probe.red,probe.black).text}</b> <span class="muted">(starting position, free)</span>`);}
@@ -848,10 +864,10 @@ CC.trouble=function(root,s,spec){
       $$('.pad',card).forEach(g=>{const f=()=>tap(g.dataset.id);g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
       $('#mt',card).innerHTML=meterHTML();
     };
+    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     const tap=id=>{
       if(card.dataset.graded)return;
       // the selected probe stays selected; only the first placement hands over to the probe not yet placed
-      if(b.blackFixed)probe.active='red';
       const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
       probe[which]=id;
       setActive(!probe[other]?other:first?'red':which);
@@ -861,7 +877,6 @@ CC.trouble=function(root,s,spec){
       draw();
     };
     if(readings.length)$('#rlog',card).innerHTML=readings.join('<br>');
-    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     draw();
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
@@ -877,7 +892,7 @@ CC.trouble=function(root,s,spec){
       btn.textContent=k+1<N?'Continue':'Finish';
     };
   };
-  const end=()=>{const score=earned/(N*P)*100;s.finish(score,`${earned} of ${N*P} possible points.`);};
+  const end=()=>{if(spec.rawPoints)s.finish(earned,`${earned} of ${N*P} possible points.`,{max:N*P});else s.finish(earned/(N*P)*100,`${earned} of ${N*P} possible points.`);};
   next();
 };
 
