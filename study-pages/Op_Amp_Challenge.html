@@ -807,12 +807,14 @@ CC.problemSet=function(root,s,spec){
 };
 
 /* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
-/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}}} */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}} */
 CC.trouble=function(root,s,spec){
   const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
   root.appendChild(w);
   s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  // like a real meter, the readings float a little: redraw them every 0.7 s
+  let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
     const b=spec.build(k);let pts=P;CC._last=b;
     if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
@@ -821,7 +823,7 @@ CC.trouble=function(root,s,spec){
     updP();
     const body=$('#tbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
-      <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button></div></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row">${b.blackFixed?`<span class="small muted">Tap a pad to move the red probe. The black probe stays on ${esc(b.padName(b.start.black))}.</span><span class="hide"><button id="pr"></button><button id="pk"></button></span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
       <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
       <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
       <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
@@ -849,6 +851,7 @@ CC.trouble=function(root,s,spec){
     const tap=id=>{
       if(card.dataset.graded)return;
       // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      if(b.blackFixed)probe.active='red';
       const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
       probe[which]=id;
       setActive(!probe[other]?other:first?'red':which);
@@ -858,6 +861,7 @@ CC.trouble=function(root,s,spec){
       draw();
     };
     if(readings.length)$('#rlog',card).innerHTML=readings.join('<br>');
+    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     draw();
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
@@ -878,7 +882,7 @@ CC.trouble=function(root,s,spec){
 };
 
 /* meter helpers */
-CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.008,0.008));};
+CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.002,0.002));};
 CC.lcd=(v,dec=2)=>{if(!isFinite(v))return 'OL';const a=Math.abs(v);if(a<0.005)return (0).toFixed(dec);return v.toFixed(a>=100?1:dec);};
 
 /* ---------- PC-board drawing kit ---------- */
@@ -889,11 +893,16 @@ B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}"
 B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
 B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
 /** component between two pad points (horizontal or vertical) */
-B.part=(type,a,b,label)=>{
+// resistor color code for a marked value (two significant digits) and a tolerance in percent (20% has no tolerance band)
+B.bands=(ohms,tol=5)=>{const C=['#111','#6d4c41','#c62828','#ef6c00','#fbc02d','#2e7d32','#1565c0','#7b1fa2','#8d8d8d','#f5f5f5'];
+  let e=Math.floor(Math.log10(ohms))-1,d=Math.round(ohms/Math.pow(10,e));if(d>=100){e++;d=Math.round(d/10);}
+  const mult=e===-1?'#c9a227':e===-2?'#c0c0c0':C[e],t={1:'#6d4c41',2:'#c62828',5:'#c9a227',10:'#c0c0c0'}[tol];
+  return [C[Math.floor(d/10)],C[d%10],mult].concat(t?[t]:[]);};
+B.part=(type,a,b,label,o={})=>{
   const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
   let body='';const bl=Math.min(L-26,64);
   const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
-  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+(o.ohms?B.bands(o.ohms,o.tol):['#c62828','#6d4c41','#ef6c00','#c9a227']).map((c,i)=>`<rect x="${[-.3,-.12,.06,.3][i]*bl-2.5}" y="-8" width="5" height="16" fill="${c}"/>`).join('');
   if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
   if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
   if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
@@ -959,7 +968,7 @@ T.itov=`<p>A <b>current-to-voltage (I to V) converter</b> feeds the input curren
 T.invIntro=`<p>The <b>inverting amplifier</b> gives a fixed gain set by two resistors and an output that is opposite in polarity to the input. A positive DC input gives a negative output, and an AC output is 180° out of phase with the input.</p>
 <p>The inverting input is held at virtual ground (0 V) by the feedback, so the input resistor ${m('R_i')} connects the source to 0 V. That makes the input impedance simply ${m('R_i')}, and the output impedance is close to 0 Ω.</p>
 <p>Resistor ${m('R_1')} from the + input to ground is optional. When it's used it should equal ${m('R_i')} in parallel with ${m('R_f')}. The two inputs then see the same DC resistance, so the bias currents create equal voltage drops that cancel, and the output offset is smaller. ${m('R_1')} doesn't change the gain.</p>`;
-T.invMistakes=`<p class="small"><b>Common mistakes:</b> forgetting the minus sign on the output; using ${m('R_f/R_i+1')} (that's the noninverting formula); mixing kΩ and Ω in the same calculation; and forgetting that the output can't exceed the saturation level (about ±13.5 V on ±15 V supplies).</p>`;
+T.invMistakes=`<p class="small"><b>Common mistakes:</b> forgetting the minus sign on the output; using ${m('R_f/R_i+1')} (that's the noninverting formula); mixing kΩ and Ω in the same calculation; and forgetting that the output can't exceed the saturation level (about 1.5 V inside each supply: ±13.5 V on ±15 V supplies, ±10.5 V on ±12 V).</p>`;
 
 /* ---------- noninverting ---------- */
 T.noninvIntro=`<p>The <b>noninverting amplifier</b> applies the signal to the + input. The output has the same polarity as the input, and the gain is always at least 1:</p>${M('A=\\frac{R_f}{R_i}+1')}
@@ -997,10 +1006,10 @@ T.tsInst4=`<p>OA Troubleshooting Four uses the same instrumentation amplifier bo
 T.howTs=per=>per?`<p>There are 10 boards. Each starts with <b>15 points</b>, and every time you move the probe to a new pad the board loses 1 point (down to 0). Select the fault and choose <b>Grade selection</b>; a correct answer earns the points that remain, a wrong answer earns 0. You get one try per board. The maximum is 150 points, but real scores are much lower because several readings are always needed. Your percentage is your points out of 150.</p>`
   :`<p>There are 10 boards worth <b>10 points</b> each, for a maximum of 100. You can take as many readings and change the input as often as you like. Select the fault and choose <b>Grade selection</b>; you get one try per board.</p>`;
 T.meterNote=`<p>Like a real meter, the voltmeter has a little drift and calibration error, but it is accurate enough to find every fault. Tap a solder pad to move the red probe.</p>`;
-T.invGeneral=`<p>The board is an inverting amplifier with ${m('R_1=10\\text{ k}\\Omega')} and ${m('R_2=100\\text{ k}\\Omega')}, so the gain is 10 and the output is inverted:</p>${M('A=\\frac{R_2}{R_1}=10\\qquad OUT=-A\\,(IN1)')}
-<p>R3 gives the + input the same DC resistance to ground as the − input, to reduce offset; it doesn't affect the gain. With ±15 V supplies the output saturates near ±13.5 V, so inputs larger than about ±1.35 V drive the output to its limit. In normal operation pin 2, the right end of R1 and the top of R2 sit at virtual ground (0 V) whatever the input.</p>`;
-T.instGeneral=`<p>The board is an instrumentation amplifier. IC1 and IC2 are followers that give both inputs a very high input impedance. IC3 is a difference amplifier with ${m('R_1=R_2=10\\text{ k}\\Omega')} and ${m('R_3=R_4=100\\text{ k}\\Omega')}:</p>${M('A=\\frac{R_3}{R_1}=10\\qquad OUT=A\\,(IN2-IN1)')}
-<p>So IN2 is amplified by 10 without inversion, and IN1 is amplified by 10 and inverted. With ±15 V supplies the output saturates near ±13.5 V. The circuit is DC coupled, so a fault in IC1 or IC2 drives an input of IC3 and can make IC3 look faulty. Always check the stage feeding a suspect op amp.</p>`;
+T.invGeneral=`<p>The board is an inverting amplifier. Each board uses standard resistor values with R2 equal to 5, 10 or 20 times R1 (for example ${m('R_1=10\\text{ k}\\Omega')} and ${m('R_2=100\\text{ k}\\Omega')}). The values are printed on the board and the schematic. The gain is R2/R1 and the output is inverted:</p>${M('A=\\frac{R_2}{R_1}\\qquad OUT=-A\\,(IN1)')}
+<p>R3 is the nearest standard value to R1 in parallel with R2. It gives the + input the same DC resistance to ground as the − input, to reduce offset; it doesn't affect the gain. The supplies are ±12 V or ±15 V, and the output saturates about 1.5 V inside each supply (near ±10.5 V or ±13.5 V). An input larger than the saturation voltage divided by the gain drives the output to its limit; with a gain of 10 on ±15 V that is about ±1.35 V. In normal operation pin 2, the right end of R1 and the top of R2 sit at virtual ground (0 V) whatever the input.</p>`;
+T.instGeneral=`<p>The board is an instrumentation amplifier. IC1 and IC2 are followers that give both inputs a very high input impedance. IC3 is a difference amplifier with ${m('R_1=R_2')} and ${m('R_3=R_4')}. Each board uses standard values with R3 equal to 5, 10 or 20 times R1 (for example ${m('R_1=10\\text{ k}\\Omega')} and ${m('R_3=100\\text{ k}\\Omega')}), printed on the board and the schematic:</p>${M('A=\\frac{R_3}{R_1}\\qquad OUT=A\\,(IN2-IN1)')}
+<p>So IN2 is amplified by A without inversion, and IN1 is amplified by A and inverted. The supplies are ±12 V or ±15 V, and the output saturates about 1.5 V inside each supply (near ±10.5 V or ±13.5 V). The circuit is DC coupled, so a fault in IC1 or IC2 drives an input of IC3 and can make IC3 look faulty. Always check the stage feeding a suspect op amp.</p>`;
 T.opampFail=`<p>An op amp contains many transistors, and one can fail in many ways. Most failures are drastic: the output latches near the positive or negative supply and no longer responds to the input. Those are the failures simulated here.</p>
 <p>But a saturated output does <i>not</i> prove the op amp is bad. Four things can put the output near a rail:</p>
 <ol><li>The input is large enough to drive the output into saturation.</li><li>An input pin is open (feedback or bias path broken).</li><li>The +V or −V supply is missing at the IC.</li><li>The op amp really is defective.</li></ol>
@@ -1008,22 +1017,22 @@ T.opampFail=`<p>An op amp contains many transistors, and one can fail in many wa
 T.traceGen=`<p>An open PC board trace is usually a hairline crack in the copper, often too small to see. Every point on a good trace has the same voltage, so <b>different voltages at the two ends of a trace mean that trace is open</b>.</p>`;
 T.invTraces=`<ul>
 <li><b>Trace 1</b> (IN1 to R1): with a nonzero input, IN1 and the left end of R1 read differently. The output stays at 0 V.</li>
-<li><b>Trace 2</b> (+15 V to pin 7): pin 7 no longer reads +15 V. A starved pin 7 usually floats near the <i>negative</i> supply, and the output sits near −V regardless of the input.</li>
-<li><b>Trace 3</b> (−15 V to pin 4): pin 4 reads a positive voltage instead of −15 V, and the output sits near +V.</li>
+<li><b>Trace 2</b> (+V to pin 7): pin 7 no longer reads +V. A starved pin 7 usually floats near the <i>negative</i> supply, and the output sits near −V regardless of the input.</li>
+<li><b>Trace 3</b> (−V to pin 4): pin 4 reads a positive voltage instead of −V, and the output sits near +V.</li>
 <li><b>Trace 4</b> (R1/R2 junction to pin 2): pin 2 floats at a few millivolts, the loop is broken and the output latches. R1 and R2 then form a divider between IN1 and the output, so the junction is no longer at 0 V.</li>
 <li><b>Trace 5</b> (pin 6 to OUT): pin 6 is correct but the OUT terminal reads about 0 V.</li></ul>`;
 T.invResistors=`<p>Carbon resistors almost always fail open, so open resistors are simulated here.</p><ul>
 <li><b>R1 open:</b> no signal reaches the op amp. The circuit acts as a follower with no input, so the output stays at 0 V. Every voltage looks normal except that the output doesn't respond to IN1.</li>
 <li><b>R2 open:</b> no feedback, so the op amp runs at full open-loop gain. A tiny positive input drives the output to −V, a tiny negative input to +V. Pin 2 reads the same as IN1.</li>
-<li><b>R3 open:</b> pin 3 floats and the output usually latches near −V. Pin 3 reads a few tens of millivolts negative (about −20 mV) while the bottom of R3 reads 0 V. Pin 2 sits at the R1/R2 divider voltage, about −1.2 V with IN1 at 0.</li></ul>`;
+<li><b>R3 open:</b> pin 3 floats and the output usually latches near −V. Pin 3 reads a few tens of millivolts negative (about −20 mV) while the bottom of R3 reads 0 V. Pin 2 sits at the R1/R2 divider voltage. With IN1 at 0 that is the output divided by A + 1, about −1.2 V for a gain of 10 on ±15 V.</li></ul>`;
 T.instTraces=`<ul>
-<li><b>Trace 1</b> (−15 V bus to pin 4 of IC1, IC2 and IC3): every pin 4 reads a positive voltage instead of −15 V, and all three outputs sit near +V.</li>
-<li><b>Trace 2</b> (+15 V to IC1 and IC2 pin 7): both pin 7s float near the negative supply and both follower outputs sit near −V. IC3 sees equal inputs, so OUT stays near 0 V and doesn't respond to either input.</li>
-<li><b>Trace 3</b> (branch to IC1 pin 7 only): IC1 pin 7 floats negative and IC1's output sits near −V, which drives OUT toward +V. IC2's pin 7 is still at +15 V.</li>
-<li><b>Trace 4</b> (+15 V to IC3 pin 7): IC3 pin 7 floats negative and OUT latches near −V. IC1 and IC2 still follow their inputs.</li></ul>`;
+<li><b>Trace 1</b> (−V bus to pin 4 of IC1, IC2 and IC3): every pin 4 reads a positive voltage instead of −V, and all three outputs sit near +V.</li>
+<li><b>Trace 2</b> (+V to IC1 and IC2 pin 7): both pin 7s float near the negative supply and both follower outputs sit near −V. IC3 sees equal inputs, so OUT stays near 0 V and doesn't respond to either input.</li>
+<li><b>Trace 3</b> (branch to IC1 pin 7 only): IC1 pin 7 floats negative and IC1's output sits near −V, which drives OUT toward +V. IC2's pin 7 is still at +V.</li>
+<li><b>Trace 4</b> (+V to IC3 pin 7): IC3 pin 7 floats negative and OUT latches near −V. IC1 and IC2 still follow their inputs.</li></ul>`;
 T.instResistors=`<p>Resistors R1 and R2 can fail open.</p><ul>
-<li><b>R1 open:</b> IC1's signal no longer reaches IC3. IC3 becomes a follower of its + input, so OUT = ${m('IN2\\cdot R_4/(R_2+R_4)')}, about 0.91 × IN2, and IN1 has no effect.</li>
-<li><b>R2 open:</b> IC2's signal no longer reaches IC3. R4 pulls pin 3 to 0 V, IC3 becomes an inverting amplifier with gain 10, and OUT = −10 × IN1. IN2 has no effect.</li></ul>`;
+<li><b>R1 open:</b> IC1's signal no longer reaches IC3. IC3 becomes a follower of its + input, so OUT = ${m('IN2\\cdot R_4/(R_2+R_4)')}, a little less than IN2 (0.91 × IN2 when the gain is 10), and IN1 has no effect.</li>
+<li><b>R2 open:</b> IC2's signal no longer reaches IC3. R4 pulls pin 3 to 0 V, IC3 becomes an inverting amplifier with gain A, and OUT = −A × IN1. IN2 has no effect.</li></ul>`;
 
 /* ---------- calculators ---------- */
 T.filtIntro=`<p>Filters pass some frequencies and reject others. Passive RC or LC filters lose signal in their components; <b>active filters</b> add an amplifier (here an op amp) to keep the signal level up and allow responses passive filters can't easily give.</p>
@@ -1125,6 +1134,8 @@ K.trouble=function(root,s,spec){
   const w=CC.el(`<div><div class="statusbar"><span class="pill" id="tn"></span>${per?'<span class="pill" id="tp"></span>':''}<span class="pill" id="ts">Points earned: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
   root.appendChild(w);
   s.every(()=>{CC.$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  // like a real meter, the reading floats a little: redraw it every 0.7 s
+  let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
     const b=spec.build(k);CC._last=b;let pts=P,probe=null;const inputs={};(b.inputs||[]).forEach(i=>inputs[i.key]=i.value);
     const meter=CC.meterErr();
@@ -1156,6 +1167,7 @@ K.trouble=function(root,s,spec){
       CC.$('#bw',card).innerHTML=b.svg().replace('</svg>',pads+'</svg>');
       CC.$$('.pad',card).forEach(g=>{const f=()=>{if(card.dataset.graded)return;const ch=probe!==g.dataset.id;probe=g.dataset.id;draw();readout(ch);};g.onclick=f;g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
     };
+    tick=()=>readout(false);
     draw();
     CC.$('#tg',card).onclick=()=>{
       const btn=CC.$('#tg',card);
@@ -1276,11 +1288,11 @@ function invItems(){
       [`A=\\frac{R_f}{R_i}=\\frac{${kT(b)}}{${kT(a)}}=${N(b/a)}`,`V_{out}=-A\\,V_{in}=-(${N(b/a)})${P_(vin)}\\text{ ${u}}`,`V_{out}=${N(vo)}\\text{ ${u}}`,'>The output has the opposite sign to the input.']));}
   {// saturation item: the formula predicts more than the output can deliver
     let a,b,vin,ideal;do{a=eVal(1,10);b=eVal(47,470);vin=sg(rnd(0.4,2)*(Math.random()<0.5?-1:1),2);ideal=-b/a*vin;}while(Math.abs(ideal)<20||Math.abs(ideal)>200);
-    const sat=ideal>0?13.5:-13.5;
-    it.push({prompt:`<p>Ri = ${kO(a)}, Rf = ${kO(b)} and Vin = ${vSigned(vin)} V. The supplies are ±15 V and the output can swing to within about 1.5 V of each supply. What is the output voltage of figure one?</p>`,diagram:fig(F.inverting()),
-      fields:[{key:'a',label:'Answer',unit:'V',value:sat,show:(sat>0?'+':'−')+'13.5',check:s=>{const u=CC.parse(s);return !isNaN(u)&&Math.sign(u)===Math.sign(sat)&&Math.abs(u)>=13&&Math.abs(u)<=15;}}],
-      explain:M('V_{out}=-\\frac{R_f}{R_i}V_{in}')+tip('Answers from 13 V to 15 V with the correct sign are accepted.'),
-      work:[`V_{out}=-\\frac{R_f}{R_i}V_{in}=-\\frac{${kT(b)}}{${kT(a)}}${P_(vin)}\\text{ V}=${N(ideal)}\\text{ V}`,`>That is more than the op amp can deliver. The output saturates about 1.5 V inside the ${sat>0?'positive':'negative'} supply.`,`V_{out}\\approx${sat>0?'+':'-'}13.5\\text{ V}`]});}
+    const V=pick([12,15]),sm=V-1.5,sat=ideal>0?sm:-sm;
+    it.push({prompt:`<p>Ri = ${kO(a)}, Rf = ${kO(b)} and Vin = ${vSigned(vin)} V. The supplies are ±${V} V and the output can swing to within about 1.5 V of each supply. What is the output voltage of figure one?</p>`,diagram:fig(F.inverting()),
+      fields:[{key:'a',label:'Answer',unit:'V',value:sat,show:(sat>0?'+':'−')+fmt(sm),check:s=>{const u=CC.parse(s);return !isNaN(u)&&Math.sign(u)===Math.sign(sat)&&Math.abs(u)>=V-2&&Math.abs(u)<=V;}}],
+      explain:M('V_{out}=-\\frac{R_f}{R_i}V_{in}')+tip(`Answers from ${V-2} V to ${V} V with the correct sign are accepted.`),
+      work:[`V_{out}=-\\frac{R_f}{R_i}V_{in}=-\\frac{${kT(b)}}{${kT(a)}}${P_(vin)}\\text{ V}=${N(ideal)}\\text{ V}`,`>That is more than the op amp can deliver. The output saturates about 1.5 V inside the ${sat>0?'positive':'negative'} supply.`,`V_{out}\\approx${sat>0?'+':'-'}${fmt(sm)}\\text{ V}`]});}
   return shuffle(it);
 }
 /* ---------- Noninverting ---------- */
@@ -1331,9 +1343,10 @@ function sumItems(){
 /* ---------- Characteristics ---------- */
 function charItems(){
   const it=[];
-  for(let j=0;j<3;j++){const ad=pick([1,1,10]);const vcm=+(rnd(1,10)).toFixed(1);const vo=+(rnd(0.05,5)).toFixed(2);const acm=vo/1000/vcm;const cm=20*Math.log10(ad/acm);
-    const rr=ad===1?`all four resistors are 10 kΩ, so the differential gain ${m('A_d')} is 1`:`R1 = R2 = 10 kΩ and Rf = R3 = 100 kΩ, so the differential gain ${m('A_d')} is 10`;
-    it.push(num(`In the difference amplifier of figure one, ${rr}. The resistors are perfectly matched. With both inputs tied together, a common-mode signal ${m('V_{CM}')} = ${fmt(vcm)} V PP produces an output of ${fmt(vo)} mV PP. What is the CMRR of the op amp?`,cm,'dB',fig(F.cmrr(ad===1?{r1:'R1 10k',r2:'R2 10k',r3:'R3 10k',rf:'Rf 10k'}:{r1:'R1 10k',r2:'R2 10k',r3:'R3 100k',rf:'Rf 100k'})),{},Mq('\\mathrm{CMRR}=20\\log\\left(\\frac{A_d}{A_{cm}}\\right)\\qquad A_{cm}=\\frac{V_{out}}{V_{CM}}'),
+  for(let j=0;j<3;j++){const ad=pick([1,1,10,10,100]);const vcm=+(rnd(1,10)).toFixed(1);const vo=+(rnd(0.05,5)).toFixed(2);const acm=vo/1000/vcm;const cm=20*Math.log10(ad/acm);
+    const [ra,rb]=ad===1?(x=>[x,x])(pick([1,2.2,4.7,10,22,47])):pick({10:[[1,10],[2.2,22],[4.7,47],[10,100],[22,220]],100:[[1,100],[2.2,220],[4.7,470]]}[ad]);
+    const rr=ad===1?`all four resistors are ${kO(ra)}, so the differential gain ${m('A_d')} is 1`:`R1 = R2 = ${kO(ra)} and Rf = R3 = ${kO(rb)}, so the differential gain ${m('A_d')} is ${ad}`;
+    it.push(num(`In the difference amplifier of figure one, ${rr}. The resistors are perfectly matched. With both inputs tied together, a common-mode signal ${m('V_{CM}')} = ${fmt(vcm)} V PP produces an output of ${fmt(vo)} mV PP. What is the CMRR of the op amp?`,cm,'dB',fig(F.cmrr({r1:'R1 '+fmt(ra)+'k',r2:'R2 '+fmt(ra)+'k',r3:'R3 '+fmt(rb)+'k',rf:'Rf '+fmt(rb)+'k'})),{},Mq('\\mathrm{CMRR}=20\\log\\left(\\frac{A_d}{A_{cm}}\\right)\\qquad A_{cm}=\\frac{V_{out}}{V_{CM}}'),
       ['>Convert the output to volts before dividing.',`A_{cm}=\\frac{V_{out}}{V_{CM}}=\\frac{${N(vo/1000)}\\text{ V}}{${N(vcm)}\\text{ V}}=${sci(acm)}`,`\\mathrm{CMRR}=20\\log\\left(\\frac{${ad}}{${sci(acm)}}\\right)=20\\log(${N(ad/acm)})`,`\\mathrm{CMRR}=${N(cm)}\\text{ dB}`]));}
   const amps=[()=>({n:'follower',A:1,NG:1,fig:F.follower(),g:''}),()=>{const a=eVal(1,10),b=eVal(10,470);return {n:'inverting amplifier',A:b/a,NG:b/a+1,inv:true,a,b,fig:F.inverting(),g:`Ri = ${kO(a)}, Rf = ${kO(b)}. `};},()=>{const a=eVal(1,10),b=eVal(10,470);return {n:'noninverting amplifier',A:b/a+1,NG:b/a+1,a,b,fig:F.noninv(),g:`Ri = ${kO(a)}, Rf = ${kO(b)}. `};}];
   shuffle(amps).forEach(f=>{const a=f();const gbw=pick([1,2,3,4]);const bw=gbw*1e3/a.NG;
@@ -1361,8 +1374,16 @@ function charItems(){
 const itemsRun=list=>(el,s)=>CC.problemSet(el,s,{list,tol:TOL,gradeLabel:'Grade answer'});
 
 /* ---------- troubleshooting: inverting amplifier board ---------- */
-const VP=15,VN=-15,SATP=13.6,SATN=-13.5;
-const clamp=v=>Math.max(SATN,Math.min(SATP,v));
+// every board gets its own supplies and resistor values
+const E24=[1,1.1,1.2,1.3,1.5,1.6,1.8,2,2.2,2.4,2.7,3,3.3,3.6,3.9,4.3,4.7,5.1,5.6,6.2,6.8,7.5,8.2,9.1];
+const near24=x=>{let best=x,bd=Infinity;for(let d=-1;d<=3;d++)for(const m of E24){const v=+(m*Math.pow(10,d)).toPrecision(3);const e=Math.abs(Math.log(v/x));if(e<bd){bd=e;best=v;}}return best;};
+const r2=x=>+x.toFixed(2);
+// ±12 V or ±15 V; the output saturates 1.4 V below +V and 1.5 V above −V (13.6 / −13.5 V on ±15 V)
+const supplies=()=>{const V=pick([12,15]);const SATP=r2(V-1.4),SATN=r2(-(V-1.5));return {V,VP:V,VN:-V,SATP,SATN,clamp:v=>Math.max(SATN,Math.min(SATP,v))};};
+// gain 5, 10 or 20 from standard resistor pairs [smaller, larger] in kΩ
+const RSETS={5:[[2,10],[3,15],[20,100]],10:[[1,10],[2.2,22],[4.7,47],[10,100],[22,220]],20:[[1,20],[1.5,30],[10,200]]};
+const gainSet=()=>{const Av=pick([5,10,10,20]);const [ra,rb]=pick(RSETS[Av]);return {Av,ra,rb};};
+const kl=x=>x<1?Math.round(x*1000)+'Ω':fmt(x,3)+'k';
 const dip=(x,y,label)=>{let g=`<rect x="${x}" y="${y}" width="60" height="96" rx="4" fill="#2b2b2b"/><path d="M${x+22},${y} a8,8 0 0 0 16,0" fill="#555"/><text x="${x+30}" y="${y+54}" font-size="13" font-weight="800" fill="#ddd" text-anchor="middle">${label}</text><text x="${x+30}" y="${y+70}" font-size="9" fill="#aaa" text-anchor="middle">741</text>`;
   for(let i=0;i<4;i++){g+=`<rect x="${x-10}" y="${y+10+i*24}" width="10" height="6" fill="#bbb"/><rect x="${x+60}" y="${y+10+i*24}" width="10" height="6" fill="#bbb"/><text x="${x+8}" y="${y+17+i*24}" font-size="8" fill="#ccc">${i+1}</text><text x="${x+52}" y="${y+17+i*24}" font-size="8" fill="#ccc" text-anchor="end">${8-i}</text>`;}
   return g;};
@@ -1372,15 +1393,16 @@ const supT=(pts,label,lp,col)=>`<polyline points="${pts.map(p=>p.join(',')).join
 
 function invBoard(){
   const faults=['No Faults','Trace1 Open','Trace2 Open','Trace3 Open','Trace4 Open','Trace5 Open','R1 Open','R2 Open','R3 Open','IC1 Defective'];
-  const ans=ri(0,faults.length-1),f=faults[ans];const R1=10,R2=100;const latch=Math.random()<0.5?SATP:SATN;
+  const ans=ri(0,faults.length-1),f=faults[ans];
+  const {VP,VN,SATP,SATN,clamp}=supplies(),{Av,ra:R1,rb:R2}=gainSet(),R3=near24(R1*R2/(R1+R2));const latch=Math.random()<0.5?SATP:SATN;
   const div=(a,b)=>a+(b-a)*R1/(R1+R2);
   const read=(id,inp)=>{const vin=inp.in1;let n={IN1:vin,R1L:vin,P3:0,P4:VN,P7:VP,VPT:VP,VNT:VN,GND:0,R3B:0};let out,J;
-    const normal=()=>{out=clamp(-R2/R1*vin);J=Math.abs(out)>13.4?div(vin,out):0.0003*Math.sign(out);};
+    const normal=()=>{out=clamp(-Av*vin);J=Math.abs(out)>-SATN-0.1?div(vin,out):0.0003*Math.sign(out);};
     switch(f){
       case 'Trace1 Open':n.R1L=0;out=0;J=0;break;
-      case 'Trace2 Open':n.P7=-14.2;out=-14.0;J=div(vin,out);break;
-      case 'Trace3 Open':n.P4=13.1;out=13.9;J=div(vin,out);break;
-      case 'Trace4 Open':out=13.5;J=div(vin,out);n.P2=-0.004;break;
+      case 'Trace2 Open':n.P7=r2(VN+0.8);out=r2(VN+1);J=div(vin,out);break;
+      case 'Trace3 Open':n.P4=r2(VP-1.9);out=r2(VP-1.1);J=div(vin,out);break;
+      case 'Trace4 Open':out=r2(VP-1.5);J=div(vin,out);n.P2=-0.004;break;
       case 'R1 Open':out=0;J=0;break;
       case 'R2 Open':J=vin;out=vin>0.0002?SATN:vin<-0.0002?SATP:SATP;break;
       case 'R3 Open':n.P3=-0.021;out=SATN;J=div(vin,out);break;
@@ -1398,44 +1420,46 @@ function invBoard(){
     B.trace([pos.R2R,P6])+B.trace([pos.R2R,[490,P6[1]],[490,214],pos.OUT],'TRACE 5',[470,200])+
     B.trace([pos.VPT,[410,150],[410,P7[1]],P7],'TRACE 2',[505,166])+B.trace([P4,[P4[0],262],pos.VNT],'TRACE 3',[420,276])+
     B.trace([P3,[250,P3[1]],pos.R3T])+B.trace([pos.R3B,pos.GND])+
-    dip(X,Y,'IC1')+B.part('R',pos.R1L,pos.R1R,'R1 10k')+B.part('R',pos.R2L,pos.R2R,'R2 100k')+B.part('R',pos.R3T,pos.R3B,'R3 9.1k')+
-    term(...pos.IN1,'IN1')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,'+15V')+term(...pos.VNT,'−15V'));
+    dip(X,Y,'IC1')+B.part('R',pos.R1L,pos.R1R,'R1 '+kl(R1),{ohms:R1*1000})+B.part('R',pos.R2L,pos.R2R,'',{ohms:R2*1000})+`<text x="441" y="${(pos.R2L[1]+pos.R2R[1])/2+4}" font-size="12" font-weight="700" fill="#2b1a05" text-anchor="end">R2 ${kl(R2)}</text>`+B.part('R',pos.R3T,pos.R3B,'R3 '+kl(R3),{ohms:R3*1000})+
+    term(...pos.IN1,'IN1')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,`+${VP}V`)+term(...pos.VNT,`−${VP}V`));
   const pads=Object.keys(pos).map(id=>({id,x:pos[id][0],y:pos[id][1],label:names[id]}));
   const rd=(id,v)=>{const x=read(id,{in1:v});return (x>0.0005?'+':'')+fmt(Math.abs(x)<0.0005?0:x,3)+' V';};
   const why={
-    'No Faults':['>Both supplies are correct at the IC (pin 7 = '+rd('P7',0)+', pin 4 = '+rd('P4',0)+').',`>With IN1 = +0.5 V the output reads ${rd('OUT',0.5)}, and with IN1 = −0.5 V it reads ${rd('OUT',-0.5)}: a gain of −10, exactly as designed.`,'>Pin 2 stays at virtual ground (0 V), and the voltage is the same at both ends of every trace. Nothing is wrong.'],
+    'No Faults':['>Both supplies are correct at the IC (pin 7 = '+rd('P7',0)+', pin 4 = '+rd('P4',0)+').',`>With IN1 = +0.5 V the output reads ${rd('OUT',0.5)}, and with IN1 = −0.5 V it reads ${rd('OUT',-0.5)}: a gain of −${Av}, the same as R2/R1 (${kl(R2)}/${kl(R1)}), exactly as designed.`,'>Pin 2 stays at virtual ground (0 V), and the voltage is the same at both ends of every trace. Nothing is wrong.'],
     'Trace1 Open':['>Set IN1 to a nonzero value, for example +0.5 V.',`>IN1 reads ${rd('IN1',0.5)} but the left end of R1 reads ${rd('R1L',0.5)}. The two ends of trace 1 differ, so trace 1 is open.`,'>Because no signal reaches R1, the output stays at 0 V for every input.'],
-    'Trace2 Open':[`>The output is stuck at ${rd('OUT',0)} whatever the input.`,`>The +15 V terminal reads ${rd('VPT',0)}, but pin 7 reads ${rd('P7',0)}. Different voltages at the two ends of trace 2 mean it is open; a starved pin 7 floats near the negative supply.`],
-    'Trace3 Open':[`>The output is stuck at ${rd('OUT',0)} whatever the input.`,`>The −15 V terminal reads ${rd('VNT',0)}, but pin 4 reads ${rd('P4',0)}. Trace 3 is open, and the starved pin 4 floats positive.`],
+    'Trace2 Open':[`>The output is stuck at ${rd('OUT',0)} whatever the input.`,`>The +${VP} V terminal reads ${rd('VPT',0)}, but pin 7 reads ${rd('P7',0)}. Different voltages at the two ends of trace 2 mean it is open; a starved pin 7 floats near the negative supply.`],
+    'Trace3 Open':[`>The output is stuck at ${rd('OUT',0)} whatever the input.`,`>The −${VP} V terminal reads ${rd('VNT',0)}, but pin 4 reads ${rd('P4',0)}. Trace 3 is open, and the starved pin 4 floats positive.`],
     'Trace4 Open':[`>The output is latched at ${rd('OUT',0)}.`,`>With IN1 = 0 V, the right end of R1 and top of R2 read ${rd('R1R',0)} (R1 and R2 are acting as a divider between IN1 and the output), but pin 2 reads ${rd('P2',0)}.`,'>The junction should be at virtual ground and should match pin 2. The two ends of trace 4 differ, so trace 4 is open.'],
     'Trace5 Open':[`>Pin 6 responds normally (IN1 = +0.5 V gives ${rd('P6',0.5)} at pin 6),`,`>but the OUT terminal reads ${rd('OUT',0.5)}. The two ends of trace 5 differ, so trace 5 is open.`],
     'R1 Open':['>Supplies and traces check good.',`>With IN1 = +0.5 V, both IN1 and the left end of R1 read ${rd('R1L',0.5)}, but the right end of R1 reads ${rd('R1R',0.5)} and the output stays at ${rd('OUT',0.5)}.`,'>Voltage appears across R1 yet no signal gets through and the output never moves, so R1 is open. (With trace 1 open, the left end of R1 would read 0 V instead.)'],
     'R2 Open':[`>With no feedback the op amp runs open loop: IN1 = +0.5 V gives ${rd('OUT',0.5)} and IN1 = −0.5 V gives ${rd('OUT',-0.5)}.`,`>Pin 2 is no longer a virtual ground. It follows IN1 (${rd('P2',0.5)} at IN1 = +0.5 V), because no current flows through R1.`,'>In a working circuit pin 2 stays at 0 V. Here it follows IN1 and the output snaps to a rail for tiny inputs, so the feedback path is broken: R2 is open. (The supplies and trace 4 check good.)'],
     'R3 Open':[`>The output is latched at ${rd('OUT',0)} for every input, and the supplies are correct.`,`>The top of R3 (pin 3) reads ${rd('R3T',0)} while the bottom of R3 reads ${rd('R3B',0)}. With a good R3 both would be essentially 0 V, so pin 3 is floating: R3 is open.`],
     'IC1 Defective':[`>The output is latched at ${rd('OUT',0)} for every input.`,`>Both supply pins are correct (pin 7 = ${rd('P7',0)}, pin 4 = ${rd('P4',0)}), pin 3 is at 0 V with R3 good, and pin 2 sits at the R1/R2 divider voltage (${rd('P2',0)} at IN1 = 0), so both inputs are connected.`,'>No input, supply or trace problem explains the latched output, so the op amp itself has failed.']};
-  return {svg,pads,faults,answer:ans,read,inputs:[{key:'in1',label:'IN1',value:0,min:-2,max:2,step:0.1}],schematic:invSchematic(),work:why[f]};
+  return {svg,pads,faults,answer:ans,read,inputs:[{key:'in1',label:'IN1',value:0,min:-2,max:2,step:0.1}],schematic:invSchematic({R1,R2,R3}),work:why[f]};
 }
-function invSchematic(){const a=OAK.OA(160,110,{pins:true,label:'IC1'});let g=a.svg;
-  g+=OAK.T(24,92,'IN1','middle',0)+R(28,92,140,92,'R1 10k')+W([140,92],[160,92])+D(140,92)+W([140,92],[140,40])+R(140,40,255,40,'R2 100k')+W([255,40],[255,110])+W([230,110],[285,110])+D(255,110)+OAK.T(289,110,'OUT','middle',0)+W([160,128],[140,128])+R(140,128,140,196,'R3 9.1k',{side:'left'})+G(140,196);
+function invSchematic(v){const a=OAK.OA(160,110,{pins:true,label:'IC1'});let g=a.svg;const lb=k=>v?k+' '+kl(v[k]):k;
+  g+=OAK.T(24,92,'IN1','middle',0)+R(28,92,140,92,lb('R1'))+W([140,92],[160,92])+D(140,92)+W([140,92],[140,40])+R(140,40,255,40,lb('R2'))+W([255,40],[255,110])+W([230,110],[285,110])+D(255,110)+OAK.T(289,110,'OUT','middle',0)+W([160,128],[140,128])+R(140,128,140,196,lb('R3'),{side:'left'})+G(140,196);
   return OAK.wrap(320,215,g);}
 
 /* ---------- troubleshooting: instrumentation amplifier ---------- */
 function instBoard(){
   const faults=['No Faults','Trace1 Open','Trace2 Open','Trace3 Open','Trace4 Open','R1 Open','R2 Open','IC1 Defective','IC2 Defective','IC3 Defective'];
-  const ans=ri(0,faults.length-1),f=faults[ans];const latch=Math.random()<0.5?SATP:SATN;const r=10/110;
+  const ans=ri(0,faults.length-1),f=faults[ans];
+  const {VP,VN,SATP,SATN,clamp}=supplies(),{Av,ra,rb}=gainSet();const latch=Math.random()<0.5?SATP:SATN;
+  const r=rb/(ra+rb),q=ra/(ra+rb);   // R4/(R2+R4) at pin 3; R1/(R1+R3) for the R1/R3 divider
   const read=(id,inp)=>{const n={IN1:inp.in1,IN2:inp.in2,VPT:VP,VNT:VN,GND:0,R4B:0,I1p4:VN,I2p4:VN,I3p4:VN,I1p7:VP,I2p7:VP,I3p7:VP};
-    if(f==='Trace1 Open'){n.I1p4=12.8;n.I2p4=12.7;n.I3p4=12.9;}   // whole −V bus cut off at the terminal
-    if(f==='Trace2 Open'){n.I1p7=-14.2;n.I2p7=-14.1;}
-    if(f==='Trace3 Open'){n.I1p7=-14.3;}
-    if(f==='Trace4 Open'){n.I3p7=-14.2;}
-    const force=(ic,p7,p4)=>{if(f==='IC'+ic+' Defective')return latch;if(p7<0)return -13.9;if(p4>0)return 13.8;return null;};
+    if(f==='Trace1 Open'){n.I1p4=r2(VP-2.2);n.I2p4=r2(VP-2.3);n.I3p4=r2(VP-2.1);}   // whole −V bus cut off at the terminal
+    if(f==='Trace2 Open'){n.I1p7=r2(VN+0.8);n.I2p7=r2(VN+0.9);}
+    if(f==='Trace3 Open'){n.I1p7=r2(VN+0.7);}
+    if(f==='Trace4 Open'){n.I3p7=r2(VN+0.8);}
+    const force=(ic,p7,p4)=>{if(f==='IC'+ic+' Defective')return latch;if(p7<0)return r2(VN+1.1);if(p4>0)return r2(VP-1.2);return null;};
     const o1=force(1,n.I1p7,n.I1p4),o2=force(2,n.I2p7,n.I2p4),o3f=force(3,n.I3p7,n.I3p4);
     n.I1p3=n.IN1;n.I2p3=n.IN2;n.I1p6=o1===null?clamp(n.IN1):o1;n.I2p6=o2===null?clamp(n.IN2):o2;n.I1p2=n.I1p6;n.I2p2=n.I2p6;
     n.R1L=n.I1p6;n.R2L=n.I2p6;
-    let p3=f==='R2 Open'?0:n.I2p6*r*10;let out,p2;
-    if(o3f!==null){out=o3f;p2=f==='R1 Open'?out:n.I1p6+(out-n.I1p6)*10/110;}
+    let p3=f==='R2 Open'?0:n.I2p6*r;let out,p2;
+    if(o3f!==null){out=o3f;p2=f==='R1 Open'?out:n.I1p6+(out-n.I1p6)*q;}
     else if(f==='R1 Open'){out=clamp(p3);p2=out;}
-    else{out=clamp(10*(p3/(r*10)-n.I1p6));if(f==='R2 Open')out=clamp(-10*n.I1p6);p2=Math.abs(out)>13.4?n.I1p6+(out-n.I1p6)*10/110:p3;}
+    else{out=clamp(Av*(n.I2p6-n.I1p6));if(f==='R2 Open')out=clamp(-Av*n.I1p6);p2=Math.abs(out)>-SATN-0.1?n.I1p6+(out-n.I1p6)*q:p3;}
     n.I3p3=p3;n.R2R=p3;n.R4T=p3;n.I3p2=p2;n.R1R=p2;n.R3L=p2;n.I3p6=out;n.R3R=out;n.OUT=out;
     return n[id];};
   const c1=[150,40],c2=[150,214],c3=[360,127];
@@ -1455,26 +1479,26 @@ function instBoard(){
     supT([pos.VNT,[545,BUS],[22,BUS],[22,pos.I1p4[1]],pos.I1p4],'TRACE 1',[455,BUS-7])+supT([pos.I2p4,[pos.I2p4[0],BUS]])+supT([[pos.I3p4[0],BUS],pos.I3p4])+
     supT([pos.VPT,[275,30],[275,pos.I2p7[1]],pos.I2p7],'TRACE 2',[400,24])+supT([[275,pos.I1p7[1]],pos.I1p7],'TRACE 3',[252,pos.I1p7[1]-8])+supT([pos.VPT,[545,50],[460,50],[460,pos.I3p7[1]],pos.I3p7],'TRACE 4',[505,44])+
     dip(...c1,'IC1')+dip(...c2,'IC2')+dip(...c3,'IC3')+jw(pos.I1p2,pos.I1p6,-40)+jw(pos.I2p2,pos.I2p6,-40)+jv(pos.R4B,[300,330],-46)+
-    B.part('R',pos.R1L,pos.R1R,'R1')+B.part('R',pos.R2L,pos.R2R,'R2')+B.part('R',pos.R3L,pos.R3R,'R3')+B.part('R',pos.R4T,pos.R4B,'R4')+
-    term(...pos.IN1,'IN1')+term(...pos.IN2,'IN2')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,'+15V')+term(...pos.VNT,'−15V'));
+    B.part('R',pos.R1L,pos.R1R,'R1 '+kl(ra),{ohms:ra*1000})+B.part('R',pos.R2L,pos.R2R,'',{ohms:ra*1000})+`<text x="333" y="294" font-size="12" font-weight="700" fill="#2b1a05">R2 ${kl(ra)}</text>`+B.part('R',pos.R3L,pos.R3R,'R3 '+kl(rb),{ohms:rb*1000})+B.part('R',pos.R4T,pos.R4B,'R4 '+kl(rb),{ohms:rb*1000})+
+    term(...pos.IN1,'IN1')+term(...pos.IN2,'IN2')+term(...pos.GND,'GND')+term(...pos.OUT,'OUT')+term(...pos.VPT,`+${VP}V`)+term(...pos.VNT,`−${VP}V`));
   const pads=Object.keys(pos).map(id=>({id,x:pos[id][0],y:pos[id][1],label:names[id]}));
   const rd=(id,a,b)=>{const x=read(id,{in1:a,in2:b});return (x>0.0005?'+':'')+fmt(Math.abs(x)<0.0005?0:x,3)+' V';};
   const lat=ic=>[`>OUT is stuck at ${rd('OUT',0,0)} whatever the inputs.`,`>IC${ic}'s supply pins are correct (pin 7 = ${rd('I'+ic+'p7',0,0)}, pin 4 = ${rd('I'+ic+'p4',0,0)}) and its input pin 3 reads ${ic===3?'the R2/R4 divider voltage, as it should':'its input voltage'}, but its output (pin 6) reads ${rd('I'+ic+'p6',0,0)} and doesn't respond.`,ic===3?'>IC1 and IC2 follow their inputs correctly, so nothing feeding IC3 explains its latched output: IC3 is defective.':`>A follower's output should equal its input, so IC${ic} itself has failed. IC3 is only reacting to the bad voltage IC${ic} feeds it.`];
   const why={
-    'No Faults':['>All six supply pins are correct.',`>IC1 and IC2 outputs equal IN1 and IN2. With IN1 = 0 and IN2 = +0.5 V, OUT reads ${rd('OUT',0,0.5)}; with IN1 = +0.5 V and IN2 = 0, OUT reads ${rd('OUT',0.5,0)}.`,'>OUT = 10(IN2 − IN1), so the board is working.'],
-    'Trace1 Open':[`>Every output is stuck near +V: IC1 and IC2 pin 6 read ${rd('I1p6',0,0)}, OUT reads ${rd('OUT',0,0)}.`,`>The −15 V terminal reads ${rd('VNT',0,0)}, but pin 4 of every IC reads about ${rd('I3p4',0,0)}. The −V bus is cut off from the terminal, so trace 1 is open.`],
-    'Trace2 Open':[`>IC1 and IC2 pin 7 read ${rd('I1p7',0,0)} and ${rd('I2p7',0,0)}, but the +15 V terminal reads ${rd('VPT',0,0)}. IC3's pin 7 is fine.`,`>Both follower outputs sit near −V, IC3 sees two equal inputs, and OUT stays near ${rd('OUT',0.5,0)} whatever the inputs. The shared +V trace to IC1 and IC2 (trace 2) is open.`],
+    'No Faults':['>All six supply pins are correct.',`>IC1 and IC2 outputs equal IN1 and IN2. With IN1 = 0 and IN2 = +0.5 V, OUT reads ${rd('OUT',0,0.5)}; with IN1 = +0.5 V and IN2 = 0, OUT reads ${rd('OUT',0.5,0)}.`,`>OUT = ${Av}(IN2 − IN1), the gain set by R3/R1 (${kl(rb)}/${kl(ra)}), so the board is working.`],
+    'Trace1 Open':[`>Every output is stuck near +V: IC1 and IC2 pin 6 read ${rd('I1p6',0,0)}, OUT reads ${rd('OUT',0,0)}.`,`>The −${VP} V terminal reads ${rd('VNT',0,0)}, but pin 4 of every IC reads about ${rd('I3p4',0,0)}. The −V bus is cut off from the terminal, so trace 1 is open.`],
+    'Trace2 Open':[`>IC1 and IC2 pin 7 read ${rd('I1p7',0,0)} and ${rd('I2p7',0,0)}, but the +${VP} V terminal reads ${rd('VPT',0,0)}. IC3's pin 7 is fine.`,`>Both follower outputs sit near −V, IC3 sees two equal inputs, and OUT stays near ${rd('OUT',0.5,0)} whatever the inputs. The shared +V trace to IC1 and IC2 (trace 2) is open.`],
     'Trace3 Open':[`>IC1 pin 7 reads ${rd('I1p7',0,0)} but IC2 pin 7 reads ${rd('I2p7',0,0)}. Only IC1 has lost its +V, so the branch to IC1 (trace 3) is open.`,`>IC1's output sits at ${rd('I1p6',0,0)}, which drives OUT to ${rd('OUT',0,0)}.`],
-    'Trace4 Open':[`>OUT is stuck at ${rd('OUT',0,0)}. IC1 and IC2 follow their inputs.`,`>IC3 pin 7 reads ${rd('I3p7',0,0)} instead of +15 V, so the +V trace to IC3 (trace 4) is open.`],
-    'R1 Open':['>Supplies and both followers are fine.',`>IN1 no longer has any effect: with IN2 = 0, OUT reads ${rd('OUT',0.5,0)} for IN1 = +0.5 V.`,`>With IN2 = +0.5 V, OUT reads ${rd('OUT',0,0.5)}, the same as IC3 pin 3: IC3 is acting as a follower of its + input (0.91 × IN2). That only happens when nothing connects IC1's output to IC3's − input, so R1 is open.`],
-    'R2 Open':['>Supplies and both followers are fine.',`>IN2 no longer has any effect, and IC3 pin 3 reads ${rd('I3p3',0,0.5)} even with IN2 = +0.5 V (the left end of R2 reads ${rd('R2L',0,0.5)}).`,`>IN1 is still amplified by −10 (IN1 = +0.5 V gives OUT = ${rd('OUT',0.5,0)}), so R2 is open.`],
+    'Trace4 Open':[`>OUT is stuck at ${rd('OUT',0,0)}. IC1 and IC2 follow their inputs.`,`>IC3 pin 7 reads ${rd('I3p7',0,0)} instead of +${VP} V, so the +V trace to IC3 (trace 4) is open.`],
+    'R1 Open':['>Supplies and both followers are fine.',`>IN1 no longer has any effect: with IN2 = 0, OUT reads ${rd('OUT',0.5,0)} for IN1 = +0.5 V.`,`>With IN2 = +0.5 V, OUT reads ${rd('OUT',0,0.5)}, the same as IC3 pin 3: IC3 is acting as a follower of its + input (${fmt(r,2)} × IN2, set by the R2/R4 divider). That only happens when nothing connects IC1's output to IC3's − input, so R1 is open.`],
+    'R2 Open':['>Supplies and both followers are fine.',`>IN2 no longer has any effect, and IC3 pin 3 reads ${rd('I3p3',0,0.5)} even with IN2 = +0.5 V (the left end of R2 reads ${rd('R2L',0,0.5)}).`,`>IN1 is still amplified by −${Av} (IN1 = +0.5 V gives OUT = ${rd('OUT',0.5,0)}), so R2 is open.`],
     'IC1 Defective':lat(1),'IC2 Defective':lat(2),'IC3 Defective':lat(3)};
-  return {svg,pads,faults,answer:ans,read,inputs:[{key:'in1',label:'IN1',value:0,min:-1.5,max:1.5,step:0.1},{key:'in2',label:'IN2',value:0,min:-1.5,max:1.5,step:0.1}],schematic:instSchematic(),work:why[f]};
+  return {svg,pads,faults,answer:ans,read,inputs:[{key:'in1',label:'IN1',value:0,min:-1.5,max:1.5,step:0.1},{key:'in2',label:'IN2',value:0,min:-1.5,max:1.5,step:0.1}],schematic:instSchematic({ra,rb}),work:why[f]};
 }
-function instSchematic(){
+function instSchematic(v){const lb=(k,x)=>v?k+' '+kl(x):k;
   const a=OAK.OA(70,60,{swap:true,label:'IC1',power:false}),b=OAK.OA(70,200,{swap:true,label:'IC2',power:false}),c=OAK.OA(250,130,{label:'IC3',power:false});
   let g=a.svg+b.svg+c.svg+OAK.T(20,42,'IN1','middle',0)+W([24,42],[70,42])+W([70,78],[58,78],[58,100],[150,100],[150,60])+D(150,60)+OAK.T(20,182,'IN2','middle',0)+W([24,182],[70,182])+W([70,218],[58,218],[58,240],[150,240],[150,200])+D(150,200);
-  g+=W([140,60],[150,60])+W([140,200],[150,200])+W([150,60],[175,60],[175,112])+R(175,112,250,112,'')+txt(212,98,'R1')+W([150,200],[175,200],[175,148])+R(175,148,250,148,'')+txt(212,170,'R2')+D(232,112)+W([232,112],[232,30])+R(232,30,345,30,'R3')+W([345,30],[345,130])+W([320,130],[370,130])+D(345,130)+OAK.T(374,130,'OUT','middle',0)+D(232,148)+R(232,148,232,250,'R4',{side:'left'})+G(232,250);
+  g+=W([140,60],[150,60])+W([140,200],[150,200])+W([150,60],[175,60],[175,112])+R(175,112,250,112,'')+txt(203,98,lb('R1',v&&v.ra),{size:11})+W([150,200],[175,200],[175,148])+R(175,148,250,148,'')+txt(203,170,lb('R2',v&&v.ra),{size:11})+D(232,112)+W([232,112],[232,30])+R(232,30,345,30,lb('R3',v&&v.rb))+W([345,30],[345,130])+W([320,130],[370,130])+D(345,130)+OAK.T(374,130,'OUT','middle',0)+D(232,148)+R(232,148,232,250,lb('R4',v&&v.rb))+G(232,250);
   return OAK.wrap(400,270,g);}
 
 const tsIntro=(ab,general,parts,board,per)=>CC.introPage({text:`<div class="cols2"><div>${ab}${T.meterNote}</div><div class="diagram">${board}</div></div>${H3('How the circuit works')}${general}${H3('Defective op amps')}${T.opampFail}${H3('Open traces')}${T.traceGen}${parts}`,how:T.howTs(per)});
@@ -1573,7 +1597,7 @@ CC.App.init({
     ]},
     {title:'Amplifier activities',items:[
       {id:'simple',title:'Simple Op Amp Applications',icon:'amp',sub:'followers, comparators, I to V',intro:CC.introPage({text:T.simpleIntro+two(H3('Followers')+T.follower,fig(F.follower()))+two(H3('Comparators')+T.comparator,fig(F.comparator()))+two(H3('I to V converters')+T.itov,fig(F.itov())),how:T.howItems(12,'<p>Comparator answers are accepted anywhere from 85% of the supply voltage up to the supply voltage, with the correct sign.</p>')}),run:itemsRun(simpleItems)},
-      {id:'inv',title:'Inverting Amplifiers',icon:'amp',sub:'17 analysis and design items',intro:CC.introPage({text:two(T.invIntro,fig(F.inverting({r1:'R1'})))+`<div class="formulas"><div class="formula"><span class="cap">Gain</span>${M('A=\\frac{R_f}{R_i}')}</div><div class="formula"><span class="cap">Input impedance</span>${M('Z_{in}=R_i')}</div><div class="formula"><span class="cap">Output</span>${M('V_{out}=-A\\,V_{in}')}</div><div class="formula"><span class="cap">Offset resistor</span>${M('R_1=\\frac{R_fR_i}{R_f+R_i}')}</div></div>`+H3('Examples')+exInv+T.invMistakes,how:T.howItems(17,'<p>The gain may be entered with or without the minus sign. One item asks for an output that saturates; answers from 13 V to 15 V with the correct sign are accepted there.</p>')}),run:itemsRun(invItems)},
+      {id:'inv',title:'Inverting Amplifiers',icon:'amp',sub:'17 analysis and design items',intro:CC.introPage({text:two(T.invIntro,fig(F.inverting({r1:'R1'})))+`<div class="formulas"><div class="formula"><span class="cap">Gain</span>${M('A=\\frac{R_f}{R_i}')}</div><div class="formula"><span class="cap">Input impedance</span>${M('Z_{in}=R_i')}</div><div class="formula"><span class="cap">Output</span>${M('V_{out}=-A\\,V_{in}')}</div><div class="formula"><span class="cap">Offset resistor</span>${M('R_1=\\frac{R_fR_i}{R_f+R_i}')}</div></div>`+H3('Examples')+exInv+T.invMistakes,how:T.howItems(17,'<p>The gain may be entered with or without the minus sign. One item asks for an output that saturates; answers from 2 V below the supply voltage up to the supply voltage, with the correct sign, are accepted there.</p>')}),run:itemsRun(invItems)},
       {id:'noninv',title:'Noninverting Amplifiers',icon:'amp',sub:'12 analysis and design items',intro:CC.introPage({text:two(T.noninvIntro,fig(F.noninv()))+`<div class="formulas"><div class="formula"><span class="cap">Gain</span>${M('A=\\frac{R_f}{R_i}+1')}</div><div class="formula"><span class="cap">Input impedance (closed loop)</span>${M('Z_{in}=z_{in}\\left(1+\\frac{A_{OL}}{A}\\right)')}</div><div class="formula"><span class="cap">Output</span>${M('V_{out}=A\\,V_{in}')}</div></div>`+H3('Examples')+exNon+T.noninvMistakes,how:T.howItems(12)}),run:itemsRun(noninvItems)},
       {id:'sum',title:'Sum and Difference Amps',icon:'amp',sub:'17 analog math items',intro:CC.introPage({text:T.sumIntro+two(H3('Summing amplifier')+T.summing,fig(F.summing(3),'Figure Two'))+exSum+two(H3('Difference amplifier')+T.difference,fig(F.difference()))+exDiff+T.sumMistakes,how:T.howItems(17)}),run:itemsRun(sumItems)},
       {id:'char',title:'Op Amp Characteristics',icon:'amp',sub:'bandwidth, slew rate, CMRR, bias',intro:CC.introPage({text:charIntro(),how:T.howItems(16,`<p>For the bandwidth of an inverting amplifier, use the noise gain ${m('1+R_f/R_i')}. Numeric answers must meet the stated tolerance.</p>`)}),run:itemsRun(charItems)},

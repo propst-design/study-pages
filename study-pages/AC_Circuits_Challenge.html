@@ -807,12 +807,14 @@ CC.problemSet=function(root,s,spec){
 };
 
 /* ---------- Troubleshooting: PC board, probes, meter, fault list ---------- */
-/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}}} */
+/* spec: {count, points, build(k)=>{svg(state)->string, pads:[{id,x,y}], faults:[names], answer:index, measure(a,b)->{text,value}, info(): html, meters(): [{label,text}], start?:{red,black}, blackFixed?:bool}} */
 CC.trouble=function(root,s,spec){
   const N=spec.count||10, P=spec.points||10;let k=0,earned=0;
   const w=el(`<div><div class="statusbar"><span class="pill" id="tn"></span><span class="pill" id="tp"></span><span class="pill" id="ts">Score: 0</span><span class="pill" id="tt">0:00</span></div><div id="tbody"></div></div>`);
   root.appendChild(w);
   s.every(()=>{$('#tt',w).textContent=CC.fmtTime(s.elapsed());},1000);
+  // like a real meter, the readings float a little: redraw them every 0.7 s
+  let tick=null;s.every(()=>{if(tick)tick();},700);
   const next=()=>{
     const b=spec.build(k);let pts=P;CC._last=b;
     if(!b.padName)b.padName=id=>{const p=b.pads.find(q=>q.id===id);return p&&p.label||id;};let probe={red:null,black:null,active:'red'};let lastKey=null;const readings=[];
@@ -821,7 +823,7 @@ CC.trouble=function(root,s,spec){
     updP();
     const body=$('#tbody',w);body.innerHTML='';
     const card=el(`<div class="cols2"><div><div class="card"><div class="board-wrap" id="bw"></div>
-      <div class="row mt" style="justify-content:space-between"><div class="row"><span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button></div></div>
+      <div class="row mt" style="justify-content:space-between"><div class="row">${b.blackFixed?`<span class="small muted">Tap a pad to move the red probe. The black probe stays on ${esc(b.padName(b.start.black))}.</span><span class="hide"><button id="pr"></button><button id="pk"></button></span>`:'<span class="small muted">Tap a pad to move the</span><button class="btn sm" id="pr" style="border-color:#c62828">● Red probe</button><button class="btn sm" id="pk">● Black probe</button>'}</div></div>
       <div class="meter mt" id="mt"></div><div class="small muted mt" id="info"></div></div></div>
       <div><div class="card"><h3 style="margin-top:0">${spec.selectLabel||'Select the circuit fault'}</h3><div class="faults" id="fl"></div><div class="row end mt"><button class="btn primary" id="tg">Grade item</button></div><div id="tfb"></div></div>
       <div class="card"><h3 style="margin-top:0">Readings</h3><div class="small" id="rlog"><span class="muted">No readings yet. Each new reading costs 1 point.</span></div></div></div></div>`);
@@ -849,6 +851,7 @@ CC.trouble=function(root,s,spec){
     const tap=id=>{
       if(card.dataset.graded)return;
       // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      if(b.blackFixed)probe.active='red';
       const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
       probe[which]=id;
       setActive(!probe[other]?other:first?'red':which);
@@ -858,6 +861,7 @@ CC.trouble=function(root,s,spec){
       draw();
     };
     if(readings.length)$('#rlog',card).innerHTML=readings.join('<br>');
+    tick=()=>{$('#mt',card).innerHTML=meterHTML();};
     draw();
     $('#tg',card).onclick=()=>{
       const btn=$('#tg',card);
@@ -878,7 +882,7 @@ CC.trouble=function(root,s,spec){
 };
 
 /* meter helpers */
-CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.008,0.008));};
+CC.meterErr=()=>{const bias=rnd(-0.03,0.03);return v=>v*(1+bias+rnd(-0.002,0.002));};
 CC.lcd=(v,dec=2)=>{if(!isFinite(v))return 'OL';const a=Math.abs(v);if(a<0.005)return (0).toFixed(dec);return v.toFixed(a>=100?1:dec);};
 
 /* ---------- PC-board drawing kit ---------- */
@@ -889,11 +893,16 @@ B.trace=(pts,label,lp)=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}"
 B.wire=(pts,color='#c62828')=>`<polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
 B.label=(x,y,t,o={})=>`<text x="${x}" y="${y}" font-size="${o.size||12}" font-weight="${o.w||700}" fill="${o.fill||'#3a2508'}" text-anchor="${o.anchor||'middle'}">${esc(t)}</text>`;
 /** component between two pad points (horizontal or vertical) */
-B.part=(type,a,b,label)=>{
+// resistor color code for a marked value (two significant digits) and a tolerance in percent (20% has no tolerance band)
+B.bands=(ohms,tol=5)=>{const C=['#111','#6d4c41','#c62828','#ef6c00','#fbc02d','#2e7d32','#1565c0','#7b1fa2','#8d8d8d','#f5f5f5'];
+  let e=Math.floor(Math.log10(ohms))-1,d=Math.round(ohms/Math.pow(10,e));if(d>=100){e++;d=Math.round(d/10);}
+  const mult=e===-1?'#c9a227':e===-2?'#c0c0c0':C[e],t={1:'#6d4c41',2:'#c62828',5:'#c9a227',10:'#c0c0c0'}[tol];
+  return [C[Math.floor(d/10)],C[d%10],mult].concat(t?[t]:[]);};
+B.part=(type,a,b,label,o={})=>{
   const [x1,y1]=a,[x2,y2]=b;const cx=(x1+x2)/2,cy=(y1+y2)/2;const L=Math.hypot(x2-x1,y2-y1);const ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
   let body='';const bl=Math.min(L-26,64);
   const lead=`<line x1="${-L/2}" y1="0" x2="${L/2}" y2="0" stroke="#9a9a9a" stroke-width="2.5"/>`;
-  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+[-.3,-.12,.06,.3].map((p,i)=>`<rect x="${p*bl-2.5}" y="-8" width="5" height="16" fill="${['#c62828','#6d4c41','#ef6c00','#c9a227'][i]}"/>`).join('');
+  if(type==='R')body=`<rect x="${-bl/2}" y="-8" width="${bl}" height="16" rx="7" fill="#e6d3a8" stroke="#8b6f3a"/>`+(o.ohms?B.bands(o.ohms,o.tol):['#c62828','#6d4c41','#ef6c00','#c9a227']).map((c,i)=>`<rect x="${[-.3,-.12,.06,.3][i]*bl-2.5}" y="-8" width="5" height="16" fill="${c}"/>`).join('');
   if(type==='PR')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="2" fill="#f1f1f1" stroke="#888"/><text x="0" y="3.5" font-size="8" text-anchor="middle" fill="#666">POWER RESISTOR</text>`;
   if(type==='C')body=`<rect x="${-bl/2}" y="-9" width="${bl}" height="18" rx="5" fill="#f5c518" stroke="#a88600"/><line x1="${-bl/2+6}" y1="-9" x2="${-bl/2+6}" y2="9" stroke="#a88600"/>`;
   if(type==='L')body=`<rect x="${-bl/2}" y="-10" width="${bl}" height="20" rx="4" fill="#a3322a" stroke="#5e1a15"/>`+Array.from({length:7},(_,i)=>`<line x1="${-bl/2+5+i*(bl-10)/6}" y1="-10" x2="${-bl/2+5+i*(bl-10)/6}" y2="10" stroke="#7a221c" stroke-width="1.5"/>`).join('');
@@ -1288,8 +1297,8 @@ function transformerSet(el,s){
 function makeMeter(){return CC.meterErr();}
 const openMsg=(vs,a,b,f)=>[`>The supply current is 0 mA, so the circuit is open somewhere. With no current, every good part drops 0 V and the full supply voltage appears across the break.`,`>The meter reads about ${fmt(vs,3)} V only across <b>${a}</b> to <b>${b}</b>, so the fault is <b>${f}</b>.`];
 function seriesBoard(){
-  // series loop: J1-F1-T1-C1-T2-R1-T3-L1-T4-J2, driven at 1 kHz
-  const Vs=10,F=1000,w=TP*F;
+  // series loop: J1-F1-T1-C1-T2-R1-T3-L1-T4-J2; the supply voltage and frequency change from item to item
+  const Vs=pick([5,10,12,15,20]),F=pick([500,1000,2000,5000]),w=TP*F;
   let R,C,L;
   do{R=eVal(330,3300);C=capFor(F,R*rnd(0.5,1.6));L=indFor(F,R*rnd(0.5,1.6));}while(!L_OK(L)||L<10e-3||!C_OK(C));
   const tol=()=>1+rnd(-0.2,0.2);
@@ -1312,10 +1321,10 @@ function seriesBoard(){
     const r=vm(v);return {value:r,text:CC.lcd(r)+' V'};};
   const P={J1:[60,150],F1a:[100,150],F1b:[190,150],C1a:[250,150],C1b:[340,150],R1a:[470,175],R1b:[470,285],L1a:[360,300],L1b:[250,300],J2:[60,300]};
   const svg=()=>B.svg(540,340,
-    B.supply(20,8,200,70,'AC POWER SUPPLY',Vs+' VAC @ 1 kHz')+B.pcb(20,110,505,220)+
+    B.supply(20,8,200,70,'AC POWER SUPPLY',Vs+' VAC @ '+fF(F))+B.pcb(20,110,505,220)+
     B.wire([[150,78],[150,95],[60,95],[60,150]],'#c62828')+B.wire([[180,78],[180,100],[34,100],[34,300],[60,300]],'#222')+
     B.trace([P.J1,P.F1a])+B.trace([P.F1b,P.C1a],'TRACE 1',[220,140])+B.trace([P.C1b,[470,150],P.R1a],'TRACE 2',[410,140])+B.trace([P.R1b,[470,300],P.L1a],'TRACE 3',[415,318])+B.trace([P.L1b,P.J2],'TRACE 4',[150,318])+
-    B.part('F',P.F1a,P.F1b,'F1')+B.part('C',P.C1a,P.C1b,'C1')+B.part('R',P.R1a,P.R1b,'R1')+B.part('L',P.L1b,P.L1a,'L1')+
+    B.part('F',P.F1a,P.F1b,'F1')+B.part('C',P.C1a,P.C1b,'C1')+B.part('R',P.R1a,P.R1b,'R1',{ohms:R,tol:20})+B.part('L',P.L1b,P.L1a,'L1')+
     B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11}));
   const padsArr=pads.map(id=>({id,x:P[id][0],y:P[id][1],label:names[id]}));
   // what the marked values predict (for the worked explanation)
@@ -1328,17 +1337,20 @@ function seriesBoard(){
     if(openAt>=0)st.push(...openMsg(Vsup,names[pads[openAt]],names[pads[openAt+1]],f));
     else if(f==='No Faults')st.push(`>The supply current (${fmt(Cx.abs(I)*1e3,3)} mA) and every part voltage are close to the expected values, allowing for the 20% part tolerance. There is no fault.`);
     else{const part=f.slice(0,2),k=map[f][0];
-      st.push(`>Current flows (${fmt(Cx.abs(I)*1e3,3)} mA), so nothing is open. A shorted part drops 0 V. The reading across <b>${names[pads[k]]}</b> to <b>${names[pads[k+1]]}</b> is 0 V instead of the few volts expected, so <b>${part} is shorted</b>.`,
+      st.push(`>Current flows (${fmt(Cx.abs(I)*1e3,3)} mA), so nothing is open. A shorted part drops 0 V. The reading across <b>${names[pads[k]]}</b> to <b>${names[pads[k+1]]}</b> is 0 V, but a good part there would drop about ${fmt(k===3?In*XCn:k===5?In*R:In*XLn,3)} V, so <b>${part} is shorted</b>.`,
         '>Shorting one reactance changes the net reactance, so the current can go up or down. The 0 V reading, not the current, is what identifies the part.');}
     return st;};
   return {svg,pads:padsArr,faults,answer:ans,measure,work,
     meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Cx.abs(I)*1000),1)}],
-    info:()=>`Marked values: R1 = ${fR(R)}, C1 = ${fC(C)}, L1 = ${fL(L)}. The supply is ${Vs} V at 1 kHz. Parts can be 20% off their marked values and the meters up to 5% off.`};
+    info:()=>`Marked values: R1 = ${fR(R)}, C1 = ${fC(C)}, L1 = ${fL(L)}. The supply is ${Vs} V at ${fF(F)}. Parts can be 20% off their marked values and the meters up to 5% off.`};
 }
 function xfmrBoard(){
-  // modeled on the ETCAI board: 120 V line, 10:1 transformer (12 V secondary), R1 = 8 Ω and L1 = 21.2 mH (X_L ≈ R at 60 Hz),
-  // and one common trace tying the primary, the secondary and the load to the supply's − terminal (J2)
-  const w=TP*60,ratio=10,Vline=120,Vsec=Vline/ratio,R=8,L=21.2e-3;
+  // modeled on the ETCAI board: 120 V line, a step-down transformer with its secondary voltage stated, a power resistor and an
+  // inductor (in mH to one decimal), and one common trace tying the primary, the secondary and the load to the supply's − terminal (J2)
+  const w=TP*60,Vline=120;let Vsec,ratio,R,L,Inom;
+  // keep the load current at 0.4–1.5 A, and the reflected current well above the ~10 mA magnetizing current
+  do{Vsec=pick([6,12,18,24]);ratio=Vline/Vsec;R=pick([4,5,6,8,10,12,15,16,20,24]);L=Math.round(R*pick([0.75,1,1,1.25,1.5])/w*1e4)/1e4;Inom=Vsec/Math.hypot(R,w*L);}
+  while(Inom<0.4||Inom>1.5||Inom/ratio<0.04);
   const tol=()=>1+rnd(-0.2,0.2);const Ra=R*tol(),La=L*tol();
   const faults=['Fuse Blown','Primary Open','Secondary Open','R1 Open','L1 Open','L1 Shorted','Trace 1 Open','Trace 2 Open','Trace 3 Open','No Faults'];
   const ans=ri(0,faults.length-1),f=faults[ans];
@@ -1377,13 +1389,13 @@ function xfmrBoard(){
     B.label(195,172,'P1',{size:10,anchor:'end'})+B.label(195,296,'P2',{size:10,anchor:'end'})+B.label(296,172,'S1',{size:10,anchor:'start'})+B.label(296,296,'S2',{size:10,anchor:'start'})+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})+
     B.label(410,128,'Secondary voltage = '+Vsec+' V',{size:11}));
   const padsArr=Object.keys(P).map(id=>({id,x:P[id][0],y:P[id][1],label:names[id]}));
-  const XLn=w*L,Zn=Math.hypot(R,XLn),Inom=Vsec/Zn;
+  const XLn=w*L,Zn=Math.hypot(R,XLn);
   const rd=id=>'about '+fmt(Cx.abs(node(id)),2)+' V';
   const work=()=>{
-    const st=[`>Expected values from the markings, with the line at ${Vline} V: the secondary gives ${q(Vsec,'V',3)}, and the load should draw about ${fmt(Inom,3)} A:`,
+    const st=[`>Expected values from the markings, with the line at ${Vline} V: T1 is a ${fmt(ratio,3)}:1 step-down transformer, so the secondary gives ${q(Vsec,'V',3)}, and the load should draw about ${fmt(Inom,3)} A:`,
       `X_L=2\\pi F L=${q(XLn,'Ω',3)}`,`Z=\\sqrt{R^2+X_L^2}=${q(Zn,'Ω',3)}`,`I_s=\\frac{V_s}{Z}=${q(Inom*1e3,'mA',3)}`,
       `I_p\\approx\\frac{I_s}{${ratio}}=${q(Inom/ratio*1e3,'mA',3)}`,`>The supply current is this reflected load current plus about 10 mA of magnetizing current. The line here is ${fmt(Vsup,3)} V, so everything scales by ${fmt(Vsup/Vline,3)}.`,
-      '>Leave the black probe on J2 (common) and move only the red probe: each reading is then that point\'s voltage to common.'];
+      '>The black probe stays on J2 (common), so each reading is that point\'s voltage to common.'];
     if(priOpen>=0){st.push(`>The supply current is 0 mA: the primary circuit is open, so not even the transformer's small magnetizing current flows. With no current, every point before the break sits at the full supply voltage and every point after it at 0 V.`,
       `>${names[priPads[priOpen]]} reads ${rd(priPads[priOpen])}${priOpen<3?` but ${names[priPads[priOpen+1]]} reads ${rd(priPads[priOpen+1])}`:', yet the secondary reads 0 V'}, so the fault is <b>${f}</b>.`);}
     else if(f==='Secondary Open')st.push(`>The supply still draws about ${fmt(Ip*1e3,2)} mA. That is the magnetizing current of an energized transformer with no load, so the primary circuit is complete: P1 reads ${rd('P1')}.`,
@@ -1393,11 +1405,11 @@ function xfmrBoard(){
     else if(f==='No Faults')st.push(`>The supply current, S1 (${rd('S1')}) and L1 top (${rd('L1a')}) are all close to the expected values, allowing for the 20% tolerance. There is no fault.`);
     else st.push(`>The supply current is higher than expected, so the load impedance is too low. L1 top reads ${rd('L1a')}: a shorted part drops 0 V, so <b>L1 is shorted</b> and R1 has the whole secondary voltage.`);
     return st;};
-  return {svg,pads:padsArr,faults,answer:ans,measure,work,start:{red:'L1b',black:'J2'},
+  return {svg,pads:padsArr,faults,answer:ans,measure,work,start:{red:'L1b',black:'J2'},blackFixed:true,
     meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Ip*1000),1)}],
-    info:()=>`T1 steps the ${Vline} V line down to ${Vsec} V. R1 = ${fR(R)}, L1 = ${fL(L)}. The common trace ties P2, S2, L1 bottom and the supply's − terminal (J2) together. Parts can be 20% off their marked values and the meters up to 5% off.`};
+    info:()=>`T1 steps the ${Vline} V line down to ${Vsec} V. R1 = ${fR(R)}, L1 = ${fL(L)}. The common trace ties P2, S2, L1 bottom and the supply's − terminal (J2) together, and the black probe stays on J2. Parts can be 20% off their marked values and the meters up to 5% off.`};
 }
-const TS_HOW=`<p>Tap a solder pad to move the highlighted probe. If the probes start off the board, your first two taps place red, then black. After that the highlighted probe stays selected until you pick the other with the probe buttons. The voltmeter shows the AC voltage between the two probes. The panel also shows the supply voltage and current, which are free to read.</p>
+const TS_HOW=`<p>Tap a solder pad to move the highlighted probe. If the probes start off the board, your first two taps place red, then black. After that the highlighted probe stays selected until you pick the other with the probe buttons. In the transformer exercise the black probe is fixed on common, so you only move the red one. The voltmeter shows the AC voltage between the two probes and, like a real meter, its reading floats a little. The panel also shows the supply voltage and current, which are free to read.</p>
 <ul><li>There are 10 problems. Each starts with 12 points, and every new voltmeter reading costs 1 point. Where the probes start on the board, that first reading is free.</li><li>Select the fault and choose <b>Grade item</b>. A right answer earns the points left; a wrong answer earns 0.</li><li>Your score is the percentage of the 120 possible points. After each item you can open a step-by-step explanation.</li></ul>
 <p>The parts can be up to 20% off their marked values and the meter up to 5% off, so look for clear differences, such as 0 V where you expect a reading or the full supply voltage across one spot, rather than small ones.</p>`;
 
@@ -1440,7 +1452,7 @@ CC.App.init({
   footer:'Based on AC Circuits Challenge © 1993, 2001 ETCAI Products. Offline HTML edition.',
   pass:80,hero,
   manual:`<h2>About this program</h2><p>AC Circuits Challenge is a set of practice exercises to use alongside a textbook or course. It gives you instant feedback on every answer, help and worked solutions when you need them, and a score for every exercise.</p>
-  <p>There are fourteen exercises:</p><ul><li><b>Fundamentals:</b> voltage conversions (rms, peak, peak-to-peak, average), transformers, and capacitors and inductors in series and parallel.</li><li><b>Series and parallel AC circuits:</b> RC, RL and RLC worksheets.</li><li><b>Resonance:</b> series and parallel resonant circuits.</li><li><b>Troubleshooting:</b> find the fault on a series RLC board and on a 120 V transformer board (12 V secondary, common return) using a virtual voltmeter. Each problem starts with 12 points.</li></ul>
+  <p>There are fourteen exercises:</p><ul><li><b>Fundamentals:</b> voltage conversions (rms, peak, peak-to-peak, average), transformers, and capacitors and inductors in series and parallel.</li><li><b>Series and parallel AC circuits:</b> RC, RL and RLC worksheets.</li><li><b>Resonance:</b> series and parallel resonant circuits.</li><li><b>Troubleshooting:</b> find the fault on a series RLC board and on a 120 V transformer board with a common return using a virtual voltmeter. Each problem starts with 12 points.</li></ul>
   <p>Every run picks new values, so you can practice an exercise as often as you like. Each exercise starts with a short page of key ideas and formulas; choose <b>Begin</b> when you are ready. The program times each exercise. When you finish, you can print a certificate with your name, ID, score, time and a validity code that an instructor can confirm with <b>Check validity</b>.</p>
   <h2>Conventions used</h2><p>On the series sheets θ is the impedance angle: the angle by which the source voltage leads the current. It is positive for inductive circuits and negative for capacitive circuits. On the parallel sheets θ is the angle of the total current, measured from the source voltage. It is negative for inductive circuits (the current lags) and positive for capacitive circuits (the current leads). The RC and RL sheets accept either sign; the RLC sheets grade the sign.</p><p>Inductor and capacitor values are those you would find in a parts catalog (1 mH to 1 H, 1 nF to 10 µF), and the troubleshooting parts have a 20% tolerance.</p>`,
   groups:[
@@ -1464,12 +1476,12 @@ CC.App.init({
       wsModule('pres','Parallel Resonance','wave','resonant frequency, tank current',parallelRes,T.pR,[F.Fr,{cap:'At resonance',tex:'X_L=X_C\\quad I_T=I_R\\quad \\theta=0°'},{cap:'Branch currents',tex:'I_L=I_C=\\frac{V_S}{X_L}'},F.ZP],pc(['R','L','C']),sketch.pR,'At resonance θ is 0°.'),
     ]},
     {title:'Troubleshooting',items:[
-      {id:'ts1',title:'Troubleshooting Simple Circuits',icon:'wrench',sub:'series RLC on a PC board',intro:CC.introPage({text:`<p>A fuse, capacitor, resistor and inductor are wired in series on a PC board, driven by a 10 V, 1 kHz supply. Any one part can be open or shorted, any of the four copper traces can be open, or the board can be working. Use the voltmeter to find out which.</p>
+      {id:'ts1',title:'Troubleshooting Simple Circuits',icon:'wrench',sub:'series RLC on a PC board',intro:CC.introPage({text:`<p>A fuse, capacitor, resistor and inductor are wired in series on a PC board, driven by an AC supply. The supply voltage (5 to 20 V), its frequency (500 Hz to 5 kHz) and the part values change from problem to problem and are shown with the board. Any one part can be open or shorted, any of the four copper traces can be open, or the board can be working. Use the voltmeter to find out which.</p>
         <p><b>A good strategy:</b></p><ul><li>Look at the supply current first. <b>0 mA</b> means the loop is open. With no current, good parts drop 0 V and the full supply voltage appears across the break, so look for the one spot that reads the full voltage.</li><li>If current flows, nothing is open. A <b>shorted</b> part drops 0 V, so look for a part with no voltage across it.</li><li>If every part has a reasonable voltage, the board has no fault.</li></ul>
         <p>Remember that in a series RLC circuit the capacitor or inductor voltage can be larger than the supply voltage. Review series RLC circuits before you start.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:12,build:seriesBoard})},
-      {id:'ts2',title:'Troubleshooting Transformer Circuits',icon:'xfmr',sub:'120 V to 12 V, fuse, R1 and L1',intro:CC.introPage({text:`<p>A fuse and a step-down transformer (120 V to 12 V) feed a load made of an 8 Ω power resistor and a 21.2 mH inductor in series. One common trace ties the primary, the secondary and the load to the supply's − terminal (J2). Any part can be faulty: the fuse blown, either transformer winding open, R1 open, L1 open or shorted, or one of the three numbered copper traces open. The board can also be working.</p>
-        <p>The meter starts with its black probe on J2 (common) and its red probe on the bottom of L1. That first reading is free.</p>
-        <p><b>A good strategy:</b></p><ul><li>Leave the black probe on common and move only the red probe. Each reading is then that point's voltage to common.</li><li>Look at the supply current first. <b>0 mA</b> means the primary circuit is open (fuse, trace 1 or the primary winding). Points before the break read the full supply voltage and points after it read 0 V.</li><li>An energized transformer always draws a small <b>magnetizing current</b> (about 10 mA here), even with nothing connected to its secondary. If that is all the supply draws, no load current is flowing: either the secondary winding is open (S1 reads 0 V) or the load circuit is open (S1 reads the secondary voltage, and it drops to 0 V just past the break).</li><li>If more current than normal flows, look for a shorted part: it drops 0 V.</li></ul>
+      {id:'ts2',title:'Troubleshooting Transformer Circuits',icon:'xfmr',sub:'120 V line, fuse, R1 and L1',intro:CC.introPage({text:`<p>A fuse and a step-down transformer feed a load made of a power resistor and an inductor in series. The supply is a 120 V line; the secondary voltage (6 to 24 V) and the values of R1 and L1 change from problem to problem and are shown with the board. One common trace ties the primary, the secondary and the load to the supply's − terminal (J2). Any part can be faulty: the fuse blown, either transformer winding open, R1 open, L1 open or shorted, or one of the three numbered copper traces open. The board can also be working.</p>
+        <p>The black probe is fixed on J2 (common) and can't be moved. The red probe starts on the bottom of L1, and that first reading is free.</p>
+        <p><b>A good strategy:</b></p><ul><li>Each reading is the voltage from the red probe's point to common.</li><li>Look at the supply current first. <b>0 mA</b> means the primary circuit is open (fuse, trace 1 or the primary winding). Points before the break read the full supply voltage and points after it read 0 V.</li><li>An energized transformer always draws a small <b>magnetizing current</b> (about 10 mA here), even with nothing connected to its secondary. If that is all the supply draws, no load current is flowing: either the secondary winding is open (S1 reads 0 V) or the load circuit is open (S1 reads the secondary voltage, and it drops to 0 V just past the break).</li><li>If more current than normal flows, look for a shorted part: it drops 0 V.</li></ul>
         <p>The line voltage varies, so use the supply voltmeter reading rather than exactly 120 V.</p>`,how:TS_HOW}),run:(el,s)=>CC.trouble(el,s,{count:10,points:12,build:xfmrBoard})},
     ]}
   ]
