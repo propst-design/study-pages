@@ -17,16 +17,18 @@ The other five (Basic Circuits, Digital, Ohmmeter, Op Amp, Voltmeter) ship their
 
 The HTML line numbers in the "Differences" sections are from commit `fd1dddd` and will drift.
 
-## Patterns shared by all four originals
+## Patterns that recur
 
-- **Answer tolerance is about ±5%** (about ±6% on AC Conversions and Transformers). The HTML pages use ±2%.
+- **Answer tolerance is about ±5%** in the AC, DC and Solid State worksheets (about ±6% on AC
+  Conversions and Transformers). The HTML pages use ±2%.
 - **Worksheet scoring is per item.** Each item is worth its share of 100. A wrong check costs 2 and
   every opening of Help costs 3, both taken from that item only, and an item never drops below 0.
   The HTML takes penalties off the final percentage and charges Help once per item.
-- **Troubleshooting boards:** probes start on the board and the first reading is free. The black
+- **AC, DC and Solid State troubleshooting boards:** probes start on the board and the first reading is free. The black
   probe stays on the supply's minus terminal and only the red one moves. Items are worth 12 points
-  (120 total). The supply and component values change with every item.
-- **No pass mark.** The originals report the score; the HTML pages pass at 60–80%.
+  (120 total) in AC and DC. The supply changes with every item, and in AC the component values change too.
+  Power Supply scores differently (130 points, 5 off per wrong answer); see its notes.
+- **No pass mark** in AC or Power Supply: they just report the score. The HTML pages pass at 60–80%.
 
 ## Running the originals again
 
