@@ -845,8 +845,10 @@ CC.trouble=function(root,s,spec){
     };
     const tap=id=>{
       if(card.dataset.graded)return;
-      probe[probe.active]=id;
-      setActive(probe.active==='red'?'black':'red');
+      // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
+      probe[which]=id;
+      setActive(!probe[other]?other:first?'red':which);
       if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
         const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
         $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
@@ -1422,7 +1424,7 @@ const SPB={name:'SPB',nodes:9,marked:()=>{let R;do{R=[0,0,0,0].map(()=>eVal(220,
   draw:R=>wires(60,150,60,300)+B.trace([[60,150],[110,150]],'TRACE 1',[85,170])+B.trace([[210,150],[290,150],[290,170]],'TRACE 2',[250,140])+B.trace([[290,150],[430,150],[430,170]],'TRACE 3',[360,140])+
     B.trace([[430,275],[430,300],[290,300]],'TRACE 4',[360,318])+B.trace([[290,275],[290,300],[230,300]],'TRACE 5',[262,318])+B.trace([[120,300],[60,300]])+
     B.part('R',[110,150],[210,150],'R1')+B.part('R',[290,170],[290,275],'R2')+B.part('R',[430,170],[430,275],'R3')+B.part('R',[120,300],[230,300],'R4')+B.label(60,135,'J1',{size:11})+B.label(60,325,'J2',{size:11})};
-const TS_HOW='<p>Tap a solder pad to place the selected probe; the probes then swap automatically. The voltmeter reads the voltage from the red (+) probe to the black (−) probe. Like a real meter it has a small error, but it is accurate enough to find every fault. The supply\'s own voltage and current displays are always visible and cost nothing.</p><p><b>Scoring:</b> each board starts at 10 points, and each new voltmeter reading costs 1 point. Select the fault and choose <b>Grade item</b>: a correct answer earns the points that remain, a wrong answer earns 0. There are 10 boards, and your score is the percentage of the 100 possible points. After each board you can see the normal and faulty voltages.</p>';
+const TS_HOW='<p>Tap a solder pad to place the selected probe. The first two taps place red, then black; after that the selected probe stays selected until you pick the other with the probe buttons. The voltmeter reads the voltage from the red (+) probe to the black (−) probe. Like a real meter it has a small error, but it is accurate enough to find every fault. The supply\'s own voltage and current displays are always visible and cost nothing.</p><p><b>Scoring:</b> each board starts at 10 points, and each new voltmeter reading costs 1 point. Select the fault and choose <b>Grade item</b>: a correct answer earns the points that remain, a wrong answer earns 0. There are 10 boards, and your score is the percentage of the 100 possible points. After each board you can see the normal and faulty voltages.</p>';
 const tsMod=(id,title,sub,def,txt,sch)=>({id,title,icon:'wrench',sub,intro:CC.introPage({text:`<div class="cols2" style="align-items:center"><div><p>${TXT.tsIntro}</p>${txt}</div><div class="diagram">${sch}</div></div>`,how:TS_HOW}),
   run:(el,s)=>CC.trouble(el,s,{count:10,points:10,build:boardFactory(def)})});
 

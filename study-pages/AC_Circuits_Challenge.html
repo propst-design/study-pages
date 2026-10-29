@@ -845,8 +845,10 @@ CC.trouble=function(root,s,spec){
     };
     const tap=id=>{
       if(card.dataset.graded)return;
-      probe[probe.active]=id;
-      setActive(probe.active==='red'?'black':'red');
+      // the selected probe stays selected; only the first placement hands over to the probe not yet placed
+      const which=probe.active,other=which==='red'?'black':'red',first=!probe[which];
+      probe[which]=id;
+      setActive(!probe[other]?other:first?'red':which);
       if(probe.red&&probe.black){const key=probe.red+'|'+probe.black;if(key!==lastKey){lastKey=key;if(pts>0)pts--;updP();
         const m=b.measure(probe.red,probe.black);readings.unshift(`<span style="color:#d32f2f">+${esc(b.padName(probe.red))}</span> / −${esc(b.padName(probe.black))}: <b>${m.text}</b>`);
         $('#rlog',card).innerHTML=readings.slice(0,12).join('<br>');}}
@@ -1390,7 +1392,7 @@ function xfmrBoard(){
     meters:()=>[{label:'Supply AC volts',text:CC.lcd(vm(Vsup),1)},{label:'Supply AC mA',text:CC.lcd(am(Ip*1000),1)}],
     info:()=>`T1 is a ${ratio}:1 step-down transformer (primary : secondary turns). Marked values: R1 = ${fR(R)}, L1 = ${fL(L)}. Parts can be 20% off their marked values and the meters up to 5% off.`};
 }
-const TS_HOW=`<p>Tap a solder pad to place the highlighted probe; the probes take turns (red, then black), or pick one with the probe buttons. The voltmeter shows the AC voltage between the two probes. The panel also shows the supply voltage and current, which are free to read.</p>
+const TS_HOW=`<p>Tap a solder pad to place the highlighted probe. The first two taps place red, then black; after that the highlighted probe stays selected until you pick the other with the probe buttons. The voltmeter shows the AC voltage between the two probes. The panel also shows the supply voltage and current, which are free to read.</p>
 <ul><li>There are 10 problems. Each starts with 10 points, and every new voltmeter reading costs 1 point.</li><li>Select the fault and choose <b>Grade item</b>. A right answer earns the points left; a wrong answer earns 0.</li><li>Your score is the percentage of the 100 possible points. After each item you can open a step-by-step explanation.</li></ul>
 <p>The parts can be up to 20% off their marked values and the meter up to 5% off, so look for clear differences, such as 0 V where you expect a reading or the full supply voltage across one spot, rather than small ones.</p>`;
 
